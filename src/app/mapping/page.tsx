@@ -3,7 +3,7 @@
 // Everything shown comes from the local cache; nothing here calls GHL.
 
 import { lastSuccessfulSync, latestSyncRuns, readSnapshots, type SnapshotRow } from "@/lib/db";
-import { funnelOnlyForStage, mappingConfig, milestoneForStage } from "@/lib/mapping-config";
+import { funnelOnlyForStage, mappedTags, mappingConfig, milestoneForStage } from "@/lib/mapping-config";
 import {
   KEY_PREFIX,
   MAPPING_SYNC_KIND,
@@ -11,7 +11,6 @@ import {
   type CalendarsSnapshot,
   type CallsSnapshot,
   type ContactsSnapshot,
-  type CustomFieldsSnapshot,
   type LocationSnapshot,
   type OpportunitiesSnapshot,
   type PipelinesSnapshot,
@@ -118,7 +117,6 @@ export default function MappingPage() {
   const pipelines = pick<PipelinesSnapshot>(rows, "pipelines");
   const users = pick<UsersSnapshot>(rows, "users");
   const tags = pick<TagsSnapshot>(rows, "tags");
-  const fields = pick<CustomFieldsSnapshot>(rows, "customFields");
   const calendars = pick<CalendarsSnapshot>(rows, "calendars");
   const appts = pick<AppointmentsSnapshot>(rows, "appointments");
   const contacts = pick<ContactsSnapshot>(rows, "contacts");
@@ -131,10 +129,14 @@ export default function MappingPage() {
   const livePipeline = (pipelineId: string) => pipelines.data?.pipelines.find((p) => p.id === pipelineId);
   const stageCount = (stageId: string) => stageCounts.data?.stages.find((s) => s.stageId === stageId);
   const userName = (id: string) => users.data?.users.find((u) => u.id === id)?.name ?? id;
-
-  const reportingHint = /fy|fiscal|semester|session|program|branch|army|veteran|cohort|term|enroll/i;
+  const liveTagNames = new Set((tags.data?.tags ?? []).map((t) => t.name.trim().toLowerCase()));
 
   const openItems: string[] = [];
+  for (const t of mappedTags()) {
+    if (tags.data && !liveTagNames.has(t.tag.toLowerCase())) {
+      openItems.push(`The mapped tag "${t.tag}" (${t.use}) does not exist in GHL. Check config/ghl-mapping.json.`);
+    }
+  }
   for (const m of mappingConfig.milestones) {
     if (m.reportingGroupBasis === "unverified") {
       openItems.push(`${m.label}: the stage name carries no fiscal year, so the ${m.reportingGroup} grouping rule is unverified. Need the field, tag, or rule that says which fiscal year a contact belongs to.`);
@@ -285,6 +287,8 @@ export default function MappingPage() {
                       {m.reportingGroup}{" "}
                       {m.reportingGroupBasis === "stage_name" ? (
                         <span className="pill pill-ok">from stage name</span>
+                      ) : m.reportingGroupBasis === "contact_tag" ? (
+                        <span className="pill pill-ok">from contact tag &quot;{m.reportingGroupTag}&quot;</span>
                       ) : (
                         <span className="pill pill-warn">rule unverified</span>
                       )}
@@ -395,6 +399,7 @@ export default function MappingPage() {
               <th>Program</th>
               <th>Label</th>
               <th>Status</th>
+              <th>How membership is decided</th>
               <th>Stages</th>
             </tr>
           </thead>
@@ -409,13 +414,14 @@ export default function MappingPage() {
                 <td>
                   <span className={`pill ${g.status === "active" ? "pill-ok" : "pill-info"}`}>{g.status}</span>
                 </td>
+                <td className="note">{g.basis ?? ""}</td>
                 <td>
                   {g.stages
                     ? g.stages.map((s) => s.stageName).join(", ")
                     : mappingConfig.milestones
                         .filter((m) => m.reportingGroup === key)
                         .map((m) => m.stageName)
-                        .join(", ")}
+                        .join(", ") || "(none)"}
                 </td>
               </tr>
             ))}
@@ -499,72 +505,48 @@ export default function MappingPage() {
         )}
       </section>
 
-      {/* ---- Tags ---- */}
+      {/* ---- Mapped tags ---- */}
       <section className="card">
-        <h2>Contact tags ({tags.data ? tags.data.tags.length : "unavailable"})</h2>
+        <h2>Mapped contact tags</h2>
         <p className="note">
-          The brief needs tag mappings for Army vs Veteran classification and for lead-source filters. Pick those from
-          this list. Highlighted tags look like fiscal-year, semester, program, or branch markers (name match only).
+          Only tags the dashboard relies on are listed. GHL has {tags.data ? num(tags.data.tags.length) : "an unavailable number of"} tags
+          in total. {mappingConfig.classificationTags.rule}
         </p>
-        {tags.data ? (
-          <div className="chips">
-            {[...tags.data.tags]
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map((t) => (
-                <span key={t.id} className={reportingHint.test(t.name) ? "chip chip-hint" : "chip"} title={t.id}>
-                  {t.name}
-                </span>
-              ))}
-          </div>
-        ) : (
-          <Unavailable row={tags.row} what="Tags" />
-        )}
-      </section>
-
-      {/* ---- Custom fields ---- */}
-      <section className="card">
-        <h2>Custom fields</h2>
-        <p className="note">
-          Fields that might carry fiscal year, semester, program, or branch are flagged as candidates for the reporting
-          group rule. Flagging is a name match only; nothing has been verified.
-        </p>
-        {fields.data ? (
-          <div className="scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Field</th>
-                  <th>On</th>
-                  <th>Type</th>
-                  <th>Key</th>
-                  <th>Options</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...fields.data.fields]
-                  .sort((a, b) => (a.model ?? "").localeCompare(b.model ?? "") || a.name.localeCompare(b.name))
-                  .map((f) => (
-                    <tr key={f.id}>
-                      <td>{f.name}</td>
-                      <td>{f.model ?? ""}</td>
-                      <td>{f.dataType ?? ""}</td>
-                      <td className="mono">{f.fieldKey ?? f.id}</td>
-                      <td className="note">{f.options?.join(", ") ?? ""}</td>
-                      <td>{reportingHint.test(f.name) ? <span className="pill pill-warn">reporting-group candidate</span> : null}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <Unavailable row={fields.row} what="Custom fields" />
-        )}
+        <table>
+          <thead>
+            <tr>
+              <th>Tag</th>
+              <th>Used for</th>
+              <th>Exists in GHL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {mappedTags().map((t) => (
+              <tr key={`${t.tag}-${t.use}`}>
+                <td>
+                  <span className="chip">{t.tag}</span>
+                </td>
+                <td>{t.use}</td>
+                <td>
+                  {!tags.data ? (
+                    <span className="pill pill-info">unavailable</span>
+                  ) : liveTagNames.has(t.tag.toLowerCase()) ? (
+                    <span className="pill pill-ok">yes</span>
+                  ) : (
+                    <span className="pill pill-bad">missing</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {tags.row && !tags.row.ok ? <Unavailable row={tags.row} what="Tags" /> : null}
       </section>
 
       {/* ---- Calendars + appointments ---- */}
       <section className="card">
         <h2>Calendars and appointment statuses</h2>
+        <p className="note">{mappingConfig.calendars.note}</p>
         {calendars.data ? (
           <table>
             <thead>

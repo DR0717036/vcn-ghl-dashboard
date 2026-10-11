@@ -38,8 +38,9 @@
       "stageId": "34114b60-82d4-462a-ac62-9c2ee21fe6eb",
       "stageName": "CA 101 submitted",
       "reportingGroup": "FY27",
-      "reportingGroupBasis": "unverified",
-      "note": "Stage name carries no fiscal year. Do not assume every contact here belongs to FY27 until an authoritative FY field, tag, or rule is confirmed (brief section 2)."
+      "reportingGroupBasis": "contact_tag",
+      "note": "Fiscal year comes from the contact tag fy27 (owner decision 2026-10-11 #5). Contacts in this stage without an fy tag are reported as unclassified, not assumed FY27.",
+      "reportingGroupTag": "fy27"
     },
     {
       "key": "army_supervisor_approval",
@@ -49,8 +50,9 @@
       "stageId": "8e5ec35d-61f1-498b-9b57-d1ca68f2892a",
       "stageName": "Supervisor Approval (5 days)",
       "reportingGroup": "FY27",
-      "reportingGroupBasis": "unverified",
-      "note": "Owner confirmed this stage means awaiting approval, not approved (docs/DECISIONS.md 2026-10-11 #2). Same fiscal-year caveat as CA 101."
+      "reportingGroupBasis": "contact_tag",
+      "note": "Owner confirmed this stage means awaiting approval, not approved (docs/DECISIONS.md 2026-10-11 #2). Fiscal year comes from the contact tag fy27 (owner decision 2026-10-11 #5). Contacts in this stage without an fy tag are reported as unclassified, not assumed FY27.",
+      "reportingGroupTag": "fy27"
     },
     {
       "key": "army_won_submitted",
@@ -107,12 +109,23 @@
     "FY27": {
       "program": "army",
       "label": "Fiscal Year 2027",
-      "status": "active"
+      "status": "active",
+      "tag": "fy27",
+      "basis": "Contact tag fy27 for CA 101 and Supervisor Approval; stage name for Won/Submitted (Fy 27)."
+    },
+    "FY26": {
+      "program": "army",
+      "label": "Fiscal Year 2026",
+      "status": "historical",
+      "tag": "fy26",
+      "basis": "Contact tag fy26. No FY26-specific Army stages exist; historical only."
     },
     "FS2": {
       "program": "veteran",
       "label": "Fall Semester 2 (2026)",
-      "status": "active"
+      "status": "active",
+      "relatedTag": "fall semester 2",
+      "basis": "Stage name (FS2). Tag is informational."
     },
     "FS1": {
       "program": "veteran",
@@ -135,7 +148,9 @@
           "stageId": "71732fff-7565-40bf-82bf-7b569ee1f917",
           "stageName": "Enrolled/ Won (FS1)"
         }
-      ]
+      ],
+      "relatedTag": "fall semester 1",
+      "basis": "Stage name (FS1/FS 1). Tag is informational."
     },
     "SS": {
       "program": "veteran",
@@ -158,11 +173,29 @@
           "stageId": "ce32844d-c6db-4565-935c-74bf75ecf877",
           "stageName": "Enrolled/ Won (Summer Session 2)"
         }
-      ]
+      ],
+      "relatedTags": [
+        "summer session 1",
+        "summer session 2"
+      ],
+      "basis": "Stage names (SS1 & SS2 / Summer Session 1 / Summer Session 2). Tags are informational."
     }
   },
   "wonRule": "Opportunity status === won. A stage name containing Won is never sufficient on its own.",
   "valueLabel": "Opportunity Value",
+  "classificationTags": {
+    "army": [
+      "army"
+    ],
+    "veteran": [
+      "veteran"
+    ],
+    "rule": "A contact with an army tag is Army; with a veteran tag is Veteran; with both is Both / Needs Review; with neither is Untagged. Mutually exclusive buckets; an appointment is counted once in the grand total. Owner decision 2026-10-11 #6."
+  },
+  "calendars": {
+    "excludedCalendarIds": [],
+    "note": "Count appointments on every calendar, active or inactive. Owner decision 2026-10-11 #7."
+  },
   "pipelines": [
     {
       "id": "e0i7pW6G6oMysgFvxuYY",

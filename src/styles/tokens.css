@@ -1,0 +1,116 @@
+/*
+  Intelagent Media design tokens — the single source of truth for color,
+  type, spacing, radii, and chart palette across every dashboard page.
+
+  Values were extracted from https://www.intelagentmedia.com (assets/css/
+  styles.css, :root block) on 2026-10-11. The site is dark-first: body is
+  "obsidian" #05080D with light-gray text, white 800-weight headings in
+  Manrope, blue→cyan gradient accents, and a yellow primary button.
+
+  Chart series are DARKER STEPS of the brand hues, not the UI accents
+  themselves: the UI yellow (#FFD51F) and cyan (#19C6F4) are too bright to be
+  chart marks on a dark surface. The six-slot categorical order below was
+  validated (lightness band, chroma, colorblind separation, normal-vision
+  floor, 3:1 contrast on the card surface) and must stay in this fixed order.
+*/
+
+:root {
+  color-scheme: dark;
+
+  /* ---- surfaces (site: obsidian / midnight / deep-navy / navy-slate) ---- */
+  --bg-page: #05080d;
+  --bg-elevated: #071426;
+  --surface-card: #0c1d33;
+  --surface-raised: #13263d;
+  --surface-inset: rgba(12, 29, 51, 0.5);
+  --border: #223750;
+  --border-strong: rgba(34, 55, 80, 0.9);
+  --border-soft: rgba(34, 55, 80, 0.6);
+
+  /* ---- text (site: white / light-gray / muted-gray) ---- */
+  --text-primary: #ffffff;
+  --text-body: #b8c2cf;
+  --text-secondary: #93a1b2;
+  --text-muted: #738094;
+  --text-on-accent: #0b1119;
+
+  /* ---- brand accents (site: blue / cyan / yellow / grad) ---- */
+  --accent-blue: #1677ff;
+  --accent-cyan: #19c6f4;
+  --accent-yellow: #ffd51f;
+  --accent-blue-soft: rgba(22, 119, 255, 0.1);
+  --accent-blue-border: rgba(22, 119, 255, 0.3);
+  --accent-blue-text: #7fb0ff;
+  --accent-cyan-soft: rgba(25, 198, 244, 0.14);
+  --accent-yellow-soft: rgba(255, 213, 31, 0.1);
+  --gradient-brand: linear-gradient(135deg, #1677ff 0%, #19c6f4 100%);
+  --gradient-surface: linear-gradient(160deg, #0a1b33 0%, #071426 100%);
+  --focus-ring: 0 0 0 3px rgba(25, 198, 244, 0.35);
+
+  /* ---- status (reserved; never used as chart series; always with label) ---- */
+  --status-good: #22a85f;
+  --status-good-bg: rgba(34, 168, 95, 0.14);
+  --status-warn: #e0a100;
+  --status-warn-bg: rgba(224, 161, 0, 0.14);
+  --status-bad: #e04848;
+  --status-bad-bg: rgba(224, 72, 72, 0.14);
+  --status-info: #7fb0ff;
+  --status-info-bg: rgba(22, 119, 255, 0.12);
+
+  /* ---- chart palette (validated on --surface-card, fixed order) ---- */
+  --series-1: #1677ff; /* brand blue */
+  --series-2: #a88900; /* brand yellow, dark step */
+  --series-3: #d55181; /* magenta */
+  --series-4: #0c9fcb; /* brand cyan, dark step */
+  --series-5: #d95926; /* orange */
+  --series-6: #9085e9; /* violet */
+  /* sequential: one hue (brand blue), light→dark; ordinal use starts at step 2 */
+  --seq-1: #86b6ef;
+  --seq-2: #5598e7;
+  --seq-3: #3987e5;
+  --seq-4: #256abf;
+  --seq-5: #1c5cab;
+  --seq-6: #184f95;
+  /* diverging: cool pole, neutral midpoint, warm pole */
+  --div-neg: #1677ff;
+  --div-mid: #2a3a4f;
+  --div-pos: #d95926;
+  --chart-grid: rgba(34, 55, 80, 0.55);
+  --chart-axis: #738094;
+
+  /* ---- typography (site: Manrope 400–800, tight tracking on headings) ---- */
+  --font-sans: var(--font-manrope), "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-display: 44px; /* hero / KPI numbers */
+  --text-kpi: 36px;
+  --text-h1: 28px;
+  --text-h2: 20px;
+  --text-h3: 16px;
+  --text-body: 15px;
+  --text-small: 13px;
+  --text-label: 12px; /* uppercase kicker labels */
+  --tracking-tight: -0.03em;
+  --tracking-label: 0.12em;
+  --leading-tight: 1.06;
+  --leading-body: 1.55;
+
+  /* ---- spacing (4px base) ---- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --container: 1200px;
+  --wide: 1320px;
+
+  /* ---- radii & shadow (site: r-btn 8 / r-card 14 / r-lg 18) ---- */
+  --r-btn: 8px;
+  --r-card: 14px;
+  --r-lg: 18px;
+  --r-pill: 999px;
+  --shadow-card: 0 10px 30px -18px rgba(5, 8, 13, 0.8);
+  --shadow-primary: 0 8px 30px -10px rgba(255, 213, 31, 0.5);
+}
