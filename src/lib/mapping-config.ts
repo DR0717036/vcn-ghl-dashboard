@@ -59,6 +59,8 @@ export interface MappingConfig {
   calendars: { excludedCalendarIds: string[]; note: string };
   wonRule: string;
   valueLabel: string;
+  /** Live dump of every pipeline and stage at generation time. */
+  pipelines: { id: string; name: string; stages: { id: string; name: string; position?: number }[] }[];
 }
 
 /** Every contact tag the dashboard relies on, with what it is used for. */

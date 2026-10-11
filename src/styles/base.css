@@ -443,3 +443,88 @@ ul.plain li {
     font-size: 30px;
   }
 }
+
+/* ---- range picker ---- */
+.range-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3) var(--s-5);
+  align-items: center;
+  margin-bottom: var(--s-5);
+}
+
+.range-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-btn);
+  padding: var(--s-1);
+}
+
+.range-btn {
+  background: transparent;
+  color: var(--text-body);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.range-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-inset);
+}
+
+.range-btn.active {
+  background: var(--accent-blue-soft);
+  border-color: var(--accent-blue-border);
+  color: var(--accent-blue-text);
+}
+
+.range-custom {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+.range-custom input[type="date"] {
+  background: var(--surface-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+/* ---- KPI card details ---- */
+.stat-breakdown {
+  font-size: var(--text-small);
+  margin-top: var(--s-2);
+}
+
+.stat-breakdown td {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-secondary);
+}
+
+.stat-breakdown td.num {
+  color: var(--text-body);
+  font-weight: 700;
+}
+
+.stat-notes summary {
+  cursor: pointer;
+  margin-top: var(--s-2);
+}
+
+section > h2 {
+  margin-top: var(--s-5);
+}

@@ -1,5 +1,8 @@
 // Local cache, using the SQLite engine built into Node.js 22.13+ / 24.
 // The database file lives in ./data (git-ignored). Nothing here touches GHL.
+//
+// All timestamps are ISO-8601 UTC strings ("2026-10-11T20:51:19.495Z") so
+// that string comparison orders them correctly in SQL.
 
 import { mkdirSync } from "node:fs";
 import path from "node:path";
@@ -14,8 +17,10 @@ export function getDb(): DatabaseSync {
   db = new DatabaseSync(path.join(dir, "cache.sqlite"));
   db.exec(`
     PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = NORMAL;
+    PRAGMA busy_timeout = 10000;
 
-    -- One row per probe/endpoint result. payload is JSON.
+    -- One row per mapping probe/endpoint result. payload is JSON.
     CREATE TABLE IF NOT EXISTS snapshots (
       key         TEXT PRIMARY KEY,
       label       TEXT NOT NULL,
@@ -38,6 +43,130 @@ export function getDb(): DatabaseSync {
       probes_ok    INTEGER,
       summary      TEXT
     );
+
+    -- Small key/value store for sync bookkeeping (cursors, first-sync time).
+    CREATE TABLE IF NOT EXISTS sync_state (
+      key   TEXT PRIMARY KEY,
+      value TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS contacts (
+      id            TEXT PRIMARY KEY,
+      name          TEXT,
+      date_added    TEXT,
+      date_updated  TEXT,
+      assigned_to   TEXT,
+      source        TEXT,
+      tags          TEXT,          -- JSON array of lowercase tag names
+      first_seen_at TEXT NOT NULL,
+      last_seen_at  TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS contacts_date_added ON contacts(date_added);
+    CREATE INDEX IF NOT EXISTS contacts_assigned ON contacts(assigned_to);
+
+    -- Assignment changes observed between syncs (GHL has no assignment history).
+    CREATE TABLE IF NOT EXISTS assignment_events (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id   TEXT NOT NULL,
+      from_user    TEXT,
+      to_user      TEXT,
+      observed_at  TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS assignment_events_time ON assignment_events(observed_at);
+
+    CREATE TABLE IF NOT EXISTS opportunities (
+      id                    TEXT PRIMARY KEY,
+      contact_id            TEXT,
+      name                  TEXT,
+      pipeline_id           TEXT NOT NULL,
+      stage_id              TEXT NOT NULL,
+      status                TEXT NOT NULL,
+      monetary_value        REAL,
+      assigned_to           TEXT,
+      source                TEXT,
+      created_at            TEXT,
+      updated_at            TEXT,
+      last_stage_change_at  TEXT,
+      last_status_change_at TEXT,
+      first_seen_at         TEXT NOT NULL,
+      last_seen_at          TEXT NOT NULL,
+      missing_since         TEXT          -- set when GHL stops returning it
+    );
+    CREATE INDEX IF NOT EXISTS opps_pipeline_stage ON opportunities(pipeline_id, stage_id);
+    CREATE INDEX IF NOT EXISTS opps_status ON opportunities(status);
+    CREATE INDEX IF NOT EXISTS opps_contact ON opportunities(contact_id);
+
+    -- Every observed change of stage / status / owner / value, plus baseline.
+    CREATE TABLE IF NOT EXISTS opportunity_history (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      opportunity_id  TEXT NOT NULL,
+      observed_at     TEXT NOT NULL,
+      pipeline_id     TEXT NOT NULL,
+      stage_id        TEXT NOT NULL,
+      status          TEXT NOT NULL,
+      assigned_to     TEXT,
+      monetary_value  REAL,
+      change_kind     TEXT NOT NULL   -- baseline | stage | status | owner | value | multiple
+    );
+    CREATE INDEX IF NOT EXISTS opp_history_opp ON opportunity_history(opportunity_id);
+
+    -- Milestone achievements and won transitions as EVENTS (not snapshots).
+    CREATE TABLE IF NOT EXISTS milestone_events (
+      id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind                 TEXT NOT NULL,      -- milestone | won | won_reversal
+      milestone_key        TEXT,               -- from config for kind=milestone
+      contact_id           TEXT,
+      opportunity_id       TEXT NOT NULL,
+      pipeline_id          TEXT NOT NULL,
+      stage_id             TEXT NOT NULL,
+      reporting_group      TEXT,               -- FY27 / FS2 / unclassified
+      event_time           TEXT NOT NULL,
+      time_basis           TEXT NOT NULL,      -- ghl_last_stage_change | ghl_last_status_change | observed
+      observed_at          TEXT NOT NULL,
+      assigned_to_at_event TEXT,
+      value_at_event       REAL,
+      is_baseline          INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(kind, milestone_key, opportunity_id, event_time)
+    );
+    CREATE INDEX IF NOT EXISTS milestone_events_time ON milestone_events(kind, event_time);
+
+    CREATE TABLE IF NOT EXISTS calls (
+      id            TEXT PRIMARY KEY,
+      alt_id        TEXT,
+      date_added    TEXT NOT NULL,
+      direction     TEXT,
+      status        TEXT,
+      call_status   TEXT,
+      duration      INTEGER,
+      user_id       TEXT,
+      contact_id    TEXT,
+      source        TEXT,
+      message_type  TEXT,
+      automated     INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS calls_date ON calls(date_added);
+    CREATE INDEX IF NOT EXISTS calls_alt ON calls(alt_id);
+
+    CREATE TABLE IF NOT EXISTS appointments (
+      id                    TEXT PRIMARY KEY,
+      calendar_id           TEXT,
+      contact_id            TEXT,
+      status                TEXT,
+      assigned_user_id      TEXT,
+      created_by_user_id    TEXT,
+      created_by_source     TEXT,
+      start_time            TEXT,
+      end_time              TEXT,
+      date_added            TEXT,
+      date_updated          TEXT,
+      rescheduled_at        TEXT,
+      deleted               INTEGER NOT NULL DEFAULT 0,
+      classification_first  TEXT,          -- army | veteran | both | untagged | unknown at first sight
+      first_seen_at         TEXT NOT NULL,
+      last_seen_at          TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS appts_added ON appointments(date_added);
+    CREATE INDEX IF NOT EXISTS appts_start ON appointments(start_time);
   `);
   return db;
 }
@@ -123,4 +252,15 @@ export function lastSuccessfulSync(kind: string): SyncRunRow | undefined {
   return getDb()
     .prepare(`SELECT * FROM sync_runs WHERE kind = ? AND ok = 1 ORDER BY id DESC LIMIT 1`)
     .get(kind) as unknown as SyncRunRow | undefined;
+}
+
+export function getState(key: string): string | undefined {
+  const row = getDb().prepare(`SELECT value FROM sync_state WHERE key = ?`).get(key) as { value: string | null } | undefined;
+  return row?.value ?? undefined;
+}
+
+export function setState(key: string, value: string): void {
+  getDb()
+    .prepare(`INSERT INTO sync_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`)
+    .run(key, value);
 }

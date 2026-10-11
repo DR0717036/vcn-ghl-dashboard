@@ -74,8 +74,28 @@ export interface GhlCalendarEvent {
   endTime?: string;
   dateAdded?: string;
   dateUpdated?: string;
-  createdBy?: unknown;
+  // Live account (2026-10-11): { source: "mobile_app", userId: "..." }
+  createdBy?: { source?: string; userId?: string } | null;
   masterEventId?: string;
+  rescheduledAt?: string | null;
+  deleted?: boolean;
+}
+
+export interface GhlContact {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  contactName?: string;
+  dateAdded?: string;
+  dateUpdated?: string;
+  assignedTo?: string | null;
+  source?: string | null;
+  tags?: string[];
+}
+
+export interface GhlContactsList {
+  contacts: GhlContact[];
+  meta?: { total?: number; startAfterId?: string; startAfter?: number; nextPageUrl?: string; nextPage?: number | null };
 }
 
 export interface GhlOpportunity {
@@ -242,4 +262,15 @@ export function exportMessages(p: MessageExportParams): Promise<GhlResult<GhlMes
 export function getContactsPage(limit = 1): Promise<GhlResult<GhlContactsPage>> {
   const { locationId } = getEnv();
   return ghlGet("/contacts/", "2021-07-28", { locationId, limit });
+}
+
+/** One page (max 100) of contacts, cursor-paged with startAfterId + startAfter. */
+export function listContacts(cursor?: { startAfterId: string; startAfter: number }): Promise<GhlResult<GhlContactsList>> {
+  const { locationId } = getEnv();
+  return ghlGet("/contacts/", "2021-07-28", {
+    locationId,
+    limit: 100,
+    startAfterId: cursor?.startAfterId,
+    startAfter: cursor?.startAfter,
+  });
 }
