@@ -50,6 +50,15 @@ export function getDb(): DatabaseSync {
       value TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS users (
+      id       TEXT PRIMARY KEY,
+      name     TEXT,
+      email    TEXT,
+      role     TEXT,
+      deleted  INTEGER NOT NULL DEFAULT 0,
+      last_seen_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS contacts (
       id            TEXT PRIMARY KEY,
       name          TEXT,

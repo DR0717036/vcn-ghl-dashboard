@@ -3,8 +3,10 @@
 import { latestSyncRuns } from "@/lib/db";
 import { fmtDateTime, fmtRange, isRangeKey, REPORTING_TZ, resolveRange, type RangeKey } from "@/lib/dates";
 import { computePrimaryKpis, coverage, kpiNewLeads } from "@/lib/metrics";
+import { computeMilestones } from "@/lib/milestones";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import KpiCard from "./KpiCard";
+import MilestoneCard from "./MilestoneCard";
 import RangePicker from "./RangePicker";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const cov = coverage();
   const lastRun = latestSyncRuns(CORE_SYNC_KIND, 1)[0];
   const kpis = computePrimaryKpis(range).map((k) => (k.key === "newLeads" ? kpiNewLeads(newLeadsRange) : k));
+  const milestones = computeMilestones(range);
   const hasData = Boolean(cov.lastCoreSyncOkAt);
 
   return (
@@ -76,6 +79,30 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           {kpis.map((k) => (
             <KpiCard key={k.key} k={k} />
           ))}
+        </div>
+      </section>
+
+      <section>
+        <h2>Program milestones</h2>
+        <p className="note">
+          Each card counts contacts reaching the milestone during the selected range (an event), with the current number sitting in the
+          stage shown separately (a snapshot). Never add the three cards of a program together: one opportunity can pass through all three.
+        </p>
+        <h3>Army CA · FY27</h3>
+        <div className="grid grid-3">
+          {milestones
+            .filter((m) => m.program === "army")
+            .map((m) => (
+              <MilestoneCard key={m.key} m={m} />
+            ))}
+        </div>
+        <h3>Veteran G.I. Bill · FS2</h3>
+        <div className="grid grid-3">
+          {milestones
+            .filter((m) => m.program === "veteran")
+            .map((m) => (
+              <MilestoneCard key={m.key} m={m} />
+            ))}
         </div>
       </section>
     </>

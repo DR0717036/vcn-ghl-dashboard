@@ -94,18 +94,20 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
   const firstSyncDone = Boolean(getState("first_core_sync_at"));
   const phases: PhaseResult[] = [];
 
+  const PHASES = 5;
   try {
+    phases.push(await syncUsers(runStart));
     phases.push(await syncContacts(runStart, firstSyncDone));
     phases.push(await syncOpportunities(runStart, firstSyncDone));
     phases.push(await syncCalls(runStart));
     phases.push(await syncAppointments(runStart));
   } finally {
     const okCount = phases.filter((p) => p.ok).length;
-    const ok = phases.length === 4 && okCount === 4;
+    const ok = phases.length === PHASES && okCount === PHASES;
     const summary = ok
-      ? `All 4 phases succeeded (${phases.map((p) => `${p.phase} ${p.count}`).join(", ")}).`
+      ? `All ${PHASES} phases succeeded (${phases.map((p) => `${p.phase} ${p.count}`).join(", ")}).`
       : `${okCount} of ${phases.length} phases succeeded. ` + phases.filter((p) => !p.ok).map((p) => `${p.phase}: ${p.error}`).join("; ");
-    finishSyncRun(runId, ok, 4, okCount, summary);
+    finishSyncRun(runId, ok, PHASES, okCount, summary);
     if (ok) {
       if (!firstSyncDone) setState("first_core_sync_at", runStart);
       setState("last_core_sync_ok_at", runStart);
@@ -113,6 +115,37 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
     running = false;
   }
   return { runId, ok: phases.every((p) => p.ok), phases };
+}
+
+// ---- users (team members, for rep names) ----------------------------------------
+
+async function syncUsers(now: string): Promise<PhaseResult> {
+  const db = getDb();
+  const res: PhaseResult = { phase: "users", ok: false, count: 0, warnings: [] };
+  const up = db.prepare(`
+    INSERT INTO users (id, name, email, role, deleted, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET name = excluded.name, email = excluded.email, role = excluded.role,
+      deleted = excluded.deleted, last_seen_at = excluded.last_seen_at`);
+  try {
+    const r = await ghl.getUsers();
+    if (!r.ok) throw new Error(`${r.kind}: ${r.error}`);
+    db.exec("BEGIN");
+    try {
+      for (const u of r.data.users ?? []) {
+        const name = (u.name ?? [u.firstName, u.lastName].filter(Boolean).join(" ")).trim() || null;
+        up.run(u.id, name, u.email ?? null, [u.roles?.type, u.roles?.role].filter(Boolean).join("/") || null, u.deleted ? 1 : 0, now);
+        res.count += 1;
+      }
+      db.exec("COMMIT");
+    } catch (e) {
+      db.exec("ROLLBACK");
+      throw e;
+    }
+    res.ok = true;
+  } catch (e) {
+    res.error = (e as Error).message;
+  }
+  return res;
 }
 
 // ---- contacts --------------------------------------------------------------------
