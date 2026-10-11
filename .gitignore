@@ -1,2 +1,9 @@
 .env
 node_modules/
+.next/
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.tsbuildinfo
+next-env.d.ts

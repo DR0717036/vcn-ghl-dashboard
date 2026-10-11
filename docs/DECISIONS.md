@@ -18,3 +18,11 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
    from the Army and Veteran scorecards. It is included only in the
    **"Entire CRM"** won-opportunity total, and that total's scope label must
    say it includes this pipeline.
+
+## 2026-10-11 — Login method
+
+4. **Sign in with Google** is the login method. The owner confirmed
+   intelagentmedia.com runs on Google Workspace. Only the three allowed
+   addresses in CLAUDE.md may sign in. Requires a one-time Google Cloud OAuth
+   client set up by the owner (free). Until it is wired in, the app runs
+   locally only and the sync endpoint refuses to run in production mode.
