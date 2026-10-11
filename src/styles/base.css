@@ -528,3 +528,77 @@ ul.plain li {
 section > h2 {
   margin-top: var(--s-5);
 }
+
+/* ---- charts ---- */
+.chart-wrap {
+  width: 100%;
+  overflow: hidden;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  font-family: var(--font-sans);
+}
+
+.chart-tick {
+  font-size: 11px;
+  fill: var(--text-muted);
+}
+
+.chart-row-label {
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--text-body);
+}
+
+.chart-row-label.muted {
+  fill: var(--text-muted);
+  font-weight: 600;
+}
+
+.chart-label-strong {
+  font-size: 13px;
+  font-weight: 800;
+  fill: var(--text-primary);
+}
+
+.chart-tooltip-title {
+  font-size: 12px;
+  fill: var(--text-secondary);
+}
+
+.chart-tooltip-value {
+  font-size: 14px;
+  font-weight: 800;
+  fill: var(--text-primary);
+}
+
+.chart-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-2);
+}
+
+.chart-head .stat-value {
+  font-size: var(--text-h2);
+}
+
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-small);
+  color: var(--text-secondary);
+}
+
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}

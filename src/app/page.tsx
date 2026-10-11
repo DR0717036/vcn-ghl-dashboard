@@ -1,11 +1,15 @@
 // Executive scorecard (brief section 3). Reads the local cache only.
 
+import { newLeadsSeries, programFunnels } from "@/lib/charts";
 import { latestSyncRuns } from "@/lib/db";
 import { fmtDateTime, fmtRange, isRangeKey, REPORTING_TZ, resolveRange, type RangeKey } from "@/lib/dates";
+import { chartSeries } from "@/lib/design";
 import { computePrimaryKpis, coverage, kpiNewLeads } from "@/lib/metrics";
 import { computeMilestones } from "@/lib/milestones";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { computeWon } from "@/lib/won";
+import BarChart from "./charts/BarChart";
+import FunnelChart from "./charts/FunnelChart";
 import KpiCard from "./KpiCard";
 import MilestoneCard from "./MilestoneCard";
 import RangePicker from "./RangePicker";
@@ -35,6 +39,8 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const kpis = computePrimaryKpis(range).map((k) => (k.key === "newLeads" ? kpiNewLeads(newLeadsRange) : k));
   const milestones = computeMilestones(range);
   const won = computeWon(range);
+  const leadsSeries = newLeadsSeries(range);
+  const funnels = programFunnels();
   const hasData = Boolean(cov.lastCoreSyncOkAt);
 
   return (
@@ -110,6 +116,49 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
       </section>
 
       <WonSection report={won} />
+
+      <section>
+        <h2>Charts</h2>
+        <div className="grid grid-2">
+          <div className="card">
+            <div className="chart-head">
+              <div>
+                <div className="label">New Leads over time</div>
+                <div className="note">
+                  {range.label}, {leadsSeries.grouping === "daily" ? "per day" : "per week (range longer than 92 days)"} · contact creation date
+                </div>
+              </div>
+              <div className="stat-value">{leadsSeries.total.toLocaleString("en-US")}</div>
+            </div>
+            <BarChart points={leadsSeries.points} color={chartSeries[0]} unit="new leads" />
+          </div>
+          <div className="card">
+            <div className="chart-head">
+              <div>
+                <div className="label">Program funnels · currently in stage</div>
+                <div className="note">Snapshot of opportunities sitting in each milestone stage now, all statuses and fiscal years. Not achievements.</div>
+              </div>
+              <div>
+                <span className="legend">
+                  <span className="legend-swatch" style={{ background: chartSeries[0] }} /> {funnels[0]?.label}
+                </span>
+                {"  "}
+                <span className="legend">
+                  <span className="legend-swatch" style={{ background: chartSeries[1] }} /> {funnels[1]?.label}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-2">
+              {funnels.map((f, i) => (
+                <div key={f.program}>
+                  <h3 style={{ marginTop: 4 }}>{f.label}</h3>
+                  <FunnelChart funnel={f} color={chartSeries[i] ?? chartSeries[0]} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
     </>
   );
 }
