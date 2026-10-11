@@ -5,9 +5,11 @@ import { fmtDateTime, fmtRange, isRangeKey, REPORTING_TZ, resolveRange, type Ran
 import { computePrimaryKpis, coverage, kpiNewLeads } from "@/lib/metrics";
 import { computeMilestones } from "@/lib/milestones";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
+import { computeWon } from "@/lib/won";
 import KpiCard from "./KpiCard";
 import MilestoneCard from "./MilestoneCard";
 import RangePicker from "./RangePicker";
+import WonSection from "./WonSection";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const lastRun = latestSyncRuns(CORE_SYNC_KIND, 1)[0];
   const kpis = computePrimaryKpis(range).map((k) => (k.key === "newLeads" ? kpiNewLeads(newLeadsRange) : k));
   const milestones = computeMilestones(range);
+  const won = computeWon(range);
   const hasData = Boolean(cov.lastCoreSyncOkAt);
 
   return (
@@ -105,6 +108,8 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
             ))}
         </div>
       </section>
+
+      <WonSection report={won} />
     </>
   );
 }
