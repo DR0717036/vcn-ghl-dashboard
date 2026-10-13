@@ -1,12 +1,14 @@
 "use client";
 
-// Multi-series line chart over time. Inline SVG, no library. Supports a
-// muted prior-period overlay (aligned by position) and, when the owner asks
-// for it, a second measure on a right-hand axis. 2px lines, >=8px hit
-// targets, recessive grid, crosshair tooltip across all series, legend in
-// HTML above the plot. Colors come from the shared tokens.
+// Multi-series line chart over time. Inline SVG, no library, drawn at the
+// container's measured width and a FIXED pixel height so text never
+// stretches. Supports a muted prior-period overlay (aligned by position)
+// and, when the owner asks for it, a second measure on a right-hand axis.
+// 2px lines, >=8px hit targets, recessive grid, crosshair tooltip across all
+// series, legend in HTML above the plot. Colors come from the shared tokens.
 
 import { useState } from "react";
+import { useWidth } from "./useWidth";
 
 export type ValueFormat = "count" | "minutes" | "usd";
 
@@ -30,7 +32,7 @@ export function fmtValue(v: number, f: ValueFormat): string {
   if (f === "minutes") {
     const h = Math.floor(v / 60);
     const m = Math.round(v % 60);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
   }
   return v.toLocaleString("en-US");
 }
@@ -62,15 +64,15 @@ export default function LineChart({
   rightLabel?: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
+  const [wrapRef, W] = useWidth<HTMLDivElement>();
   const n = Math.max(1, ...series.map((s) => s.points.length));
   const hasRight = series.some((s) => s.axis === "right");
-  const W = 1000;
   const H = height;
-  const padL = 56;
-  const padR = hasRight ? 64 : 16;
-  const padT = 16;
-  const padB = 34;
-  const plotW = W - padL - padR;
+  const padL = leftLabel ? 62 : 48;
+  const padR = hasRight ? (rightLabel ? 66 : 52) : 14;
+  const padT = 12;
+  const padB = 30;
+  const plotW = Math.max(10, W - padL - padR);
   const plotH = H - padT - padB;
   const x = (i: number) => (n === 1 ? padL + plotW / 2 : padL + (i / (n - 1)) * plotW);
 
@@ -82,13 +84,11 @@ export default function LineChart({
   const ticks = [0, 0.25, 0.5, 0.75, 1];
   const primary = series.find((s) => !s.muted) ?? series[0];
   const labels = primary?.points.map((p) => p.label) ?? [];
-  const labelEvery = Math.max(1, Math.ceil(n / 10));
-  const showMarkers = n <= 40;
-
-  if (!primary || primary.points.length === 0) return <p className="note">No data points in range.</p>;
+  const labelEvery = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(plotW / 70))));
+  const showMarkers = n <= 40 && plotW / n >= 12;
 
   return (
-    <div className="chart-wrap">
+    <div className="chart-wrap" ref={wrapRef}>
       <div className="chart-legend">
         {series.map((s) => (
           <span key={s.label} className="legend">
@@ -96,95 +96,98 @@ export default function LineChart({
           </span>
         ))}
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={series.map((s) => s.label).join(" and ")} onMouseLeave={() => setHover(null)}>
-        {ticks.map((f) => {
-          const yy = padT + plotH - f * plotH;
-          return (
-            <g key={f}>
-              <line x1={padL} x2={W - padR} y1={yy} y2={yy} stroke="var(--chart-grid)" strokeWidth={1} />
-              <text x={padL - 8} y={yy + 4} textAnchor="end" className="chart-tick">
-                {fmtTick(Math.round(leftMax * f * 100) / 100, leftFmt)}
-              </text>
-              {hasRight ? (
-                <text x={W - padR + 8} y={yy + 4} className="chart-tick">
-                  {fmtTick(Math.round(rightMax * f * 100) / 100, rightFmt)}
+      {!primary || primary.points.length === 0 ? (
+        <p className="note">No data points in range.</p>
+      ) : (
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={series.map((s) => s.label).join(" and ")} onMouseLeave={() => setHover(null)}>
+          {ticks.map((f) => {
+            const yy = padT + plotH - f * plotH;
+            return (
+              <g key={f}>
+                <line x1={padL} x2={W - padR} y1={yy} y2={yy} stroke="var(--chart-grid)" strokeWidth={1} />
+                <text x={padL - 8} y={yy + 4} textAnchor="end" className="chart-tick">
+                  {fmtTick(Math.round(leftMax * f * 100) / 100, leftFmt)}
                 </text>
-              ) : null}
-            </g>
-          );
-        })}
-        {leftLabel ? (
-          <text transform={`translate(12, ${padT + plotH / 2}) rotate(-90)`} textAnchor="middle" className="chart-tick">
-            {leftLabel}
-          </text>
-        ) : null}
-        {hasRight && rightLabel ? (
-          <text transform={`translate(${W - 10}, ${padT + plotH / 2}) rotate(90)`} textAnchor="middle" className="chart-tick">
-            {rightLabel}
-          </text>
-        ) : null}
-        {labels.map((l, i) =>
-          i % labelEvery === 0 ? (
-            <text key={i} x={x(i)} y={H - padB + 18} textAnchor="middle" className="chart-tick">
-              {l}
-            </text>
-          ) : null,
-        )}
-        {series.map((s) => {
-          const y = yFor(s);
-          const d = s.points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(p.value)}`).join(" ");
-          return (
-            <g key={s.label}>
-              <path
-                d={d}
-                fill="none"
-                stroke={s.color}
-                strokeWidth={s.muted ? 1.5 : 2.5}
-                strokeDasharray={s.muted ? "5 4" : undefined}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                opacity={s.muted ? 0.9 : 1}
-              />
-              {showMarkers && !s.muted
-                ? s.points.map((p, i) => (
-                    <circle key={i} cx={x(i)} cy={y(p.value)} r={hover === i ? 5 : 3.5} fill={s.color} stroke="var(--surface-card)" strokeWidth={2} />
-                  ))
-                : null}
-            </g>
-          );
-        })}
-        {/* hit targets: one column per point */}
-        {Array.from({ length: n }, (_, i) => {
-          const left = i === 0 ? padL : (x(i - 1) + x(i)) / 2;
-          const right = i === n - 1 ? W - padR : (x(i) + x(i + 1)) / 2;
-          return <rect key={i} x={left} y={padT} width={Math.max(1, right - left)} height={plotH} fill="transparent" onMouseEnter={() => setHover(i)} />;
-        })}
-        {hover !== null ? (
-          <g pointerEvents="none">
-            <line x1={x(hover)} x2={x(hover)} y1={padT} y2={padT + plotH} stroke="var(--chart-axis)" strokeDasharray="3 3" />
-            {(() => {
-              const rows = series.map((s) => ({ s, p: s.points[hover] })).filter((r) => r.p);
-              const boxW = 230;
-              const boxH = 22 + rows.length * 18;
-              const tx = Math.min(W - padR - boxW, Math.max(padL, x(hover) - boxW / 2));
-              return (
-                <g transform={`translate(${tx}, ${padT})`}>
-                  <rect width={boxW} height={boxH} rx={6} fill="var(--surface-raised)" stroke="var(--border)" />
-                  <text x={10} y={16} className="chart-tooltip-title">
-                    {labels[hover]}
+                {hasRight ? (
+                  <text x={W - padR + 8} y={yy + 4} className="chart-tick">
+                    {fmtTick(Math.round(rightMax * f * 100) / 100, rightFmt)}
                   </text>
-                  {rows.map((r, j) => (
-                    <text key={r.s.label} x={10} y={34 + j * 18} className="chart-tooltip-value">
-                      <tspan fill={r.s.color}>●</tspan> {r.s.label}
-                      {r.s.muted && r.p.label !== labels[hover] ? ` (${r.p.label})` : ""}: {fmtValue(r.p.value, r.s.format ?? "count")}
+                ) : null}
+              </g>
+            );
+          })}
+          {leftLabel ? (
+            <text transform={`translate(11, ${padT + plotH / 2}) rotate(-90)`} textAnchor="middle" className="chart-tick">
+              {leftLabel}
+            </text>
+          ) : null}
+          {hasRight && rightLabel ? (
+            <text transform={`translate(${W - 9}, ${padT + plotH / 2}) rotate(90)`} textAnchor="middle" className="chart-tick">
+              {rightLabel}
+            </text>
+          ) : null}
+          {labels.map((l, i) =>
+            i % labelEvery === 0 ? (
+              <text key={i} x={x(i)} y={H - padB + 18} textAnchor="middle" className="chart-tick">
+                {l}
+              </text>
+            ) : null,
+          )}
+          {series.map((s) => {
+            const y = yFor(s);
+            const d = s.points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(p.value)}`).join(" ");
+            return (
+              <g key={s.label}>
+                <path
+                  d={d}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth={s.muted ? 1.5 : 2.5}
+                  strokeDasharray={s.muted ? "5 4" : undefined}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  opacity={s.muted ? 0.9 : 1}
+                />
+                {showMarkers && !s.muted
+                  ? s.points.map((p, i) => (
+                      <circle key={i} cx={x(i)} cy={y(p.value)} r={hover === i ? 5 : 3.5} fill={s.color} stroke="var(--surface-card)" strokeWidth={2} />
+                    ))
+                  : null}
+              </g>
+            );
+          })}
+          {Array.from({ length: n }, (_, i) => {
+            const left = i === 0 ? padL : (x(i - 1) + x(i)) / 2;
+            const right = i === n - 1 ? W - padR : (x(i) + x(i + 1)) / 2;
+            return <rect key={i} x={left} y={padT} width={Math.max(1, right - left)} height={plotH} fill="transparent" onMouseEnter={() => setHover(i)} />;
+          })}
+          {hover !== null ? (
+            <g pointerEvents="none">
+              <line x1={x(hover)} x2={x(hover)} y1={padT} y2={padT + plotH} stroke="var(--chart-axis)" strokeDasharray="3 3" />
+              {(() => {
+                const rows = series.map((s) => ({ s, p: s.points[hover] })).filter((r) => r.p);
+                const boxW = Math.min(240, Math.max(150, plotW * 0.6));
+                const boxH = 22 + rows.length * 18;
+                const tx = Math.min(W - padR - boxW, Math.max(padL, x(hover) - boxW / 2));
+                return (
+                  <g transform={`translate(${tx}, ${padT})`}>
+                    <rect width={boxW} height={boxH} rx={6} fill="var(--surface-raised)" stroke="var(--border)" />
+                    <text x={10} y={16} className="chart-tooltip-title">
+                      {labels[hover]}
                     </text>
-                  ))}
-                </g>
-              );
-            })()}
-          </g>
-        ) : null}
-      </svg>
+                    {rows.map((r, j) => (
+                      <text key={r.s.label} x={10} y={34 + j * 18} className="chart-tooltip-value">
+                        <tspan fill={r.s.color}>●</tspan> {r.s.muted ? "prior" : r.s.label.split(" per ")[0]}
+                        {r.s.muted && r.p.label !== labels[hover] ? ` (${r.p.label})` : ""}: {fmtValue(r.p.value, r.s.format ?? "count")}
+                      </text>
+                    ))}
+                  </g>
+                );
+              })()}
+            </g>
+          ) : null}
+        </svg>
+      )}
     </div>
   );
 }

@@ -142,3 +142,35 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     milestone card). The 35 opportunities sitting in that stage were
     backfilled as baseline events dated by GHL's stage-entry time
     (Jun 30 – Aug 28, 2026); earlier pass-throughs are unknown.
+
+## 2026-10-13 — Edits round 2: Primary KPIs layout and visual polish
+
+19. **One card anatomy** for every Primary KPI card (src/app/KpiShell.tsx):
+    title and one-line subtitle; big number with the status pill on the
+    same line at the right; one goal line ("Goal 4,200 · 12% of goal ·
+    986 by now"); one change-vs-prior line; an optional chart area at a
+    fixed 236px; and a collapsed "Details" toggle holding the breakdown
+    tables and "How this is counted". Long lines are truncated with an
+    ellipsis and carry the full text as a tooltip, so nothing wraps and
+    cards in a row stay aligned. Rows are CSS grids with stretched items,
+    never a masonry flow. Charts render at the card's measured width and a
+    fixed pixel height, so axis text never stretches.
+20. **Row order:** Leads (Total Leads Assigned, New Leads) · Activity
+    (Calls Made, Talk Time, with charts) · Appointments (Booked,
+    Completed, Confirmed, Cancelled) · Submissions (Army CA 101,
+    Awaiting Supervisor Approval, FS1 Application Submissions, each with
+    the two-axis chart; then the full-width Program Submissions table).
+    Each row has an eyebrow sub-heading (short rule + small caps).
+21. **Alternating bands** like intelagentmedia.com: the page title sits
+    on the dark hero; sync bar, range picker and Leads on a light band
+    (#E4EAF1 ground, white cards, dark text); Activity on a dark band;
+    Appointments light; Submissions dark; the rest of the page continues
+    on dark. Dark-band cards use the site's gradient card (135° from
+    #0F2342 through #091730 to #060D19, 1px #223750 border, 14px radius).
+    Every text, border, status, and chart token has a dark-band value, so
+    the same components and charts read correctly on both surfaces; the
+    chart palette was validated on both. The yellow eyebrow becomes the
+    dark gold step (#7A6200) on light bands, where pure yellow is
+    unreadable.
+22. **Spacing:** 24px gutters between cards, 28px padding inside, 64px
+    band padding top and bottom, 36px headline numbers everywhere.

@@ -157,7 +157,7 @@ export default function MappingPage() {
   }
 
   return (
-    <>
+    <div className="page">
       <h1>Mapping</h1>
       <p className="lead">
         What the connected Go High Level account contains, how the dashboard&apos;s labels map onto it, and what the
@@ -780,6 +780,6 @@ export default function MappingPage() {
           ))}
         </ul>
       </section>
-    </>
+    </div>
   );
 }

@@ -161,3 +161,39 @@
   --status-info: #0f5fd1;
   --status-info-bg: rgba(22, 119, 255, 0.08);
 }
+
+/*
+  Dark bands (owner edits round 2). Cards on a dark band use the site's
+  gradient card style and switch every text/border/chart token back to its
+  dark-surface value, so the same components read correctly on both bands.
+*/
+.band-dark .stat,
+.band-dark .card {
+  color-scheme: dark;
+  --text-primary: #ffffff;
+  --text-body: #d3dbe5;
+  --text-secondary: #aab6c4;
+  --text-muted: #8f9cad;
+  --surface-card: #0b1b31;
+  --surface-raised: #13263d;
+  --surface-inset: rgba(255, 255, 255, 0.06);
+  --border: #27405e;
+  --border-strong: #2f4a6b;
+  --border-soft: #1f3450;
+  --accent-blue-text: #7fb0ff;
+  --accent-yellow-text: #ffd51f;
+  --accent-blue-soft: rgba(22, 119, 255, 0.16);
+  --accent-blue-border: rgba(22, 119, 255, 0.45);
+  --accent-yellow-soft: rgba(255, 213, 31, 0.14);
+  --status-good: #3ccf7a;
+  --status-good-bg: rgba(34, 168, 95, 0.18);
+  --status-warn: #ffc83d;
+  --status-warn-bg: rgba(224, 161, 0, 0.18);
+  --status-bad: #ff7676;
+  --status-bad-bg: rgba(224, 72, 72, 0.18);
+  --status-info: #8ab8ff;
+  --status-info-bg: rgba(22, 119, 255, 0.18);
+  --chart-grid: rgba(255, 255, 255, 0.09);
+  --chart-axis: #9aa8b8;
+  --series-prior: #8a98a9;
+}

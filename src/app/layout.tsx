@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </nav>
           </div>
         </header>
-        <main className="page">{children}</main>
+        <main>{children}</main>
         <footer className="foot">Read-only view of Go High Level. This dashboard never changes CRM data.</footer>
       </body>
     </html>

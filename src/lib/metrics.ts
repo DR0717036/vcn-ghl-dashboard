@@ -478,7 +478,7 @@ export function kpiAppointmentsConfirmed(range: DateRange): KpiResult {
   return {
     key: "appointmentsConfirmed",
     title: "Appointments Confirmed",
-    subtitle: `Currently in "${stages[0]?.stageName ?? "Appointment Confirmed (VCN)"}" · snapshot per pipeline`,
+    subtitle: `In stage "${stages[0]?.stageName ?? "Appointment Confirmed (VCN)"}" now · snapshot`,
     format: "count",
     value: total,
     goal: goalFor("appointmentsConfirmed", range),
@@ -525,7 +525,7 @@ export function kpiAppointmentsCancelled(range: DateRange): KpiResult {
   return {
     key: "appointmentsCancelled",
     title: "Appointments Cancelled",
-    subtitle: "Status cancelled, by last change in period",
+    subtitle: "Status cancelled · last changed in period",
     format: "count",
     value: cur.total,
     goal: goalFor("appointmentsCancelled", range),
