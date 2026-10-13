@@ -1,0 +1,27 @@
+{
+  "_comment": "Commission plans for the estimate shown in Program Submissions (combined). Every plan is month-to-date for the current calendar month, regardless of the selected date range. 'Won' means opportunity status = won: the first won transition, once per opportunity id, in the Army CA or Veteran G.I. Bill pipeline, credited to the opportunity owner at the won event. A 'submission' is a CA 101 submission or an IAU App Submitted (FS2). Each rep's plan is named in config/sales-reps.json. Amounts are USD. Estimated from dashboard counts; the official commission calculation is done outside this dashboard. Owner decision 2026-10-13 (edits round 6).",
+  "plans": {
+    "submission-retro": {
+      "type": "per_submission_retro",
+      "label": "per submission",
+      "description": "A flat amount per combined submission; once the month reaches the threshold, the higher rate applies retroactively to every submission that month.",
+      "rate": 75,
+      "retroThreshold": 21,
+      "retroRate": 100
+    },
+    "per-won-flat": {
+      "type": "per_won_flat",
+      "label": "per won",
+      "description": "A flat amount per won opportunity. Submissions do not pay.",
+      "rate": 250
+    },
+    "won-tiered": {
+      "type": "per_won_tiered",
+      "label": "won tiered",
+      "description": "A higher amount for each of the first N won opportunities in the month, then a lower amount for each one after. Not retroactive. Submissions do not pay.",
+      "firstRate": 500,
+      "firstCount": 13,
+      "thenRate": 250
+    }
+  }
+}

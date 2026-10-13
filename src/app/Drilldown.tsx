@@ -1,11 +1,12 @@
 "use client";
 
-// Drilldown pop-ups for the Submissions row (owner edits round 5).
+// Drilldown pop-ups for the Submissions row (owner edits rounds 5 and 6).
 //
 // One modal component serves both uses: a KPI card (all contacts the card
 // counted) and a rep row in Program Submissions (contacts credited to that
-// user). Rows come from GET /api/drilldown, fetched only when a drilldown is
-// opened, never preloaded into the page. The table sorts by any column and
+// user, plus the won opportunities counted this month for won-based plans).
+// Rows come from GET /api/drilldown, fetched only when a drilldown is opened,
+// never preloaded into the page. Each table sorts by any column and its
 // "Download CSV" exports exactly the rows shown, in the order shown.
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -13,7 +14,7 @@ import { createPortal } from "react-dom";
 import type { DrillResult, DrillRow } from "@/lib/drilldown";
 import LineChart, { type LineSeries } from "./charts/LineChart";
 
-export type ColumnKey = "name" | "source" | "assignedUser" | "pipeline" | "status" | "phone" | "email" | "value" | "stage" | "stageReached" | "tags" | "createdOn" | "reachedOn";
+export type ColumnKey = "name" | "source" | "assignedUser" | "pipeline" | "status" | "phone" | "email" | "value" | "stage" | "stageReached" | "tags" | "createdOn" | "reachedOn" | "wonOn";
 
 const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "date" }> = {
   name: { label: "Contact name", kind: "text" },
@@ -29,12 +30,15 @@ const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "dat
   tags: { label: "Tags", kind: "text" },
   createdOn: { label: "Created on", kind: "date" },
   reachedOn: { label: "Reached stage on", kind: "date" },
+  wonOn: { label: "Won on", kind: "date" },
 };
 
 /** KPI card drilldown columns, in the owner's order. */
 export const KPI_COLUMNS: ColumnKey[] = ["name", "source", "assignedUser", "pipeline", "status", "phone", "email", "value", "stage", "tags", "createdOn", "reachedOn"];
 /** Rep row drilldown columns, in the owner's order. */
 export const REP_COLUMNS: ColumnKey[] = ["name", "email", "phone", "source", "pipeline", "stageReached", "tags", "reachedOn"];
+/** Won opportunities listed under a won-based rep. */
+export const WON_COLUMNS: ColumnKey[] = ["name", "pipeline", "stage", "value", "wonOn"];
 
 const DASH = "—";
 const dateFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
@@ -59,6 +63,7 @@ function cell(row: DrillRow, key: ColumnKey): { text: string; sort: string | num
     case "createdOn":
       return { text: fmtDate(row.createdOn), sort: row.createdOn };
     case "reachedOn":
+    case "wonOn":
       return { text: fmtDate(row.reachedOn), sort: row.reachedOn };
     default: {
       const v = row[key];
@@ -71,6 +76,161 @@ function csvEscape(s: string): string {
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+function downloadCsv(name: string, columns: ColumnKey[], rows: DrillRow[]) {
+  const lines = [columns.map((k) => csvEscape(COLUMNS[k].label)).join(",")];
+  for (const r of rows) lines.push(columns.map((k) => csvEscape(cell(r, k).text)).join(","));
+  const blob = new Blob(["﻿" + lines.join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${name.replace(/[^a-z0-9_-]+/gi, "_")}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+type Dir = "asc" | "desc";
+
+/** One sortable table with its own toolbar (row count, reconciliation pill, CSV button). */
+function SortableTable({
+  rows,
+  columns,
+  loaded,
+  error,
+  expected,
+  expectedLabel,
+  note,
+  csvName,
+  emptyText,
+  defaultSort,
+}: {
+  rows: DrillRow[];
+  columns: ColumnKey[];
+  loaded: boolean;
+  error: string | null;
+  expected?: number | null;
+  expectedLabel: string;
+  note?: string | null;
+  csvName: string;
+  emptyText: string;
+  defaultSort: ColumnKey;
+}) {
+  const [sortKey, setSortKey] = useState<ColumnKey>(defaultSort);
+  const [dir, setDir] = useState<Dir>("desc");
+
+  const sorted = useMemo(() => {
+    const kind = COLUMNS[sortKey].kind;
+    return [...rows].sort((a, b) => {
+      const x = cell(a, sortKey).sort;
+      const y = cell(b, sortKey).sort;
+      if (x === null && y === null) return 0;
+      if (x === null) return 1;
+      if (y === null) return -1;
+      const c = kind === "number" ? Number(x) - Number(y) : String(x).localeCompare(String(y));
+      return dir === "asc" ? c : -c;
+    });
+  }, [rows, sortKey, dir]);
+
+  const toggleSort = (key: ColumnKey) => {
+    if (key === sortKey) setDir(dir === "asc" ? "desc" : "asc");
+    else {
+      setSortKey(key);
+      setDir(COLUMNS[key].kind === "text" ? "asc" : "desc");
+    }
+  };
+
+  const mismatch = loaded && expected !== undefined && expected !== null && rows.length !== expected;
+
+  return (
+    <>
+      <div className="modal-toolbar">
+        <div className="modal-toolbar-text">
+          {error ? (
+            <span className="delta-down">Could not load rows: {error}</span>
+          ) : !loaded ? (
+            <span className="kpi-muted">Loading…</span>
+          ) : (
+            <>
+              <b>{rows.length.toLocaleString("en-US")}</b> {rows.length === 1 ? "row" : "rows"}
+              {expected !== undefined && expected !== null ? (
+                mismatch ? (
+                  <span className="pill pill-warn modal-pill">
+                    does not match {expectedLabel} ({expected.toLocaleString("en-US")})
+                  </span>
+                ) : (
+                  <span className="pill pill-ok modal-pill">matches {expectedLabel}</span>
+                )
+              ) : null}
+              {note ? <span className="modal-note-inline">{note}</span> : null}
+            </>
+          )}
+        </div>
+        <button type="button" className="btn btn-secondary modal-csv" onClick={() => downloadCsv(csvName, columns, sorted)} disabled={!loaded || rows.length === 0}>
+          Download CSV
+        </button>
+      </div>
+
+      <div className="modal-table-wrap">
+        <table className="drill-table">
+          <thead>
+            <tr>
+              {columns.map((k) => (
+                <th
+                  key={k}
+                  className={`${COLUMNS[k].kind === "number" ? "num " : ""}${sortKey === k ? "sorted" : ""}`.trim()}
+                  aria-sort={sortKey === k ? (dir === "asc" ? "ascending" : "descending") : "none"}
+                >
+                  <button type="button" className="th-sort" onClick={() => toggleSort(k)}>
+                    {COLUMNS[k].label}
+                    <span className="th-arrow" aria-hidden="true">
+                      {sortKey === k ? (dir === "asc" ? "▲" : "▼") : ""}
+                    </span>
+                  </button>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loaded && rows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="note">
+                  {emptyText}
+                </td>
+              </tr>
+            ) : null}
+            {sorted.map((r) => (
+              <tr key={`${r.milestoneKey}:${r.opportunityId}:${r.contactId ?? ""}`}>
+                {columns.map((k) => {
+                  const c = cell(r, k);
+                  if (k === "name") {
+                    return (
+                      <td key={k} className="drill-name">
+                        {r.ghlUrl ? (
+                          <a href={r.ghlUrl} target="_blank" rel="noopener noreferrer" title="Open in GHL">
+                            {c.text}
+                          </a>
+                        ) : (
+                          c.text
+                        )}
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={k} className={`${COLUMNS[k].kind === "number" ? "num" : ""}${c.text === DASH ? " dash" : ""}`.trim()} title={k === "tags" ? c.text : undefined}>
+                      {c.text}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 export interface DrilldownSpec {
   /** Query string for /api/drilldown, e.g. "kind=milestone&key=army_ca101&range=this_month". */
   query: string;
@@ -80,21 +240,19 @@ export interface DrilldownSpec {
   header?: ReactNode;
   /** The number the card or row shows; the modal confirms its rows match it. */
   expected?: number | null;
-  /** Small label/value facts shown under the header (snapshot figures from the card). */
-  facts?: { label: string; value: string }[];
+  /** Small label/value facts shown under the header (snapshot figures, quota, won, commission). */
+  facts?: { label: string; value: string; title?: string }[];
   chart?: { series: LineSeries[]; leftLabel?: string; rightLabel?: string };
   columns: ColumnKey[];
+  /** Rep drilldowns: also list the won opportunities counted this month, checked against this number. */
+  wonTable?: { title: string; expected: number | null };
   notes?: string[];
   csvName: string;
 }
 
-type Dir = "asc" | "desc";
-
 export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose: () => void }) {
   const [data, setData] = useState<DrillResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<ColumnKey>("reachedOn");
-  const [dir, setDir] = useState<Dir>("desc");
 
   useEffect(() => {
     let cancelled = false;
@@ -128,45 +286,6 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
     };
   }, [onClose]);
 
-  const rows = useMemo(() => {
-    if (!data) return [];
-    const kind = COLUMNS[sortKey].kind;
-    const sorted = [...data.rows].sort((a, b) => {
-      const x = cell(a, sortKey).sort;
-      const y = cell(b, sortKey).sort;
-      if (x === null && y === null) return 0;
-      if (x === null) return 1;
-      if (y === null) return -1;
-      const c = kind === "number" ? Number(x) - Number(y) : String(x).localeCompare(String(y));
-      return dir === "asc" ? c : -c;
-    });
-    return sorted;
-  }, [data, sortKey, dir]);
-
-  const toggleSort = (key: ColumnKey) => {
-    if (key === sortKey) setDir(dir === "asc" ? "desc" : "asc");
-    else {
-      setSortKey(key);
-      setDir(COLUMNS[key].kind === "text" ? "asc" : "desc");
-    }
-  };
-
-  const downloadCsv = () => {
-    const lines = [spec.columns.map((k) => csvEscape(COLUMNS[k].label)).join(",")];
-    for (const r of rows) lines.push(spec.columns.map((k) => csvEscape(cell(r, k).text)).join(","));
-    const blob = new Blob(["﻿" + lines.join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${spec.csvName.replace(/[^a-z0-9_-]+/gi, "_")}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const mismatch = data && spec.expected !== undefined && spec.expected !== null && data.count !== spec.expected;
-
   if (typeof document === "undefined") return null;
   return createPortal(
     <div
@@ -189,7 +308,7 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
         {spec.facts && spec.facts.length > 0 ? (
           <div className="modal-facts">
             {spec.facts.map((f) => (
-              <span key={f.label}>
+              <span key={f.label} title={f.title}>
                 <span className="modal-fact-label">{f.label}</span> <b>{f.value}</b>
               </span>
             ))}
@@ -201,87 +320,35 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
           </div>
         ) : null}
 
-        <div className="modal-toolbar">
-          <div className="modal-toolbar-text">
-            {error ? (
-              <span className="delta-down">Could not load rows: {error}</span>
-            ) : !data ? (
-              <span className="kpi-muted">Loading contacts…</span>
-            ) : (
-              <>
-                <b>{data.count.toLocaleString("en-US")}</b> {data.count === 1 ? "row" : "rows"}
-                {spec.expected !== undefined && spec.expected !== null ? (
-                  mismatch ? (
-                    <span className="pill pill-warn modal-pill">does not match the card ({spec.expected.toLocaleString("en-US")})</span>
-                  ) : (
-                    <span className="pill pill-ok modal-pill">matches the card</span>
-                  )
-                ) : null}
-                {data.detailsNote ? <span className="modal-note-inline">{data.detailsNote}</span> : null}
-              </>
-            )}
-          </div>
-          <button type="button" className="btn btn-secondary modal-csv" onClick={downloadCsv} disabled={!data || rows.length === 0}>
-            Download CSV
-          </button>
-        </div>
+        <SortableTable
+          rows={data?.rows ?? []}
+          columns={spec.columns}
+          loaded={Boolean(data)}
+          error={error}
+          expected={spec.expected}
+          expectedLabel="the card"
+          note={data?.detailsNote}
+          csvName={spec.csvName}
+          emptyText="No contacts in this period."
+          defaultSort="reachedOn"
+        />
 
-        <div className="modal-table-wrap">
-          <table className="drill-table">
-            <thead>
-              <tr>
-                {spec.columns.map((k) => (
-                  <th
-                    key={k}
-                    className={`${COLUMNS[k].kind === "number" ? "num " : ""}${sortKey === k ? "sorted" : ""}`.trim()}
-                    aria-sort={sortKey === k ? (dir === "asc" ? "ascending" : "descending") : "none"}
-                  >
-                    <button type="button" className="th-sort" onClick={() => toggleSort(k)}>
-                      {COLUMNS[k].label}
-                      <span className="th-arrow" aria-hidden="true">
-                        {sortKey === k ? (dir === "asc" ? "▲" : "▼") : ""}
-                      </span>
-                    </button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data && rows.length === 0 ? (
-                <tr>
-                  <td colSpan={spec.columns.length} className="note">
-                    No contacts in this period.
-                  </td>
-                </tr>
-              ) : null}
-              {rows.map((r) => (
-                <tr key={`${r.milestoneKey}:${r.opportunityId}:${r.contactId ?? ""}`}>
-                  {spec.columns.map((k) => {
-                    const c = cell(r, k);
-                    if (k === "name") {
-                      return (
-                        <td key={k} className="drill-name">
-                          {r.ghlUrl ? (
-                            <a href={r.ghlUrl} target="_blank" rel="noopener noreferrer" title="Open in GHL">
-                              {c.text}
-                            </a>
-                          ) : (
-                            c.text
-                          )}
-                        </td>
-                      );
-                    }
-                    return (
-                      <td key={k} className={`${COLUMNS[k].kind === "number" ? "num" : ""}${c.text === DASH ? " dash" : ""}`.trim()} title={k === "tags" ? c.text : undefined}>
-                        {c.text}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {spec.wonTable ? (
+          <>
+            <div className="modal-table-title">{spec.wonTable.title}</div>
+            <SortableTable
+              rows={data?.won ?? []}
+              columns={WON_COLUMNS}
+              loaded={Boolean(data)}
+              error={error}
+              expected={spec.wonTable.expected}
+              expectedLabel="Won (MTD)"
+              csvName={`${spec.csvName} won`}
+              emptyText="No won opportunities this month."
+              defaultSort="wonOn"
+            />
+          </>
+        ) : null}
 
         {spec.notes && spec.notes.length > 0 ? (
           <div className="modal-notes">

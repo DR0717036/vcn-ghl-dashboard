@@ -1,4 +1,4 @@
-// Drilldown rows for the Submissions row (owner edits round 5).
+// Drilldown rows for the Submissions row (owner edits rounds 5 and 6).
 //
 // Everything the cache already holds (contact name, source, tags, created
 // date, opportunity pipeline/stage/status/value, user names) comes from
@@ -11,7 +11,9 @@
 // card and de-duplicates per contact the same way, so its row count equals
 // the card's count. Rep drilldowns split the same two event sets by the
 // owner at the time of the event, so all rep rows add up to the team total.
+// A rep's won list uses the same wonEvents() query as the commission report.
 
+import { wonEvents } from "@/lib/commission";
 import { getDb } from "@/lib/db";
 import type { DateRange } from "@/lib/dates";
 import { getEnv } from "@/lib/env";
@@ -19,7 +21,6 @@ import { getContact } from "@/lib/ghl/read";
 import { mappingConfig, trackedMilestones, type MilestoneMapping } from "@/lib/mapping-config";
 import { firstEvents, userNames, type EventRow } from "@/lib/milestones";
 import { repRoster } from "@/lib/reps";
-import { isNamedNonRep } from "@/lib/submissions";
 
 export interface DrillRow {
   contactId: string | null;
@@ -28,7 +29,7 @@ export interface DrillRow {
   /** Link to the contact in the GHL web app, when a contact id exists. */
   ghlUrl: string | null;
   source: string | null;
-  /** Opportunity owner at the time of the event: the user the submission is credited to. */
+  /** Opportunity owner at the time of the event: the user the row is credited to. */
   assignedUser: string | null;
   pipeline: string | null;
   status: string | null;
@@ -36,7 +37,7 @@ export interface DrillRow {
   email: string | null;
   /** Opportunity Value at the time of the event. Not revenue. */
   value: number | null;
-  /** The opportunity's current stage (snapshot). */
+  /** The opportunity's current stage (snapshot), or for won rows the stage at the won event. */
   stage: string | null;
   /** The milestone stage this row was counted for. */
   stageReached: string;
@@ -44,7 +45,7 @@ export interface DrillRow {
   tags: string[];
   /** Contact creation date in GHL (ISO). */
   createdOn: string | null;
-  /** Event time (ISO). */
+  /** Event time (ISO): stage entry, or the won transition for won rows. */
   reachedOn: string;
 }
 
@@ -53,6 +54,8 @@ export interface DrillResult {
   title: string;
   rows: DrillRow[];
   count: number;
+  /** Rep drilldowns only: the won opportunities counted this calendar month for this user. */
+  won?: DrillRow[];
   /** Set when GHL could not supply email/phone for some rows (shown as a dash). */
   detailsNote: string | null;
   fetchedAt: string;
@@ -61,6 +64,20 @@ export interface DrillResult {
 const DETAILS_TTL_MS = 15 * 60 * 1000;
 const CA101_KEY = "army_ca101";
 const FS2_KEY = "vet_iau_app_submitted";
+
+/** One event to list, whatever table it came from. */
+interface EventLike {
+  contact_id: string | null;
+  opportunity_id: string;
+  event_time: string;
+  assigned_to_at_event: string | null;
+  value_at_event: number | null;
+  stageReached: string;
+  milestoneKey: string;
+  /** For won rows: the pipeline and stage at the event, instead of the current snapshot. */
+  pipelineId?: string;
+  stageAtEvent?: string;
+}
 
 function contactUrl(contactId: string): string {
   const { locationId } = getEnv();
@@ -122,27 +139,27 @@ async function contactDetails(ids: string[]): Promise<{ map: Map<string, Details
 }
 
 /** The counted events for a milestone in the range: one per contact, same selection as the card. */
-function countedEvents(m: MilestoneMapping, range: DateRange): EventRow[] {
+function countedEvents(m: MilestoneMapping, range: DateRange): EventLike[] {
   const rows = firstEvents(m.key, m.reportingGroup, range.start.toISOString(), range.end.toISOString());
   const seen = new Set<string>();
-  const out: EventRow[] = [];
-  for (const r of rows) {
+  const out: EventLike[] = [];
+  for (const r of rows as EventRow[]) {
     if (seen.has(r.who)) continue;
     seen.add(r.who);
-    out.push(r);
+    out.push({ ...r, stageReached: m.stageName, milestoneKey: m.key });
   }
   return out;
 }
 
-async function enrich(events: { e: EventRow; m: MilestoneMapping }[]): Promise<{ rows: DrillRow[]; detailsNote: string | null }> {
+async function enrich(events: EventLike[]): Promise<{ rows: DrillRow[]; detailsNote: string | null }> {
   if (events.length === 0) return { rows: [], detailsNote: null };
   const db = getDb();
   const names = userNames();
-  const { stages, pipelines, pipelineOfStage } = stageNames();
+  const { stages, pipelines } = stageNames();
   const marks = (n: number) => Array(n).fill("?").join(",");
 
-  const contactIds = [...new Set(events.map((x) => x.e.contact_id).filter((id): id is string => Boolean(id)))];
-  const oppIds = [...new Set(events.map((x) => x.e.opportunity_id))];
+  const contactIds = [...new Set(events.map((x) => x.contact_id).filter((id): id is string => Boolean(id)))];
+  const oppIds = [...new Set(events.map((x) => x.opportunity_id))];
   type ContactRow = { id: string; name: string | null; source: string | null; tags: string | null; date_added: string | null };
   const contacts = new Map<string, ContactRow>();
   if (contactIds.length > 0) {
@@ -156,7 +173,7 @@ async function enrich(events: { e: EventRow; m: MilestoneMapping }[]): Promise<{
 
   const { map: details, failures } = await contactDetails(contactIds);
 
-  const rows: DrillRow[] = events.map(({ e, m }) => {
+  const rows: DrillRow[] = events.map((e) => {
     const c = e.contact_id ? contacts.get(e.contact_id) : undefined;
     const d = e.contact_id ? details.get(e.contact_id) : undefined;
     const o = opps.get(e.opportunity_id);
@@ -166,7 +183,7 @@ async function enrich(events: { e: EventRow; m: MilestoneMapping }[]): Promise<{
     } catch {
       tags = [];
     }
-    const pipelineId = o?.pipeline_id ?? pipelineOfStage.get(m.stageId) ?? null;
+    const pipelineId = e.pipelineId ?? o?.pipeline_id ?? null;
     return {
       contactId: e.contact_id,
       opportunityId: e.opportunity_id,
@@ -179,9 +196,9 @@ async function enrich(events: { e: EventRow; m: MilestoneMapping }[]): Promise<{
       phone: d?.phone ?? null,
       email: d?.email ?? null,
       value: e.value_at_event,
-      stage: o ? (stages.get(o.stage_id) ?? o.stage_id) : null,
-      stageReached: m.stageName,
-      milestoneKey: m.key,
+      stage: e.stageAtEvent ? (stages.get(e.stageAtEvent) ?? e.stageAtEvent) : o ? (stages.get(o.stage_id) ?? o.stage_id) : null,
+      stageReached: e.stageReached,
+      milestoneKey: e.milestoneKey,
       tags,
       createdOn: c?.date_added ?? null,
       reachedOn: e.event_time,
@@ -201,34 +218,43 @@ async function enrich(events: { e: EventRow; m: MilestoneMapping }[]): Promise<{
 export async function milestoneDrilldown(key: string, range: DateRange): Promise<DrillResult | null> {
   const m = trackedMilestones().find((x) => x.key === key);
   if (!m) return null;
-  const events = countedEvents(m, range).map((e) => ({ e, m }));
-  const { rows, detailsNote } = await enrich(events);
+  const { rows, detailsNote } = await enrich(countedEvents(m, range));
   return { ok: true, title: m.label, rows, count: rows.length, detailsNote, fetchedAt: new Date().toISOString() };
 }
 
 /**
  * Contacts credited to one user in Program Submissions (combined): CA 101 events
- * plus FS2 events whose owner at the event was that user. `user` is a GHL user
- * id, or "others" for everyone who is neither a configured rep nor a named row
- * (including unassigned).
+ * plus FS2 events whose owner at the event was that user, plus the won
+ * opportunities credited to them in the current calendar month (`month`).
+ * `user` is a GHL user id, or "others" for everyone who is not a configured
+ * rep (including unassigned).
  */
-export async function repDrilldown(user: string, range: DateRange): Promise<DrillResult | null> {
+export async function repDrilldown(user: string, range: DateRange, month: DateRange): Promise<DrillResult | null> {
   const ca = trackedMilestones().find((x) => x.key === CA101_KEY);
   const fs = trackedMilestones().find((x) => x.key === FS2_KEY);
   if (!ca || !fs) return null;
   const roster = repRoster();
   const names = userNames();
-  const owned = (e: EventRow): boolean => {
-    const id = e.assigned_to_at_event;
-    if (user === "others") {
-      if (id === null) return true;
-      if (roster.byUserId.has(id)) return false;
-      return !isNamedNonRep(names.get(id) ?? id);
-    }
-    return id === user;
-  };
-  const events = [...countedEvents(ca, range).map((e) => ({ e, m: ca })), ...countedEvents(fs, range).map((e) => ({ e, m: fs }))].filter((x) => owned(x.e));
+  const owned = (id: string | null): boolean => (user === "others" ? id === null || !roster.byUserId.has(id) : id === user);
+
+  const events = [...countedEvents(ca, range), ...countedEvents(fs, range)].filter((x) => owned(x.assigned_to_at_event));
   const { rows, detailsNote } = await enrich(events);
-  const title = user === "others" ? "Other users, not sales reps" : (names.get(user) ?? user);
-  return { ok: true, title, rows, count: rows.length, detailsNote, fetchedAt: new Date().toISOString() };
+
+  const wonLike: EventLike[] = wonEvents(month)
+    .filter((w) => owned(w.userId))
+    .map((w) => ({
+      contact_id: w.contactId,
+      opportunity_id: w.opportunityId,
+      event_time: w.wonAt,
+      assigned_to_at_event: w.userId,
+      value_at_event: w.value,
+      stageReached: "Won",
+      milestoneKey: "won",
+      pipelineId: w.pipelineId,
+      stageAtEvent: w.stageId,
+    }));
+  const won = (await enrich(wonLike)).rows;
+
+  const title = user === "others" ? "Other users, not sales reps" : (roster.byUserId.get(user)?.name ?? names.get(user) ?? user);
+  return { ok: true, title, rows, count: rows.length, won, detailsNote, fetchedAt: new Date().toISOString() };
 }

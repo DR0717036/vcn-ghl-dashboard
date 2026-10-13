@@ -14,6 +14,7 @@ import { chartSeries } from "@/lib/design";
 import { mappingConfig } from "@/lib/mapping-config";
 import { computePrimaryKpis, coverage, kpiAppointmentsCancelled, kpiAppointmentsConfirmed, kpiNewLeads } from "@/lib/metrics";
 import { computeMilestoneByKey, computeMilestones } from "@/lib/milestones";
+import { computeCommission } from "@/lib/commission";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { computeWon } from "@/lib/won";
@@ -67,6 +68,8 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
   const submissions = computeSubmissions(range);
+  // Month-to-date quota, won, and commission estimates: always the current calendar month.
+  const commission = computeCommission(now);
   const milestones = computeMilestones(range);
   const won = computeWon(range);
   const leadsSeries = newLeadsSeries(range);
@@ -126,7 +129,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
 
       <section className="band band-dark">
         <div className="band-inner">
-          <h1 className="page-title">Primary KPIs</h1>
+          <h1 className="page-title">Primary KPIs Overall</h1>
           <h2 className="row-title">Submissions</h2>
           <div className="kpi-row cols-3">
             {kpiMilestones.map(({ m, series }) => (
@@ -134,7 +137,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
             ))}
           </div>
           <div className="kpi-row cols-1">
-            <SubmissionsCard s={submissions} rangeQuery={rangeQuery} rangeLabel={range.label} />
+            <SubmissionsCard s={submissions} c={commission} rangeQuery={rangeQuery} rangeLabel={range.label} />
           </div>
         </div>
       </section>

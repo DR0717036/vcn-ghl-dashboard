@@ -15,11 +15,14 @@ export async function GET(req: Request): Promise<NextResponse> {
   }
   const sp = new URL(req.url).searchParams;
   const rangeParam = sp.get("range") ?? undefined;
-  const range = resolveRange(isRangeKey(rangeParam) ? rangeParam : "this_month", new Date(), { from: sp.get("from") ?? undefined, to: sp.get("to") ?? undefined });
+  const now = new Date();
+  const range = resolveRange(isRangeKey(rangeParam) ? rangeParam : "this_month", now, { from: sp.get("from") ?? undefined, to: sp.get("to") ?? undefined });
+  // Quota, won, and commission figures are always the current calendar month.
+  const month = resolveRange("this_month", now);
   const kind = sp.get("kind");
   try {
     const result =
-      kind === "milestone" ? await milestoneDrilldown(sp.get("key") ?? "", range) : kind === "rep" ? await repDrilldown(sp.get("user") ?? "", range) : undefined;
+      kind === "milestone" ? await milestoneDrilldown(sp.get("key") ?? "", range) : kind === "rep" ? await repDrilldown(sp.get("user") ?? "", range, month) : undefined;
     if (result === undefined) return NextResponse.json({ ok: false, error: "kind must be milestone or rep." }, { status: 400 });
     if (result === null) return NextResponse.json({ ok: false, error: "Unknown milestone or user." }, { status: 404 });
     return NextResponse.json(result);

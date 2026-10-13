@@ -1721,3 +1721,139 @@ section > h2 {
     padding: 16px 0;
   }
 }
+
+
+/* =====================================================================
+   Round 6: roomier drilldown tables, quota / won / commission columns,
+   gold team-total row
+   ===================================================================== */
+
+.drill-table {
+  font-size: 14px;
+}
+
+.drill-table td {
+  height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.drill-table .th-sort {
+  padding: 12px 16px;
+}
+
+.drill-table th {
+  border-bottom-color: #233a5c;
+}
+
+.modal-table-title {
+  margin-top: var(--s-6);
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+/* the wider rep table: fixed columns, Status no longer absorbs the leftover width */
+.rep-table-wide {
+  min-width: 1100px;
+}
+
+.rep-table-wide .col-name {
+  width: 196px;
+}
+
+.rep-table-wide .col-num {
+  width: 92px;
+}
+
+.rep-table-wide .col-goal {
+  width: 136px;
+}
+
+.rep-table-wide .col-status {
+  width: 118px;
+}
+
+.rep-table-wide .col-quota {
+  width: 108px;
+}
+
+.rep-table-wide .col-won {
+  width: 92px;
+}
+
+.rep-table-wide .col-commission {
+  width: 170px;
+}
+
+.rep-table-wide th.status,
+.rep-table-wide td.status {
+  padding-left: var(--s-4);
+}
+
+.rep-table td.quota {
+  font-weight: 800;
+}
+
+.quota-good {
+  color: var(--status-good);
+}
+
+.quota-warn {
+  color: #ffd51f;
+}
+
+.quota-bad {
+  color: var(--status-bad);
+}
+
+.rep-table td.commission {
+  line-height: 1.15;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.plan-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 14px;
+  margin-top: 3px;
+  font-variant-numeric: normal;
+}
+
+/* team total row: brand gold, a touch bolder */
+.rep-table .rep-total td,
+.rep-table .rep-total td.num,
+.rep-table .rep-total td.num.combined,
+.rep-table .rep-total td.rep-name {
+  color: var(--accent-yellow);
+  font-weight: 900;
+}
+
+.rep-table .rep-total .plan-label {
+  color: var(--accent-yellow);
+  opacity: 0.8;
+  font-weight: 700;
+}
+
+.rep-commission-total {
+  margin-top: var(--s-5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+}
+
+.rep-commission-total .stat-value {
+  font-size: 34px;
+  margin-top: 4px;
+  color: var(--accent-yellow);
+}
+
+.rep-commission-note {
+  max-width: 520px;
+  text-align: right;
+}

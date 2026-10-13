@@ -1,7 +1,8 @@
 // Program Submissions (combined): CA 101 submitted (Army, FY27) + IAU App
-// Submitted (Veteran, FS2), per rep and as a team total. This is the metric
-// that carries the combined weekly rep goal. Event-based, like the
-// milestone cards it is built from.
+// Submitted (Veteran, FS2), per rep and as a team total. This is the ONLY
+// submissions goal (5 per rep per week, scaled per rep in
+// config/sales-reps.json). Event-based, like the milestone cards it is built
+// from.
 
 import type { DateRange } from "@/lib/dates";
 import { goalFor, type Goal } from "@/lib/goals";
@@ -31,10 +32,9 @@ export interface SubmissionsResult {
   oppValue: number;
   prevOppValue: number | null;
   oppValueMissing: number;
-  /** The six configured reps (always listed), sorted by combined count. */
+  /** The configured reps (always listed), sorted by combined count. */
   rows: SubmissionRow[];
-  /** Named non-reps shown on their own row (NAMED_NON_REPS), after the reps and before "Other users". */
-  named: SubmissionRow[];
+  /** Everyone else, including unassigned, as one row. */
   others: SubmissionRow | null;
   unmatchedReps: Rep[];
   partialHistory: boolean;
@@ -44,16 +44,6 @@ export interface SubmissionsResult {
 
 const CA101_KEY = "army_ca101";
 const FS2_KEY = "vet_iau_app_submitted";
-
-// GHL users who get their own named row in the table without being sales reps
-// (no rep goal, no status). Matched on the GHL display name, case-insensitive.
-// Deliberately not in config/sales-reps.json (owner, edits round 4).
-const NAMED_NON_REPS = ["johnny m"];
-
-/** True for GHL users who get a named (non-rep) row. Shared with drilldowns so "Other users" means the same set. */
-export function isNamedNonRep(name: string): boolean {
-  return NAMED_NON_REPS.includes(name.trim().toLowerCase());
-}
 
 export function computeSubmissions(range: DateRange): SubmissionsResult {
   const ca = computeMilestoneByKey(CA101_KEY, range);
@@ -70,7 +60,6 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
     prevOppValue: null,
     oppValueMissing: 0,
     rows: [],
-    named: [],
     others: null,
     unmatchedReps: [],
     partialHistory: false,
@@ -104,9 +93,7 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
     row.total += r.contacts;
   }
   const repRows = [...byUser.values()].filter((r) => r.isRep).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
-  const isNamed = (r: SubmissionRow) => isNamedNonRep(r.name);
-  const named = [...byUser.values()].filter((r) => !r.isRep && isNamed(r)).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
-  const otherRows = [...byUser.values()].filter((r) => !r.isRep && !isNamed(r));
+  const otherRows = [...byUser.values()].filter((r) => !r.isRep);
   const others: SubmissionRow | null =
     otherRows.length === 0
       ? null
@@ -128,17 +115,16 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
     prevOppValue: ca.prevValue === null || fs.prevValue === null ? null : ca.prevValue + fs.prevValue,
     oppValueMissing: ca.valueMissing + fs.valueMissing,
     rows: repRows,
-    named,
     others,
     unmatchedReps: roster.unmatched,
     partialHistory,
     parts: { ca101: ca, fs2: fs },
     notes: [
-      `CA 101 submitted (Army CA, ${ca.reportingGroup}) plus IAU App Submitted (Veteran G.I. Bill, ${fs.reportingGroup}): the first entry into each stage, once per contact, during the period. The two parts are different programs, so a contact can appear in both.`,
-      "Rep credit uses the opportunity owner at the time of the event. The six sales reps come from config/sales-reps.json; everyone else is grouped as other users and still counts in the team total.",
+      `A submission is a CA 101 submitted (Army CA, ${ca.reportingGroup}) or an IAU App Submitted (Veteran G.I. Bill, ${fs.reportingGroup}): the first entry into each stage, once per contact, during the period. The two parts are different programs, so a contact can appear in both.`,
+      "Rep credit uses the opportunity owner at the time of the event. The sales reps come from config/sales-reps.json, matched by GHL user id; everyone else is grouped as other users and still counts in the team total.",
+      "This is the only submissions goal: 5 per rep per week, scaled by each rep's multiplier or override (Sam R. 3). The team goal is the sum of every rep's goal. The Army CA 101, Awaiting Supervisor Approval, and FS2 cards carry no goal of their own.",
       "Opportunity Value is the value on each opportunity at the time of its event, summed across both parts. It is not revenue, cash, or commission.",
       "Click a row to see the contacts behind it.",
-      ...(named.length > 0 ? [`${named.map((r) => r.name).join(", ")} ${named.length === 1 ? "has" : "have"} a named row for visibility but ${named.length === 1 ? "is" : "are"} not a sales rep, so no rep goal applies.`] : []),
       ...(partialHistory ? [ca.notes.find((t) => t.startsWith("Milestone tracking began")) ?? ""] : []),
     ].filter(Boolean),
   };

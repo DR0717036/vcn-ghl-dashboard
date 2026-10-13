@@ -1,35 +1,52 @@
-// The sales reps for per-rep goals and the leaderboard come from
-// config/sales-reps.json and are matched to GHL users by email. Everyone
-// else in GHL still counts toward team totals.
+// The sales reps for per-rep goals, the Program Submissions table, quotas,
+// and commission estimates come from config/sales-reps.json and are matched
+// to GHL users by user id. Everyone else in GHL still counts toward team
+// totals as "Other users, not sales reps".
 
 import raw from "../../config/sales-reps.json";
 import { getDb } from "@/lib/db";
 
 export interface Rep {
   name: string;
-  email: string;
+  /** GHL user id (the id in GHL's user list). */
+  userId: string;
+  email?: string;
+  /** Scales every per-rep goal rate: 1.0 full-time, 0.5 part-time. */
+  kpiMultiplier: number;
+  /** Combined submissions expected in a calendar month. */
+  monthlyQuota: number;
+  /** A plan name in config/commission.json. */
+  commissionPlan: string;
+  /** Fixed goal rates for specific KPIs, in the KPI's own unit, replacing base × multiplier. */
+  goalOverrides?: Record<string, number>;
 }
 
 export const salesReps: Rep[] = (raw as { reps: Rep[] }).reps;
 
+/** One rep's goal rate for a KPI: the override if set, otherwise the base rate × the rep's multiplier. */
+export function repRate(rep: Rep, kpiKey: string, base: number): number {
+  const o = rep.goalOverrides?.[kpiKey];
+  if (typeof o === "number" && Number.isFinite(o) && o >= 0) return o;
+  const mult = typeof rep.kpiMultiplier === "number" && Number.isFinite(rep.kpiMultiplier) && rep.kpiMultiplier >= 0 ? rep.kpiMultiplier : 1;
+  return base * mult;
+}
+
 export interface RepRoster {
-  /** GHL user id → configured rep, for reps found in the users table. */
+  /** GHL user id → configured rep (every configured rep, matched or not, so rows never disappear). */
   byUserId: Map<string, Rep>;
-  /** Configured reps whose email matched no GHL user (shown as a warning, never silently dropped). */
+  /** Configured reps whose user id is not in GHL's user list (shown as a warning, never silently dropped). */
   unmatched: Rep[];
-  /** Number of reps in config, used as the team multiplier for per-rep goals. */
+  /** Number of reps in config. */
   count: number;
 }
 
 export function repRoster(): RepRoster {
-  const users = getDb().prepare(`SELECT id, email FROM users`).all() as { id: string; email: string | null }[];
-  const byEmail = new Map(users.filter((u) => u.email).map((u) => [u.email!.trim().toLowerCase(), u.id]));
+  const known = new Set((getDb().prepare(`SELECT id FROM users`).all() as { id: string }[]).map((u) => u.id));
   const byUserId = new Map<string, Rep>();
   const unmatched: Rep[] = [];
   for (const rep of salesReps) {
-    const id = byEmail.get(rep.email.trim().toLowerCase());
-    if (id) byUserId.set(id, rep);
-    else unmatched.push(rep);
+    byUserId.set(rep.userId, rep);
+    if (!known.has(rep.userId)) unmatched.push(rep);
   }
   return { byUserId, unmatched, count: salesReps.length };
 }

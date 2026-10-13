@@ -256,3 +256,35 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     {contactId}; a white-label domain can be set with GHL_APP_BASE_URL.
     "Other users" in a drilldown means the same set as the table row:
     not a configured rep and not a named row, including unassigned.
+35. **Round 6 reps and goals.** Seven reps in config/sales-reps.json,
+    matched by GHL user id, each with kpiMultiplier (Sam R. 0.5, all
+    others 1.0), monthlyQuota (20; Sam 12), commissionPlan, and optional
+    goalOverrides (Sam: programSubmissions 3 per week). Every per-rep
+    goal rate is base × multiplier or the override, and the team goal is
+    the SUM of each rep's goal (combined submissions 33 per week today),
+    so it updates when reps or multipliers change. Johnny M is now a rep;
+    the separate named row from round 4 is gone. The only submissions
+    goal is Program Submissions (combined); the Army CA 101, Awaiting
+    Supervisor Approval, and FS2 cards never carry a goal.
+36. **Commission estimates** live in config/commission.json (every rate
+    and threshold) and src/lib/commission.ts. Always month-to-date for
+    the current calendar month regardless of the selected range. Won =
+    status won, first won transition once per opportunity id, Army CA or
+    Veteran G.I. Bill pipeline, credited to the owner at the won event
+    (the same query the Won section uses). Plans: submission-retro ($75
+    per combined submission, $100 retroactively at 21+), per-won-flat
+    ($250 per won), won-tiered ($500 for the first 13 won, then $250).
+    Shown as estimates; the official calculation happens outside the
+    dashboard.
+37. **Program Submissions table** gained Monthly quota ("5/20": green at
+    100%+, yellow 50–99%, red below 50% once more than half the month
+    has elapsed, otherwise neutral), Won (MTD), and Est. commission with
+    a plan label. The team total row is brand gold and bolder, sums the
+    commission as "Total est. commission (MTD)", and the same total is
+    repeated under the table in large text. Rep drilldowns show quota,
+    won, and commission in the header, and won-based reps (and Other
+    users) get a second table of the won opportunities counted. Drilldown
+    tables use 56px rows, 16px cell padding, 14px text, lighter dividers.
+    Reconciled: rows = Combined per rep, quota MTD = Combined with This
+    Month, won table = Won (MTD) per rep, rep modals sum to the team
+    total.
