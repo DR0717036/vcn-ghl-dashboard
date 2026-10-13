@@ -204,3 +204,31 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     Submissions title is headline-sized (20px). In its table the Rep goal
     column is right-aligned and the Status column has a fixed width with
     left padding.
+28. **Round 4 control bar.** 20px gap under the header, 24px padding
+    inside, 16px between the sync line and the range row, 8px between
+    range buttons. "Timezone" and "Tracking since" are gone from the bar
+    (the timezone stays America/New_York; "Tracking since" is still on
+    the mapping page).
+29. **"Primary KPIs" is a centered, white, H1-sized page title** at the
+    top of the Submissions band; the "Submissions" row heading is white
+    at headline size. The other rows keep their small yellow eyebrows.
+30. **Card motion.** Every KPI card renders with a `reveal` class
+    (opacity 0, 14px low) and `src/app/Reveal.tsx` adds `is-visible`
+    when it enters the viewport (400ms fade and drift, 90ms stagger per
+    position in its row). Hover lifts a card 3px, brightens its border,
+    and adds a blurred brand-blue glow over 150ms. Reduced motion turns
+    both off; with scripting unavailable, cards show immediately. The
+    reveal offset uses the `translate` property and the hover lift uses
+    `transform`, so the two never fight.
+31. **Program Submissions (combined) table.** The headline shows contacts
+    and the team's Opportunity Value side by side (sum of the two parts'
+    opportunity values at event time), with the status pill at the
+    right. "Johnny M" has his own named row after the six reps and
+    before "Other users": matched on his GHL display name in
+    `src/lib/submissions.ts` (NAMED_NON_REPS), not in
+    config/sales-reps.json, with no rep goal or status. The table uses
+    fixed columns (name 300px, numbers 124px, rep goal 172px, status
+    takes the rest) so numbers sit next to the names; 52px rows, zebra
+    striping, 16px tabular numbers, Combined bold and white, thin 7%
+    white dividers, reps sorted by Combined descending, team total
+    pinned last.

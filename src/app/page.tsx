@@ -1,14 +1,15 @@
 // Executive scorecard (brief section 3). Reads the local cache only.
 //
-// Layout (owner edits round 2): the page alternates full-width light and
-// dark bands like intelagentmedia.com. Sync bar, range picker, and the Leads
-// row sit on a light band; Activity on a dark band with gradient cards;
-// Appointments light; Submissions dark. Every KPI card shares one anatomy
-// (src/app/KpiShell.tsx) so cards in a row line up exactly.
+// Layout (owner edits rounds 2-4): a sticky glass control bar under the
+// header, then full-width bands that alternate dark and light like
+// intelagentmedia.com: Submissions (dark), Activity (light), Appointments
+// (dark), Leads (light). Every KPI card shares one anatomy
+// (src/app/KpiShell.tsx) so cards in a row line up exactly; cards fade in on
+// scroll (src/app/Reveal.tsx) and lift on hover (CSS only).
 
 import { callsSeries, milestoneSeries, newLeadsSeries, programFunnels, talkTimeSeries } from "@/lib/charts";
 import { latestSyncRuns } from "@/lib/db";
-import { fmtDateTime, fmtRange, isRangeKey, REPORTING_TZ, resolveRange, type RangeKey } from "@/lib/dates";
+import { fmtDateTime, fmtRange, isRangeKey, resolveRange, type RangeKey } from "@/lib/dates";
 import { chartSeries } from "@/lib/design";
 import { mappingConfig } from "@/lib/mapping-config";
 import { computePrimaryKpis, coverage, kpiAppointmentsCancelled, kpiAppointmentsConfirmed, kpiNewLeads } from "@/lib/metrics";
@@ -24,6 +25,7 @@ import KpiCard from "./KpiCard";
 import MilestoneCard from "./MilestoneCard";
 import MilestoneKpiCard from "./MilestoneKpiCard";
 import RangePicker from "./RangePicker";
+import Reveal from "./Reveal";
 import SubmissionsCard from "./SubmissionsCard";
 import WonSection from "./WonSection";
 
@@ -88,6 +90,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
+      <Reveal />
       <ControlBar>
         <div className="control-sync">
           <span>
@@ -106,12 +109,6 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
             <b>Compared with:</b> {fmtRange(range.prevStart, range.prevEnd, range.partial)}
             {range.partial ? " (same elapsed portion)" : ""}
           </span>
-          <span>
-            <b>Timezone:</b> {REPORTING_TZ}
-          </span>
-          <span>
-            <b>Tracking since:</b> {cov.firstCoreSyncAt ? fmtDateTime(cov.firstCoreSyncAt) : "not started"}
-          </span>
         </div>
         <RangePicker active={key} from={from} to={to} />
       </ControlBar>
@@ -127,7 +124,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
 
       <section className="band band-dark">
         <div className="band-inner">
-          <div className="eyebrow">Primary KPIs</div>
+          <h1 className="page-title">Primary KPIs</h1>
           <h2 className="row-title">Submissions</h2>
           <div className="kpi-row cols-3">
             {kpiMilestones.map(({ m, series }) => (

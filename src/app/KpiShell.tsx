@@ -93,7 +93,7 @@ export default function KpiShell({
 }) {
   const hasDetails = breakdown.length > 0 || sections.length > 0 || notes.length > 0;
   return (
-    <div className={`stat kpi ${className}`.trim()} data-kpi={id}>
+    <div className={`stat kpi reveal ${className}`.trim()} data-kpi={id}>
       <div className="kpi-head">
         <div className="label">{title}</div>
         <div className="kpi-sub note" title={subtitle}>

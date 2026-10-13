@@ -1171,3 +1171,220 @@ section > h2 {
     position: static;
   }
 }
+
+/* =====================================================================
+   Round 4: looser control bar, centered page title, scroll reveal, hover
+   lift, scannable rep table
+   ===================================================================== */
+
+/* 1 + 3: 20px gap under the header, 24px padding inside, roomier rows */
+.control-sticky {
+  padding: 20px var(--s-5) var(--s-3);
+}
+
+.control-bar {
+  padding: 24px;
+  gap: var(--s-4);
+}
+
+.control-bar .range-picker {
+  gap: var(--s-3) var(--s-5);
+}
+
+.control-bar .range-shortcuts {
+  gap: var(--s-2);
+  padding: 4px;
+}
+
+.control-bar .range-btn {
+  padding: 6px 12px;
+}
+
+/* 4: "Primary KPIs" as a centered, white, H1-sized page title */
+.page-title {
+  text-align: center;
+  color: #ffffff;
+  font-size: var(--text-h1);
+  margin: var(--s-2) 0 var(--s-7);
+}
+
+/* 5: row headings back to white at headline size */
+.row-title {
+  color: var(--text-primary);
+}
+
+.band-dark .row-title {
+  color: #ffffff;
+}
+
+/* 6: scroll reveal. Cards start transparent, slightly low, and fade up when
+   they enter the viewport. The offset uses the `translate` property so it
+   never fights the hover lift, which uses `transform`. */
+.reveal {
+  opacity: 0;
+  translate: 0 14px;
+  transition:
+    opacity 400ms ease var(--reveal-delay, 0ms),
+    translate 400ms ease var(--reveal-delay, 0ms),
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  translate: 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal.is-visible {
+    opacity: 1;
+    translate: 0 0;
+    transition: none;
+  }
+}
+
+@media (scripting: none) {
+  .reveal {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* 7: hover lift with a soft brand-blue glow, on every KPI card (the 150ms
+   transitions live in the .reveal rule above, which every card carries) */
+.kpi:hover {
+  transform: translateY(-3px);
+}
+
+.band-dark .kpi:hover {
+  border-color: #4d79b5;
+  box-shadow:
+    0 0 0 1px rgba(22, 119, 255, 0.22),
+    0 18px 48px rgba(22, 119, 255, 0.28),
+    0 14px 40px rgba(0, 0, 0, 0.35);
+}
+
+.band-light .kpi:hover {
+  border-color: #8fb0dc;
+  box-shadow:
+    0 0 0 1px rgba(22, 119, 255, 0.18),
+    0 18px 44px rgba(22, 119, 255, 0.2),
+    0 8px 30px rgba(8, 24, 45, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi:hover {
+    transform: none;
+  }
+}
+
+/* 10: the rep table. Fixed, narrow number columns right next to the names;
+   the Status column absorbs the leftover width. */
+.rep-table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 920px;
+  margin-top: var(--s-3);
+}
+
+.rep-table .col-name {
+  width: 300px;
+}
+
+.rep-table .col-num {
+  width: 124px;
+}
+
+.rep-table .col-goal {
+  width: 172px;
+}
+
+.rep-table th,
+.rep-table td {
+  height: 52px;
+  padding: 0 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.rep-table th {
+  height: 40px;
+}
+
+.rep-table th:first-child,
+.rep-table td:first-child {
+  padding-left: var(--s-4);
+  padding-right: var(--s-6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rep-table td.rep-name {
+  font-weight: 800;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.rep-table td.num {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.rep-table td.num.combined {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.rep-table th.num.combined {
+  color: var(--text-secondary);
+}
+
+.rep-table td.num.note {
+  font-size: var(--text-small);
+  font-weight: 400;
+}
+
+.rep-table th.status,
+.rep-table td.status {
+  width: auto;
+  padding-left: var(--s-6);
+}
+
+.rep-table tbody tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.rep-table tbody tr:hover td {
+  background: rgba(22, 119, 255, 0.1);
+}
+
+.rep-table .rep-total td {
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  border-bottom: 0;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rep-table .rep-total td.num {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+/* the same table on a light card, if it is ever moved there */
+.band-light .rep-table th,
+.band-light .rep-table td {
+  border-bottom-color: rgba(8, 24, 45, 0.08);
+}
+
+.band-light .rep-table tbody tr:nth-child(even) td {
+  background: rgba(8, 24, 45, 0.035);
+}
+
+.band-light .rep-table .rep-total td {
+  border-top-color: rgba(8, 24, 45, 0.25);
+}

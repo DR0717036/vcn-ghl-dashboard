@@ -27,8 +27,14 @@ export interface SubmissionsResult {
   prev: number | null;
   prevUnavailableReason?: string;
   goal: Goal | null;
-  /** The six configured reps (always listed), then one row for everyone else. */
+  /** Opportunity Value behind the team's submissions (sum of the two parts). Not revenue. */
+  oppValue: number;
+  prevOppValue: number | null;
+  oppValueMissing: number;
+  /** The six configured reps (always listed), sorted by combined count. */
   rows: SubmissionRow[];
+  /** Named non-reps shown on their own row (NAMED_NON_REPS), after the reps and before "Other users". */
+  named: SubmissionRow[];
   others: SubmissionRow | null;
   unmatchedReps: Rep[];
   partialHistory: boolean;
@@ -38,6 +44,11 @@ export interface SubmissionsResult {
 
 const CA101_KEY = "army_ca101";
 const FS2_KEY = "vet_iau_app_submitted";
+
+// GHL users who get their own named row in the table without being sales reps
+// (no rep goal, no status). Matched on the GHL display name, case-insensitive.
+// Deliberately not in config/sales-reps.json (owner, edits round 4).
+const NAMED_NON_REPS = ["johnny m"];
 
 export function computeSubmissions(range: DateRange): SubmissionsResult {
   const ca = computeMilestoneByKey(CA101_KEY, range);
@@ -50,7 +61,11 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
     fs2: 0,
     prev: null,
     goal: goalFor("programSubmissions", range),
+    oppValue: 0,
+    prevOppValue: null,
+    oppValueMissing: 0,
     rows: [],
+    named: [],
     others: null,
     unmatchedReps: [],
     partialHistory: false,
@@ -84,7 +99,9 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
     row.total += r.contacts;
   }
   const repRows = [...byUser.values()].filter((r) => r.isRep).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
-  const otherRows = [...byUser.values()].filter((r) => !r.isRep);
+  const isNamed = (r: SubmissionRow) => NAMED_NON_REPS.includes(r.name.trim().toLowerCase());
+  const named = [...byUser.values()].filter((r) => !r.isRep && isNamed(r)).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  const otherRows = [...byUser.values()].filter((r) => !r.isRep && !isNamed(r));
   const others: SubmissionRow | null =
     otherRows.length === 0
       ? null
@@ -102,7 +119,11 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
     fs2: fs.achieved,
     prev,
     prevUnavailableReason: ca.prevUnavailableReason ?? fs.prevUnavailableReason,
+    oppValue: ca.value + fs.value,
+    prevOppValue: ca.prevValue === null || fs.prevValue === null ? null : ca.prevValue + fs.prevValue,
+    oppValueMissing: ca.valueMissing + fs.valueMissing,
     rows: repRows,
+    named,
     others,
     unmatchedReps: roster.unmatched,
     partialHistory,
@@ -110,6 +131,8 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
     notes: [
       `CA 101 submitted (Army CA, ${ca.reportingGroup}) plus IAU App Submitted (Veteran G.I. Bill, ${fs.reportingGroup}): the first entry into each stage, once per contact, during the period. The two parts are different programs, so a contact can appear in both.`,
       "Rep credit uses the opportunity owner at the time of the event. The six sales reps come from config/sales-reps.json; everyone else is grouped as other users and still counts in the team total.",
+      "Opportunity Value is the value on each opportunity at the time of its event, summed across both parts. It is not revenue, cash, or commission.",
+      ...(named.length > 0 ? [`${named.map((r) => r.name).join(", ")} ${named.length === 1 ? "has" : "have"} a named row for visibility but ${named.length === 1 ? "is" : "are"} not a sales rep, so no rep goal applies.`] : []),
       ...(partialHistory ? [ca.notes.find((t) => t.startsWith("Milestone tracking began")) ?? ""] : []),
     ].filter(Boolean),
   };
