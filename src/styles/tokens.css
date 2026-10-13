@@ -168,6 +168,7 @@
   dark-surface value, so the same components read correctly on both bands.
 */
 .band-dark .stat,
+.modal,
 .band-dark .card {
   color-scheme: dark;
   --text-primary: #ffffff;

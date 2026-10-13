@@ -50,6 +50,18 @@ export function getDb(): DatabaseSync {
       value TEXT
     );
 
+    -- Email/phone for contacts shown in a drilldown, fetched on demand from
+    -- GHL (GET /contacts/{id}) and kept for 15 minutes. Never bulk-loaded.
+    CREATE TABLE IF NOT EXISTS contact_details (
+      id          TEXT PRIMARY KEY,
+      fetched_at  TEXT NOT NULL,
+      ok          INTEGER NOT NULL,
+      name        TEXT,
+      email       TEXT,
+      phone       TEXT,
+      error       TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS users (
       id       TEXT PRIMARY KEY,
       name     TEXT,

@@ -75,6 +75,8 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const per = calls.grouping === "hourly" ? "per hour" : calls.grouping === "daily" ? "per day" : "per week";
   const priorLabel = range.key === "this_week" || range.key === "last_week" ? "prior week" : "prior period";
   const alignedBy = calls.grouping === "hourly" ? "hour" : "day";
+  // Names the selected range for drilldown requests (same keys the page itself reads).
+  const rangeQuery = new URLSearchParams({ range: key, ...(key === "custom" && from ? { from } : {}), ...(key === "custom" && to ? { to } : {}) }).toString();
 
   const milestoneTitle: Record<string, string> = {
     army_ca101: "Army CA 101 Submissions",
@@ -128,11 +130,11 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           <h2 className="row-title">Submissions</h2>
           <div className="kpi-row cols-3">
             {kpiMilestones.map(({ m, series }) => (
-              <MilestoneKpiCard key={m.key} m={m} series={series} title={milestoneTitle[m.key]} subtitle={milestoneSubtitle(m.key, m)} />
+              <MilestoneKpiCard key={m.key} m={m} series={series} title={milestoneTitle[m.key]} subtitle={milestoneSubtitle(m.key, m)} rangeQuery={rangeQuery} rangeLabel={range.label} />
             ))}
           </div>
           <div className="kpi-row cols-1">
-            <SubmissionsCard s={submissions} />
+            <SubmissionsCard s={submissions} rangeQuery={rangeQuery} rangeLabel={range.label} />
           </div>
         </div>
       </section>

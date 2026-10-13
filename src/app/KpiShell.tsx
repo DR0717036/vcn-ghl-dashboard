@@ -71,6 +71,7 @@ export default function KpiShell({
   sections = [],
   notes = [],
   badges,
+  footer,
   className = "",
 }: {
   id: string;
@@ -89,6 +90,8 @@ export default function KpiShell({
   notes?: ReactNode[];
   /** Small pills shown next to the goal line (e.g. "partial history"). */
   badges?: ReactNode;
+  /** Pinned to the bottom in place of the Details expander (e.g. a button that opens a drilldown). */
+  footer?: ReactNode;
   className?: string;
 }) {
   const hasDetails = breakdown.length > 0 || sections.length > 0 || notes.length > 0;
@@ -111,6 +114,7 @@ export default function KpiShell({
       <div className="kpi-line">{deltaLine}</div>
       {chart ? <div className="kpi-chart">{chart}</div> : null}
       {body}
+      {footer ? <div className="kpi-footer">{footer}</div> : null}
       {hasDetails ? (
         <details className="kpi-details">
           <summary>Details</summary>

@@ -38,8 +38,8 @@ export default function Reveal() {
       document.querySelectorAll<HTMLElement>(".reveal").forEach((el) => {
         if (seen.has(el)) return;
         seen.add(el);
-        const row = el.parentElement;
-        const index = row ? Array.from(row.children).indexOf(el) : 0;
+        const row = el.closest(".kpi-row");
+        const index = row ? Array.from(row.children).findIndex((c) => c === el || c.contains(el)) : 0;
         el.style.setProperty("--reveal-delay", `${Math.max(0, index) * STAGGER_MS}ms`);
         io.observe(el);
       });

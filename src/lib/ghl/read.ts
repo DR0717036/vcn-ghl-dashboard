@@ -93,6 +93,14 @@ export interface GhlContact {
   tags?: string[];
 }
 
+/** Fields read from GET /contacts/{id} (Version 2021-07-28). Anything missing shows as "—". */
+export interface GhlContactDetail extends GhlContact {
+  name?: string;
+  email?: string | null;
+  phone?: string | null;
+  locationId?: string;
+}
+
 export interface GhlContactsList {
   contacts: GhlContact[];
   meta?: { total?: number; startAfterId?: string; startAfter?: number; nextPageUrl?: string; nextPage?: number | null };
@@ -256,6 +264,11 @@ export function exportMessages(p: MessageExportParams): Promise<GhlResult<GhlMes
     sortBy: p.sortBy,
     sortOrder: p.sortOrder,
   });
+}
+
+/** One contact by id, read-only. Used by drilldowns for email and phone, one call per listed contact. */
+export function getContact(contactId: string): Promise<GhlResult<{ contact: GhlContactDetail }>> {
+  return ghlGet(`/contacts/${encodeURIComponent(contactId)}`, "2021-07-28");
 }
 
 /** One page of contacts; used only to confirm access and read the total. */

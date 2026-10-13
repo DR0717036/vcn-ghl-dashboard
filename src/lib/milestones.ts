@@ -49,7 +49,7 @@ export interface MilestoneResult {
   notes: string[];
 }
 
-interface EventRow {
+export interface EventRow {
   who: string;
   contact_id: string | null;
   opportunity_id: string;
@@ -67,11 +67,12 @@ const FIRST_EVENTS = `
       ON COALESCE(e.contact_id, 'opp:' || e.opportunity_id) = f.who AND e.event_time = f.t
    WHERE e.kind = 'milestone' AND e.milestone_key = ? AND e.reporting_group = ? AND e.event_time >= ? AND e.event_time < ?`;
 
-function firstEvents(key: string, group: string, start: string, end: string): EventRow[] {
+/** Every first-entry event (one per contact and time) for a milestone and reporting group inside [start, end). Shared with drilldowns so the rows reconcile with the cards. */
+export function firstEvents(key: string, group: string, start: string, end: string): EventRow[] {
   return getDb().prepare(FIRST_EVENTS).all(key, group, key, group, start, end) as unknown as EventRow[];
 }
 
-function userNames(): Map<string, string> {
+export function userNames(): Map<string, string> {
   const rows = getDb().prepare(`SELECT id, name FROM users`).all() as { id: string; name: string | null }[];
   return new Map(rows.map((r) => [r.id, r.name ?? r.id]));
 }

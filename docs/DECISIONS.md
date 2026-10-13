@@ -232,3 +232,27 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     striping, 16px tabular numbers, Combined bold and white, thin 7%
     white dividers, reps sorted by Combined descending, team total
     pinned last.
+32. **Round 5 drilldowns.** The three Submissions KPI cards and every rep
+    row in Program Submissions (combined) open one shared modal
+    (`src/app/Drilldown.tsx`): title, the card's count/value/status line,
+    the same two-axis chart at full width, a sortable contact table,
+    "How this is counted", and "Download CSV" (exactly the rows shown, in
+    the order shown). Esc, the close button, and a click outside close
+    it. Those three cards no longer have an inline Details expander, so
+    their height never changes.
+33. **Drilldown data stays server-side and read-only.** GET
+    /api/drilldown builds rows from the cache with the same firstEvents()
+    selection the cards use (one row per contact), so a KPI modal's row
+    count equals the card and the rep modals add up to the team total.
+    Email and phone are not in the sync; they come from GHL GET
+    /contacts/{id} for only the listed contacts and are kept in
+    contact_details for 15 minutes. Missing fields show a dash. Like the
+    sync route, the endpoint is disabled in production until login
+    exists, because it returns personal data.
+34. **Column meanings.** Assigned user is the opportunity owner at the
+    time of the event (the credited user); Stage is the opportunity's
+    current stage; Opportunity Value is the value at the event. The GHL
+    link is app.gohighlevel.com/v2/location/{locationId}/contacts/detail/
+    {contactId}; a white-label domain can be set with GHL_APP_BASE_URL.
+    "Other users" in a drilldown means the same set as the table row:
+    not a configured rep and not a named row, including unassigned.

@@ -10,12 +10,13 @@
 import { repGoalStatus } from "@/lib/goals";
 import { fmtUsd } from "@/lib/milestones";
 import type { SubmissionRow, SubmissionsResult } from "@/lib/submissions";
+import { REP_COLUMNS, RepDrilldownRow } from "./Drilldown";
 import { GoalPill, GoalText, StatusPill } from "./GoalLine";
 import KpiShell, { Delta } from "./KpiShell";
 
 const n = (v: number) => v.toLocaleString("en-US");
 
-export default function SubmissionsCard({ s, className = "" }: { s: SubmissionsResult; className?: string }) {
+export default function SubmissionsCard({ s, rangeQuery, rangeLabel, className = "" }: { s: SubmissionsResult; rangeQuery: string; rangeLabel: string; className?: string }) {
   const unavailable = s.value === null;
   const g = s.goal;
   const repGoalCol = Boolean(g && g.perRepFull !== null);
@@ -30,6 +31,19 @@ export default function SubmissionsCard({ s, className = "" }: { s: SubmissionsR
       <td className="num combined">{n(r.total)}</td>
     </>
   );
+  // Drilldown for one row: the contacts credited to that user in the period (round 5).
+  const rowSpec = (r: SubmissionRow, user: string) => ({
+    query: `kind=rep&user=${encodeURIComponent(user)}&${rangeQuery}`,
+    title: `${r.name} · ${n(r.total)} ${r.total === 1 ? "submission" : "submissions"}`,
+    subtitle: `Program Submissions (combined) · CA 101 ${n(r.ca101)} · IAU App (FS2) ${n(r.fs2)} · ${rangeLabel}`,
+    expected: r.total,
+    columns: REP_COLUMNS,
+    notes: [
+      "Each row is one contact reaching one stage: CA 101 submitted (Army CA) or IAU App Submitted (FS2) (Veteran G.I. Bill). A contact that reached both appears twice, once per stage, which is how the combined count works.",
+      "Credit goes to the opportunity owner at the time of the event.",
+    ],
+    csvName: `${r.name} submissions ${rangeLabel}`,
+  });
   const notARep = repGoalCol ? (
     <>
       <td className="num note">—</td>
@@ -60,7 +74,7 @@ export default function SubmissionsCard({ s, className = "" }: { s: SubmissionsR
         </thead>
         <tbody>
           {s.rows.map((r) => (
-            <tr key={r.userId ?? r.name}>
+            <RepDrilldownRow key={r.userId ?? r.name} spec={rowSpec(r, r.userId ?? "others")}>
               <td className="rep-name">{r.name}</td>
               {numCells(r)}
               {repGoalCol && g ? (
@@ -74,21 +88,21 @@ export default function SubmissionsCard({ s, className = "" }: { s: SubmissionsR
                   <StatusPill status={repGoalStatus(r.total, g)} />
                 </td>
               ) : null}
-            </tr>
+            </RepDrilldownRow>
           ))}
           {s.named.map((r) => (
-            <tr key={r.userId ?? r.name}>
+            <RepDrilldownRow key={r.userId ?? r.name} spec={rowSpec(r, r.userId ?? "others")}>
               <td className="rep-name">{r.name}</td>
               {numCells(r)}
               {notARep}
-            </tr>
+            </RepDrilldownRow>
           ))}
           {s.others ? (
-            <tr>
+            <RepDrilldownRow spec={rowSpec(s.others, "others")}>
               <td className="note">{s.others.name}</td>
               {numCells(s.others)}
               {notARep}
-            </tr>
+            </RepDrilldownRow>
           ) : null}
           <tr className="rep-total">
             <td className="rep-name">Team total</td>

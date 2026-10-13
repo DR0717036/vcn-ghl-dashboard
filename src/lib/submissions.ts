@@ -50,6 +50,11 @@ const FS2_KEY = "vet_iau_app_submitted";
 // Deliberately not in config/sales-reps.json (owner, edits round 4).
 const NAMED_NON_REPS = ["johnny m"];
 
+/** True for GHL users who get a named (non-rep) row. Shared with drilldowns so "Other users" means the same set. */
+export function isNamedNonRep(name: string): boolean {
+  return NAMED_NON_REPS.includes(name.trim().toLowerCase());
+}
+
 export function computeSubmissions(range: DateRange): SubmissionsResult {
   const ca = computeMilestoneByKey(CA101_KEY, range);
   const fs = computeMilestoneByKey(FS2_KEY, range);
@@ -99,7 +104,7 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
     row.total += r.contacts;
   }
   const repRows = [...byUser.values()].filter((r) => r.isRep).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
-  const isNamed = (r: SubmissionRow) => NAMED_NON_REPS.includes(r.name.trim().toLowerCase());
+  const isNamed = (r: SubmissionRow) => isNamedNonRep(r.name);
   const named = [...byUser.values()].filter((r) => !r.isRep && isNamed(r)).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
   const otherRows = [...byUser.values()].filter((r) => !r.isRep && !isNamed(r));
   const others: SubmissionRow | null =
@@ -132,6 +137,7 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
       `CA 101 submitted (Army CA, ${ca.reportingGroup}) plus IAU App Submitted (Veteran G.I. Bill, ${fs.reportingGroup}): the first entry into each stage, once per contact, during the period. The two parts are different programs, so a contact can appear in both.`,
       "Rep credit uses the opportunity owner at the time of the event. The six sales reps come from config/sales-reps.json; everyone else is grouped as other users and still counts in the team total.",
       "Opportunity Value is the value on each opportunity at the time of its event, summed across both parts. It is not revenue, cash, or commission.",
+      "Click a row to see the contacts behind it.",
       ...(named.length > 0 ? [`${named.map((r) => r.name).join(", ")} ${named.length === 1 ? "has" : "have"} a named row for visibility but ${named.length === 1 ? "is" : "are"} not a sales rep, so no rep goal applies.`] : []),
       ...(partialHistory ? [ca.notes.find((t) => t.startsWith("Milestone tracking began")) ?? ""] : []),
     ].filter(Boolean),

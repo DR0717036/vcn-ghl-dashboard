@@ -1388,3 +1388,336 @@ section > h2 {
 .band-light .rep-table .rep-total td {
   border-top-color: rgba(8, 24, 45, 0.25);
 }
+
+
+/* =====================================================================
+   Round 5: drilldown modals for the Submissions row
+   ===================================================================== */
+
+/* clickable cards and rows */
+.kpi-clickable {
+  cursor: pointer;
+}
+
+.kpi-footer {
+  margin-top: auto;
+  padding-top: var(--s-4);
+}
+
+.kpi-details-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--text-small);
+  font-weight: 800;
+  color: var(--accent-blue-text);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kpi-details-btn::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.rep-table tbody tr.rep-row-click {
+  cursor: pointer;
+}
+
+.rep-table tbody tr.rep-row-click:hover td,
+.rep-table tbody tr.rep-row-click:focus-visible td {
+  background: rgba(22, 119, 255, 0.16);
+}
+
+.rep-table tbody tr.rep-row-click:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.rep-table tbody tr.rep-row-click td.rep-name {
+  color: var(--accent-blue-text);
+}
+
+/* the modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(3, 8, 16, 0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 0;
+  overflow-y: auto;
+}
+
+.modal {
+  position: relative;
+  width: 80vw;
+  max-width: 1500px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #0f2342 0%, #091730 45%, #060d19 100%);
+  border: 1px solid #2b4568;
+  border-radius: var(--r-lg);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(22, 119, 255, 0.12);
+  padding: 32px 36px 36px;
+  color: #d3dbe5;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.modal-head {
+  padding-right: 56px;
+}
+
+.modal-title {
+  font-size: var(--text-h2);
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
+  color: var(--accent-yellow);
+}
+
+.modal-sub {
+  margin-top: 4px;
+  color: #aab6c4;
+}
+
+.modal-header-line {
+  margin-top: var(--s-4);
+}
+
+.modal-value-row {
+  margin-top: 0;
+  min-height: 0;
+}
+
+.modal .stat-value {
+  color: #ffffff;
+}
+
+.modal .note {
+  color: #aab6c4;
+}
+
+.modal-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin-top: var(--s-3);
+  font-size: var(--text-small);
+  color: #aab6c4;
+}
+
+.modal-facts b {
+  color: #ffffff;
+}
+
+.modal-chart {
+  margin-top: var(--s-5);
+  padding: var(--s-4) var(--s-4) var(--s-2);
+  border: 1px solid #223750;
+  border-radius: var(--r-card);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.modal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-top: var(--s-5);
+  flex-wrap: wrap;
+}
+
+.modal-toolbar-text {
+  font-size: 14px;
+  color: #d3dbe5;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+.modal-toolbar-text b {
+  color: #ffffff;
+}
+
+.modal-pill {
+  margin-left: 4px;
+}
+
+.modal-note-inline {
+  color: #e0a100;
+  font-size: var(--text-small);
+}
+
+.modal-csv {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.modal-csv:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.modal-table-wrap {
+  margin-top: var(--s-3);
+  overflow: auto;
+  max-height: 60vh;
+  border: 1px solid #223750;
+  border-radius: var(--r-card);
+}
+
+.drill-table {
+  width: max-content;
+  min-width: 100%;
+  font-size: 13px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.drill-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #0b1a33;
+  color: #aab6c4;
+  border-bottom: 1px solid #2b4568;
+  padding: 0;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.drill-table th.num {
+  text-align: right;
+}
+
+.drill-table th.sorted {
+  color: #ffffff;
+}
+
+.th-sort {
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 10px 12px;
+  cursor: pointer;
+  width: 100%;
+  text-align: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.th-sort:hover {
+  color: #ffffff;
+}
+
+.drill-table th.num .th-sort {
+  justify-content: flex-end;
+}
+
+.th-arrow {
+  font-size: 9px;
+  min-width: 9px;
+}
+
+.drill-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  white-space: nowrap;
+  color: #d3dbe5;
+  vertical-align: middle;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drill-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.drill-table td.dash {
+  color: #6f7d8e;
+}
+
+.drill-table td.drill-name {
+  font-weight: 700;
+}
+
+.drill-table td.drill-name a {
+  color: #7fb0ff;
+  text-decoration: none;
+}
+
+.drill-table td.drill-name a:hover {
+  text-decoration: underline;
+}
+
+.drill-table tbody tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.drill-table tbody tr:hover td {
+  background: rgba(22, 119, 255, 0.1);
+}
+
+.modal-notes {
+  margin-top: var(--s-5);
+}
+
+.modal-notes .label {
+  color: #aab6c4;
+}
+
+.modal-notes .note {
+  color: #aab6c4;
+}
+
+@media (max-width: 900px) {
+  .modal {
+    width: 94vw;
+    padding: 20px 18px 24px;
+  }
+  .modal-backdrop {
+    padding: 16px 0;
+  }
+}
