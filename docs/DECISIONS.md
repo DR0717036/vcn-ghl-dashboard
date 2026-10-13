@@ -76,3 +76,27 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
      fonts of their own.
    - Status: written but not yet switched on. Applying it is a one-line
      change in the root layout once the owner approves the summary.
+
+## 2026-10-13 — Edits round 1: global look, header, Primary KPIs, goals
+
+10. **Light cards on the dark page.** The first scorecard was hard to read
+    (dark text on dark navy). Cards, the status bar, and the range picker
+    now use the site's "Soft Slate" light surfaces (#F4F7FB card, #FFFFFF
+    raised, #E4EAF1 inset, #D0D9E4 borders) with dark text (#182536
+    headings, #2F3F52 body, #46566A secondary, #5B6B7F muted). The page
+    itself stays obsidian. Every text token has a dark-page value and a
+    light-card value, applied automatically by the card classes, so no
+    component sets its own color. Root cause of the unreadable text was a
+    token name collision (`--text-body` declared as both a color and a font
+    size); the font size is now `--fs-body`.
+11. **Section headings** ("Primary KPIs", "Program milestones", …) use the
+    Intelagent yellow (#FFD51F) on the dark page. Headings inside cards
+    stay dark.
+12. **Header** shows the VCN logo (public/vcn-logo.png, 44px circle on a
+    white disc) left of "VCN Sales Dashboard", keeping the "by Intelagent
+    Media" gradient mark. The logo is also the browser tab icon.
+13. **Chart palette re-validated on the light surface.** Order unchanged;
+    two steps darkened so every series clears 3:1 on white: cyan-dark is
+    now #0A8DB4 (was #0C9FCB) and violet #8178E0 (was #9085E9). Grid
+    #DDE5EE, axis text #5B6B7F. A neutral gray (#9AA8B8) is reserved for
+    prior-period overlays and is never a series color.

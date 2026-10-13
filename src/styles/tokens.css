@@ -3,67 +3,83 @@
   type, spacing, radii, and chart palette across every dashboard page.
 
   Values were extracted from https://www.intelagentmedia.com (assets/css/
-  styles.css, :root block) on 2026-10-11. The site is dark-first: body is
-  "obsidian" #05080D with light-gray text, white 800-weight headings in
-  Manrope, blue→cyan gradient accents, and a yellow primary button.
+  styles.css, :root block and the "Soft Slate" light sections) on
+  2026-10-11. The site is dark-first: body is "obsidian" #05080D with
+  light-gray text, white 800-weight headings in Manrope, blue→cyan gradient
+  accents, and a yellow primary button. Its light sections use ground
+  #E4EAF1, cards #EEF2F6, borders #D0D9E4, headings #182536, body #46566A.
+
+  2026-10-13 (owner edits round 1): cards switched to those light surfaces
+  with dark text, on the unchanged dark page. Every text token has a
+  dark-page value (in :root) and a light-card value (in .on-light), so dark
+  text never sits on a dark surface. The earlier bug where "--text-body"
+  was declared twice (once as a color, once as a font size, so the color
+  never applied) is fixed: the font size is now "--fs-body".
 
   Chart series are DARKER STEPS of the brand hues, not the UI accents
   themselves: the UI yellow (#FFD51F) and cyan (#19C6F4) are too bright to be
-  chart marks on a dark surface. The six-slot categorical order below was
-  validated (lightness band, chroma, colorblind separation, normal-vision
-  floor, 3:1 contrast on the card surface) and must stay in this fixed order.
+  chart marks. The six-slot categorical order below was re-validated on the
+  light card surface (lightness band, chroma, colorblind separation,
+  normal-vision floor, 3:1 contrast) and must stay in this fixed order.
 */
 
 :root {
   color-scheme: dark;
 
-  /* ---- surfaces (site: obsidian / midnight / deep-navy / navy-slate) ---- */
+  /* ---- page surfaces (site: obsidian / midnight) ---- */
   --bg-page: #05080d;
   --bg-elevated: #071426;
-  --surface-card: #0c1d33;
-  --surface-raised: #13263d;
-  --surface-inset: rgba(12, 29, 51, 0.5);
-  --border: #223750;
-  --border-strong: rgba(34, 55, 80, 0.9);
-  --border-soft: rgba(34, 55, 80, 0.6);
+  --surface-dark: #0c1d33;
+  --surface-dark-raised: #13263d;
+  --border-dark: #223750;
 
-  /* ---- text (site: white / light-gray / muted-gray) ---- */
+  /* ---- card surfaces (site light sections, "Soft Slate") ---- */
+  --surface-card: #f4f7fb;
+  --surface-raised: #ffffff;
+  --surface-inset: #e4eaf1;
+  --border: #d0d9e4;
+  --border-strong: #c3cfdd;
+  --border-soft: #dde5ee;
+
+  /* ---- text on the dark page (site: white / light-gray / muted-gray) ---- */
   --text-primary: #ffffff;
-  --text-body: #b8c2cf;
-  --text-secondary: #93a1b2;
-  --text-muted: #738094;
+  --text-body: #c6cfda;
+  --text-secondary: #a7b3c2;
+  --text-muted: #8b98a9;
   --text-on-accent: #0b1119;
 
   /* ---- brand accents (site: blue / cyan / yellow / grad) ---- */
   --accent-blue: #1677ff;
   --accent-cyan: #19c6f4;
   --accent-yellow: #ffd51f;
-  --accent-blue-soft: rgba(22, 119, 255, 0.1);
-  --accent-blue-border: rgba(22, 119, 255, 0.3);
+  --accent-blue-soft: rgba(22, 119, 255, 0.12);
+  --accent-blue-border: rgba(22, 119, 255, 0.35);
   --accent-blue-text: #7fb0ff;
+  --accent-yellow-text: #ffd51f;
   --accent-cyan-soft: rgba(25, 198, 244, 0.14);
-  --accent-yellow-soft: rgba(255, 213, 31, 0.1);
+  --accent-yellow-soft: rgba(255, 213, 31, 0.12);
   --gradient-brand: linear-gradient(135deg, #1677ff 0%, #19c6f4 100%);
-  --gradient-surface: linear-gradient(160deg, #0a1b33 0%, #071426 100%);
   --focus-ring: 0 0 0 3px rgba(25, 198, 244, 0.35);
 
-  /* ---- status (reserved; never used as chart series; always with label) ---- */
-  --status-good: #22a85f;
-  --status-good-bg: rgba(34, 168, 95, 0.14);
-  --status-warn: #e0a100;
-  --status-warn-bg: rgba(224, 161, 0, 0.14);
-  --status-bad: #e04848;
-  --status-bad-bg: rgba(224, 72, 72, 0.14);
+  /* ---- status on dark (reserved; never a chart series; always with a label) ---- */
+  --status-good: #3ccf7a;
+  --status-good-bg: rgba(34, 168, 95, 0.16);
+  --status-warn: #ffc83d;
+  --status-warn-bg: rgba(224, 161, 0, 0.16);
+  --status-bad: #ff6b6b;
+  --status-bad-bg: rgba(224, 72, 72, 0.16);
   --status-info: #7fb0ff;
-  --status-info-bg: rgba(22, 119, 255, 0.12);
+  --status-info-bg: rgba(22, 119, 255, 0.14);
 
-  /* ---- chart palette (validated on --surface-card, fixed order) ---- */
+  /* ---- chart palette (validated on the light card surface, fixed order) ---- */
   --series-1: #1677ff; /* brand blue */
   --series-2: #a88900; /* brand yellow, dark step */
   --series-3: #d55181; /* magenta */
-  --series-4: #0c9fcb; /* brand cyan, dark step */
+  --series-4: #0a8db4; /* brand cyan, dark step */
   --series-5: #d95926; /* orange */
-  --series-6: #9085e9; /* violet */
+  --series-6: #8178e0; /* violet */
+  /* prior-period overlay: neutral, never a series color */
+  --series-prior: #9aa8b8;
   /* sequential: one hue (brand blue), light→dark; ordinal use starts at step 2 */
   --seq-1: #86b6ef;
   --seq-2: #5598e7;
@@ -73,10 +89,10 @@
   --seq-6: #184f95;
   /* diverging: cool pole, neutral midpoint, warm pole */
   --div-neg: #1677ff;
-  --div-mid: #2a3a4f;
+  --div-mid: #c3cfdd;
   --div-pos: #d95926;
-  --chart-grid: rgba(34, 55, 80, 0.55);
-  --chart-axis: #738094;
+  --chart-grid: #dde5ee;
+  --chart-axis: #5b6b7f;
 
   /* ---- typography (site: Manrope 400–800, tight tracking on headings) ---- */
   --font-sans: var(--font-manrope), "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -86,7 +102,7 @@
   --text-h1: 28px;
   --text-h2: 20px;
   --text-h3: 16px;
-  --text-body: 15px;
+  --fs-body: 15px;
   --text-small: 13px;
   --text-label: 12px; /* uppercase kicker labels */
   --tracking-tight: -0.03em;
@@ -111,6 +127,37 @@
   --r-card: 14px;
   --r-lg: 18px;
   --r-pill: 999px;
-  --shadow-card: 0 10px 30px -18px rgba(5, 8, 13, 0.8);
+  --shadow-card: 0 8px 30px rgba(8, 24, 45, 0.25);
   --shadow-primary: 0 8px 30px -10px rgba(255, 213, 31, 0.5);
+}
+
+/*
+  Light surfaces. Applied to every card-like element (see base.css). Every
+  text, status, and accent token is re-pointed to a dark-on-light value, so
+  components inside a card never need their own colors.
+*/
+.card,
+.stat,
+.status-bar,
+.range-shortcuts,
+.range-custom,
+.on-light {
+  color-scheme: light;
+  --text-primary: #182536;
+  --text-body: #2f3f52;
+  --text-secondary: #46566a;
+  --text-muted: #5b6b7f;
+  --accent-blue-text: #0f5fd1;
+  --accent-yellow-text: #7a6200;
+  --accent-blue-soft: rgba(22, 119, 255, 0.08);
+  --accent-blue-border: rgba(22, 119, 255, 0.35);
+  --accent-yellow-soft: rgba(255, 213, 31, 0.22);
+  --status-good: #15803d;
+  --status-good-bg: rgba(21, 128, 61, 0.1);
+  --status-warn: #8a5b00;
+  --status-warn-bg: rgba(224, 161, 0, 0.16);
+  --status-bad: #c62828;
+  --status-bad-bg: rgba(198, 40, 40, 0.1);
+  --status-info: #0f5fd1;
+  --status-info-bg: rgba(22, 119, 255, 0.08);
 }

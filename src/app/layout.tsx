@@ -15,6 +15,7 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "VCN Sales Dashboard",
   description: "Veteran Careers Network sales dashboard on Go High Level data (read-only)",
+  icons: { icon: "/vcn-logo.png" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -23,7 +24,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <header className="topbar">
           <div className="topbar-inner">
-            <span className="brand">VCN Sales Dashboard</span>
+            <a className="brand" href="/">
+              {/* VCN logo (public/vcn-logo.png), left of the title; Intelagent branding everywhere else. */}
+              <img className="brand-logo" src="/vcn-logo.png" alt="Veteran Careers Network" width={44} height={44} />
+              <span>VCN Sales Dashboard</span>
+            </a>
             <span className="brand-sub">by Intelagent Media</span>
             <nav className="nav">
               <a href="/">Scorecard</a>

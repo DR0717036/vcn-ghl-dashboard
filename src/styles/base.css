@@ -1,6 +1,10 @@
 /*
   Shared component styles built only from tokens.css. Every page uses these
   classes; no page defines its own colors or fonts.
+
+  Surfaces: the page is dark; every card-like element (.card, .stat,
+  .status-bar, .range-shortcuts) is light and carries the .on-light token
+  set from tokens.css, so text inside it is dark automatically.
 */
 
 * {
@@ -18,7 +22,7 @@ body {
   background: var(--bg-page);
   color: var(--text-body);
   font-family: var(--font-sans);
-  font-size: var(--text-body);
+  font-size: var(--fs-body);
   line-height: var(--leading-body);
   -webkit-font-smoothing: antialiased;
 }
@@ -43,9 +47,11 @@ h1 {
   margin-bottom: var(--s-1);
 }
 
+/* Section headings carry the Intelagent yellow on the dark page. */
 h2 {
   font-size: var(--text-h2);
   margin-bottom: var(--s-3);
+  color: var(--accent-yellow-text);
 }
 
 h3 {
@@ -83,13 +89,13 @@ h3 {
 /* ---- layout ---- */
 .topbar {
   background: var(--bg-elevated);
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-dark);
 }
 
 .topbar-inner {
   max-width: var(--wide);
   margin: 0 auto;
-  padding: var(--s-4) var(--s-5);
+  padding: var(--s-3) var(--s-5);
   display: flex;
   align-items: center;
   gap: var(--s-4);
@@ -97,10 +103,23 @@ h3 {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
   font-weight: 800;
   font-size: 17px;
   color: var(--text-primary);
   letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: block;
+  flex: none;
 }
 
 .brand-sub {
@@ -147,10 +166,17 @@ h3 {
   padding: var(--s-4) var(--s-5) var(--s-6);
   color: var(--text-muted);
   font-size: var(--text-small);
-  border-top: 1px solid var(--border-soft);
+  border-top: 1px solid var(--border-dark);
 }
 
-/* ---- cards (site: deep-navy, 1px slate border, 14px radius) ---- */
+/* ---- cards: light "Soft Slate" surface, dark text, 14px radius ---- */
+.card,
+.stat,
+.status-bar,
+.range-shortcuts {
+  color: var(--text-body);
+}
+
 .card {
   background: var(--surface-card);
   border: 1px solid var(--border-strong);
@@ -187,6 +213,7 @@ h3 {
   flex-direction: column;
   gap: var(--s-2);
   min-width: 0;
+  box-shadow: var(--shadow-card);
 }
 
 .stat-value {
@@ -210,6 +237,7 @@ h3 {
   display: flex;
   gap: var(--s-3);
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .delta-up {
@@ -235,7 +263,7 @@ h3 {
   align-items: center;
   background: var(--surface-card);
   border: 1px solid var(--border-strong);
-  border-left: 3px solid var(--accent-cyan);
+  border-left: 4px solid var(--accent-cyan);
   border-radius: var(--r-card);
   padding: var(--s-3) var(--s-4);
   margin-bottom: var(--s-5);
@@ -244,7 +272,7 @@ h3 {
 
 .status-bar b {
   color: var(--text-primary);
-  font-weight: 700;
+  font-weight: 800;
 }
 
 /* ---- buttons (site: yellow primary with dark text, slate-bordered secondary) ---- */
@@ -355,19 +383,19 @@ tbody tr:hover td {
 .pill-ok {
   background: var(--status-good-bg);
   color: var(--status-good);
-  border-color: rgba(34, 168, 95, 0.3);
+  border-color: var(--status-good);
 }
 
 .pill-warn {
   background: var(--status-warn-bg);
   color: var(--status-warn);
-  border-color: rgba(224, 161, 0, 0.3);
+  border-color: var(--status-warn);
 }
 
 .pill-bad {
   background: var(--status-bad-bg);
   color: var(--status-bad);
-  border-color: rgba(224, 72, 72, 0.3);
+  border-color: var(--status-bad);
 }
 
 .pill-info {
@@ -378,8 +406,14 @@ tbody tr:hover td {
 
 .pill-gold {
   background: var(--accent-yellow-soft);
-  color: var(--accent-yellow);
-  border-color: rgba(255, 213, 31, 0.3);
+  color: var(--accent-yellow-text);
+  border-color: rgba(168, 137, 0, 0.5);
+}
+
+.pill-neutral {
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+  border-color: var(--border);
 }
 
 .chips {
@@ -389,7 +423,7 @@ tbody tr:hover td {
 }
 
 .chip {
-  background: var(--surface-inset);
+  background: var(--surface-raised);
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 3px 10px;
@@ -397,30 +431,33 @@ tbody tr:hover td {
   color: var(--text-body);
 }
 
+/* Callouts sit directly on the dark page: light text, tinted background. */
 .callout {
   border-radius: var(--r-btn);
   padding: var(--s-3) var(--s-4);
   margin: var(--s-2) 0;
   font-size: 14px;
   border: 1px solid transparent;
+  color: var(--text-body);
+}
+
+.callout b {
+  color: var(--text-primary);
 }
 
 .callout-warn {
-  background: var(--status-warn-bg);
-  border-color: rgba(224, 161, 0, 0.3);
-  color: var(--text-body);
+  background: rgba(224, 161, 0, 0.14);
+  border-color: rgba(224, 161, 0, 0.35);
 }
 
 .callout-bad {
-  background: var(--status-bad-bg);
-  border-color: rgba(224, 72, 72, 0.3);
-  color: var(--text-body);
+  background: rgba(224, 72, 72, 0.14);
+  border-color: rgba(224, 72, 72, 0.35);
 }
 
 .callout-info {
-  background: var(--status-info-bg);
-  border-color: var(--accent-blue-border);
-  color: var(--text-body);
+  background: rgba(22, 119, 255, 0.14);
+  border-color: rgba(22, 119, 255, 0.35);
 }
 
 ul.plain {
@@ -481,9 +518,9 @@ ul.plain li {
 }
 
 .range-btn.active {
-  background: var(--accent-blue-soft);
-  border-color: var(--accent-blue-border);
-  color: var(--accent-blue-text);
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #ffffff;
 }
 
 .range-custom {
@@ -493,9 +530,21 @@ ul.plain li {
   flex-wrap: wrap;
 }
 
+.range-custom .range-btn {
+  background: var(--surface-card);
+  color: #182536;
+  border-color: var(--border-strong);
+}
+
+.range-custom .range-btn.active {
+  background: var(--accent-blue);
+  color: #ffffff;
+}
+
 .range-custom input[type="date"] {
   background: var(--surface-card);
-  color: var(--text-primary);
+  color: #182536;
+  color-scheme: light;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 6px 10px;
@@ -516,8 +565,13 @@ ul.plain li {
 }
 
 .stat-breakdown td.num {
-  color: var(--text-body);
+  color: var(--text-primary);
   font-weight: 700;
+}
+
+.stat-breakdown th {
+  padding: var(--s-2) 0 4px;
+  border-bottom: 1px solid var(--border);
 }
 
 .stat-notes summary {
@@ -529,7 +583,7 @@ section > h2 {
   margin-top: var(--s-5);
 }
 
-/* ---- charts ---- */
+/* ---- charts (always drawn inside a light card) ---- */
 .chart-wrap {
   width: 100%;
   overflow: hidden;
@@ -544,7 +598,7 @@ section > h2 {
 
 .chart-tick {
   font-size: 11px;
-  fill: var(--text-muted);
+  fill: var(--chart-axis);
 }
 
 .chart-row-label {
