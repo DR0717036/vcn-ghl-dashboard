@@ -5,7 +5,7 @@
 import { getDb, getState, lastSuccessfulSync } from "@/lib/db";
 import type { DateRange } from "@/lib/dates";
 import { fmtDay } from "@/lib/dates";
-import { goalFor } from "@/lib/goals";
+import { goalFor, type Goal } from "@/lib/goals";
 import { mappingConfig } from "@/lib/mapping-config";
 import { CORE_SYNC_KIND, HISTORY_START } from "@/lib/sync/core";
 
@@ -27,7 +27,7 @@ export interface KpiResult {
   format: "count" | "minutes";
   value: number | null;
   unavailableReason?: string;
-  goal: number | null;
+  goal: Goal | null;
   prev: number | null;
   prevUnavailableReason?: string;
   breakdown: Breakdown[];
@@ -148,7 +148,7 @@ export function kpiNewLeads(range: DateRange): KpiResult {
     subtitle: range.label,
     format: "count",
     value,
-    goal: goalFor("newLeads", range.key),
+    goal: goalFor("newLeads", range),
     prev: newLeadsCount(iso(range.prevStart), iso(range.prevEnd)),
     breakdown,
     sections,
@@ -172,7 +172,7 @@ export function kpiLeadsAssigned(range: DateRange): KpiResult {
     title: "Total Leads Assigned",
     format: "count",
     value: null,
-    goal: goalFor("leadsAssigned", range.key),
+    goal: goalFor("leadsAssigned", range),
     prev: null,
     breakdown: [{ label: "Currently assigned leads (snapshot)", value: n(currently) }],
     sections: [snapshotSection],
@@ -272,7 +272,7 @@ export function kpiCallsMade(range: DateRange): KpiResult {
     subtitle: "Human call attempts",
     format: "count",
     value: cur.total,
-    goal: goalFor("callsMade", range.key),
+    goal: goalFor("callsMade", range),
     prev,
     prevUnavailableReason: reason,
     breakdown: [
@@ -316,7 +316,7 @@ export function kpiTalkTime(range: DateRange): KpiResult {
     subtitle: "Recorded Call Duration",
     format: "minutes",
     value: Math.round(cur.total / 60),
-    goal: goalFor("talkTimeMinutes", range.key),
+    goal: goalFor("talkTimeMinutes", range),
     prev,
     prevUnavailableReason: reason,
     breakdown: [
@@ -334,7 +334,7 @@ export function fmtMinutes(min: number | null): string {
   if (min === null) return "unavailable";
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
 }
 
 // ---- Appointments Booked ---------------------------------------------------------------
@@ -385,7 +385,7 @@ export function kpiAppointmentsBooked(range: DateRange): KpiResult {
     subtitle: "Bookings created in period",
     format: "count",
     value: cur.total,
-    goal: goalFor("appointmentsBooked", range.key),
+    goal: goalFor("appointmentsBooked", range),
     prev,
     prevUnavailableReason: reason,
     breakdown: [
@@ -445,7 +445,7 @@ export function kpiAppointmentsCompleted(range: DateRange): KpiResult {
     subtitle: "Scheduled in period and marked Showed",
     format: "count",
     value: cur.showed,
-    goal: goalFor("appointmentsCompleted", range.key),
+    goal: goalFor("appointmentsCompleted", range),
     prev,
     prevUnavailableReason: reason,
     breakdown: [
@@ -481,7 +481,7 @@ export function kpiAppointmentsConfirmed(range: DateRange): KpiResult {
     subtitle: `Currently in "${stages[0]?.stageName ?? "Appointment Confirmed (VCN)"}" · snapshot per pipeline`,
     format: "count",
     value: total,
-    goal: goalFor("appointmentsConfirmed", range.key),
+    goal: goalFor("appointmentsConfirmed", range),
     prev: null,
     prevUnavailableReason: "This is a current snapshot of stage occupancy; there is no prior-period value.",
     breakdown,
@@ -528,7 +528,7 @@ export function kpiAppointmentsCancelled(range: DateRange): KpiResult {
     subtitle: "Status cancelled, by last change in period",
     format: "count",
     value: cur.total,
-    goal: goalFor("appointmentsCancelled", range.key),
+    goal: goalFor("appointmentsCancelled", range),
     prev,
     prevUnavailableReason: reason,
     breakdown: [

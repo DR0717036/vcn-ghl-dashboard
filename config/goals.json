@@ -1,18 +1,32 @@
 {
-  "_comment": "Goals for the executive scorecard. Keys are KPI names; inside each, the range key (today, yesterday, this_week, last_week, this_month, last_month, this_year, last_year, custom) maps to a numeric target. A missing entry shows 'Goal not set'. Talk time goals are in minutes. Nothing here is applied automatically to any other metric.",
-  "leadsAssigned": {},
-  "newLeads": {},
-  "callsMade": {},
-  "talkTimeMinutes": {},
-  "appointmentsBooked": {},
-  "appointmentsCompleted": {},
-  "army_ca101": {},
-  "army_supervisor_approval": {},
-  "army_won_submitted": {},
-  "vet_iau_app_submitted": {},
-  "vet_iau_app_accepted": {},
-  "vet_enrolled_won": {},
-  "wonArmy": {},
-  "wonVeteran": {},
-  "wonEntireCrm": {}
+  "_comment": "Goals for the executive scorecard (owner decision 2026-10-13). Rates, not totals: the dashboard multiplies per-rep rates by the number of reps in config/sales-reps.json and by the length of the selected period, then scales to the elapsed portion of the period for the Met / On Track / Missed pill. Talk time is in minutes. A KPI missing from every list shows 'Goal not set' and no pill.",
+  "perRepPerDay": {
+    "callsMade": 100,
+    "talkTimeMinutes": 120
+  },
+  "perRepPerWeek": {
+    "appointmentsBooked": 7,
+    "appointmentsCompleted": 4,
+    "appointmentsConfirmed": 4,
+    "programSubmissions": 5
+  },
+  "teamPerWeek": {
+    "leadsAssigned": 200,
+    "newLeads": 200
+  },
+  "snapshotKpis": ["appointmentsConfirmed"],
+  "noGoal": [
+    "appointmentsCancelled",
+    "vet_iau_app_submitted_fs1",
+    "army_ca101",
+    "army_supervisor_approval",
+    "vet_iau_app_submitted",
+    "army_won_submitted",
+    "vet_iau_app_accepted",
+    "vet_enrolled_won",
+    "wonArmy",
+    "wonArmyFy27",
+    "wonVeteran",
+    "wonEntireCrm"
+  ]
 }

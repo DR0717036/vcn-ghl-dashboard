@@ -155,7 +155,7 @@ export function computeWon(range: DateRange): WonReport {
       period,
       prev: prevReason ? null : prevRows.length,
       prevUnavailableReason: prevReason,
-      goal: goalFor(goalKey, range.key),
+      goal: goalFor(goalKey, range)?.full ?? null,
       current: totalsOf(snapshot.rows.map((r) => r.monetary_value)),
       notes: [
         "Became Won During Period counts the first time each opportunity reached status = won, by GHL's status-change time. An opportunity reopened and won again is not counted twice; reversals are listed and never subtracted.",

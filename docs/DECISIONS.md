@@ -100,3 +100,45 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     now #0A8DB4 (was #0C9FCB) and violet #8178E0 (was #9085E9). Grid
     #DDE5EE, axis text #5B6B7F. A neutral gray (#9AA8B8) is reserved for
     prior-period overlays and is never a series color.
+14. **Goals are rates, scaled to the elapsed period** (config/goals.json,
+    owner decision 2026-10-13). Per rep per day: Calls Made 100, Talk Time
+    2 hours. Per rep per week: Appointments Booked 7, Appointments Completed
+    (showed) 4, Appointments Confirmed at least 4, Program Submissions
+    (CA 101 + IAU App Submitted FS2) 5. Team-wide per week: Total Leads
+    Assigned 200, New Leads 200. The six sales reps live in
+    config/sales-reps.json (Michael Nieves, Miguel Torres, Isabela Estrada,
+    William Bobier, Sam R., Anthony N.), matched to GHL users by email; the
+    team version of a per-rep goal is the rate × 6. Everyone else counts in
+    team totals but not in rep goals. For a selected range the goal is
+    rate × reps × days in the period (weekly rates pro-rated by 7); the
+    pill compares the value with that goal scaled to the elapsed time:
+    **Met** = at or above the full-period goal, **On Track** = at or above
+    the elapsed-portion goal while the period is still running, **Missed**
+    = below it. A finished period can only be Met or Missed. Appointments
+    Confirmed is a stage snapshot, so it is compared with the full weekly
+    team goal (24) without scaling. No goal (and no pill) on Appointments
+    Cancelled, FS1 Application Submissions, Awaiting Supervisor Approval,
+    the individual CA 101 and IAU App Submitted cards, the six program
+    milestone cards, and the won totals.
+15. **Date math bug fixed (2026-10-13).** The New York wall-clock helper
+    over-corrected the UTC offset, so every day boundary sat 8 hours late
+    (midnight came out as 8 AM Eastern) and multi-day ranges skipped days.
+    All period counts shown before this fix (including the stage 1–4
+    numbers reported on 2026-10-11/13) used those shifted boundaries and
+    should be re-read now. Verified: Today/Yesterday/This Week/Last Week/
+    This Month/Last Month/This Year start at Eastern midnight, weeks have
+    7 days, October has 31, and the DST edges (Mar 8 and Nov 1, 2026)
+    resolve correctly.
+16. **Prior-period overlays** on the Calls Made and Talk Time charts use the
+    scorecard's comparison period (same length, same elapsed portion),
+    aligned day for day (hour for hour on a one-day range). When the range
+    is This Week or Last Week that is exactly the prior week.
+17. **Cancellation time.** GHL does not store when an appointment was
+    cancelled. The Appointments Cancelled card uses the appointment's
+    last-updated time as the cancellation time and also shows the same
+    cancelled appointments counted by scheduled start and by booking date.
+18. **FS1 submissions are event-tracked.** "IAU App Submitted (FS 1)" was
+    added to the tracked stages for the KPI card only (not a program
+    milestone card). The 35 opportunities sitting in that stage were
+    backfilled as baseline events dated by GHL's stage-entry time
+    (Jun 30 – Aug 28, 2026); earlier pass-throughs are unknown.

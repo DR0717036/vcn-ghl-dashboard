@@ -104,7 +104,7 @@ export function computeMilestone(m: MilestoneMapping, range: DateRange, names: M
     unclassified: 0,
     prev: null,
     prevValue: null,
-    goal: goalFor(m.key, range.key),
+    goal: goalFor(m.key, range)?.full ?? null,
     currentInStage: 0,
     currentValue: 0,
     currentValueMissing: 0,

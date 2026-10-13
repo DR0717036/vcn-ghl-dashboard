@@ -87,11 +87,14 @@ export function nyParts(date: Date): Parts {
 
 /** The UTC instant for a New York wall-clock time. Month is 1-12; day may overflow. */
 export function nyDate(y: number, m: number, d: number, h = 0, mi = 0, s = 0): Date {
-  let guess = Date.UTC(y, m - 1, d, h, mi, s);
+  // The wanted wall-clock time, written as if it were UTC. Adjust the guess
+  // until its New York wall clock matches it (two passes cover DST edges).
+  const target = Date.UTC(y, m - 1, d, h, mi, s);
+  let guess = target;
   for (let i = 0; i < 3; i++) {
     const p = nyParts(new Date(guess));
     const asUtc = Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi, p.s);
-    const diff = asUtc - guess;
+    const diff = asUtc - target;
     if (diff === 0) break;
     guess -= diff;
   }

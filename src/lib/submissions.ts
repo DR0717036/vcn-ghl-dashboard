@@ -4,7 +4,7 @@
 // milestone cards it is built from.
 
 import type { DateRange } from "@/lib/dates";
-import { goalFor } from "@/lib/goals";
+import { goalFor, type Goal } from "@/lib/goals";
 import { computeMilestoneByKey, type MilestoneResult } from "@/lib/milestones";
 import { repRoster, type Rep } from "@/lib/reps";
 
@@ -26,7 +26,7 @@ export interface SubmissionsResult {
   fs2: number;
   prev: number | null;
   prevUnavailableReason?: string;
-  goal: number | null;
+  goal: Goal | null;
   /** The six configured reps (always listed), then one row for everyone else. */
   rows: SubmissionRow[];
   others: SubmissionRow | null;
@@ -49,7 +49,7 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
     ca101: 0,
     fs2: 0,
     prev: null,
-    goal: goalFor("programSubmissions", range.key),
+    goal: goalFor("programSubmissions", range),
     rows: [],
     others: null,
     unmatchedReps: [],

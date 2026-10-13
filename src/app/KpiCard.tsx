@@ -1,16 +1,10 @@
 import type { ReactNode } from "react";
 import { fmtMinutes, type KpiResult } from "@/lib/metrics";
+import GoalLine from "./GoalLine";
 
 function fmtValue(k: KpiResult): string {
   if (k.value === null) return "unavailable";
   return k.format === "minutes" ? fmtMinutes(k.value) : k.value.toLocaleString("en-US");
-}
-
-function fmtGoal(k: KpiResult): string {
-  if (k.goal === null) return "Goal not set";
-  const g = k.format === "minutes" ? fmtMinutes(k.goal) : k.goal.toLocaleString("en-US");
-  if (k.value === null || k.goal === 0) return `Goal ${g}`;
-  return `Goal ${g} · ${Math.round((k.value / k.goal) * 100)}% of goal`;
 }
 
 export function Delta({ value, prev, format = "count", reason }: { value: number | null; prev: number | null; format?: "count" | "minutes" | "usd"; reason?: string }) {
@@ -38,9 +32,10 @@ export default function KpiCard({ k, compact = false, chart, className = "" }: {
       <div className={`stat-value${unavailable ? " unavailable" : ""}`}>{fmtValue(k)}</div>
       {unavailable && k.unavailableReason ? <div className="note">{k.unavailableReason}</div> : null}
       <div className="stat-meta">
-        <span>{fmtGoal(k)}</span>
+        <GoalLine goal={k.goal} value={k.value} format={k.format} />
         <Delta value={k.value} prev={k.prev} format={k.format} reason={k.prevUnavailableReason} />
       </div>
+      {k.goal ? <div className="note">Goal basis: {k.goal.basis}.</div> : null}
       {chart}
       {!compact && k.breakdown.length > 0 ? (
         <table className="stat-breakdown">
