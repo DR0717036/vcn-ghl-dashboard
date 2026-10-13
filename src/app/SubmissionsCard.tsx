@@ -27,7 +27,7 @@ export default function SubmissionsCard({ s, className = "" }: { s: SubmissionsR
             <th className="num">IAU App (FS2)</th>
             <th className="num">Combined</th>
             {repGoalCol ? <th className="num">Rep goal</th> : null}
-            {repGoalCol ? <th>Status</th> : null}
+            {repGoalCol ? <th className="status">Status</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -44,7 +44,7 @@ export default function SubmissionsCard({ s, className = "" }: { s: SubmissionsR
                 </td>
               ) : null}
               {repGoalCol && g ? (
-                <td>
+                <td className="status">
                   <StatusPill status={repGoalStatus(r.total, g)} />
                 </td>
               ) : null}
@@ -57,7 +57,7 @@ export default function SubmissionsCard({ s, className = "" }: { s: SubmissionsR
               <td className="num">{n(s.others.fs2)}</td>
               <td className="num">{n(s.others.total)}</td>
               {repGoalCol ? <td className="num note">—</td> : null}
-              {repGoalCol ? <td className="note">not a rep</td> : null}
+              {repGoalCol ? <td className="status note">not a rep</td> : null}
             </tr>
           ) : null}
           <tr className="rep-total">
@@ -67,7 +67,7 @@ export default function SubmissionsCard({ s, className = "" }: { s: SubmissionsR
             <td className="num">{n(s.value ?? 0)}</td>
             {repGoalCol && g ? <td className="num">{Math.round(g.full)}</td> : null}
             {repGoalCol ? (
-              <td>
+              <td className="status">
                 <GoalPill goal={g} value={s.value} />
               </td>
             ) : null}
@@ -80,7 +80,7 @@ export default function SubmissionsCard({ s, className = "" }: { s: SubmissionsR
   return (
     <KpiShell
       id={s.key}
-      className={className}
+      className={`kpi-title-xl ${className}`.trim()}
       title={s.title}
       subtitle="CA 101 submitted (Army CA) + IAU App Submitted (FS2) (Veteran G.I. Bill) · reached during period · team total"
       value={

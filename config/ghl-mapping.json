@@ -115,7 +115,7 @@
    "stageName": "IAU App Submitted (FS 1)",
    "reportingGroup": "FS1",
    "reportingGroupBasis": "stage_name",
-   "note": "Historical semester. Tracked as an event milestone for the Primary KPI card only; not one of the six program milestone cards (owner edits round 1, 2026-10-13)."
+   "note": "Historical semester. Tracked as an event milestone (events keep being recorded) but no card is shown since owner edits round 3, 2026-10-13; the Primary KPI card shows IAU App Submitted (FS2) instead."
   }
  ],
  "snapshotStages": {

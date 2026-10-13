@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={manrope.variable}>
       <body>
-        <header className="topbar">
+        <header className="topbar topbar-sticky">
           <div className="topbar-inner">
             <a className="brand" href="/">
               {/* VCN logo (public/vcn-logo.png), left of the title; Intelagent branding everywhere else. */}

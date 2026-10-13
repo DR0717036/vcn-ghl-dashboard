@@ -95,11 +95,17 @@ h3 {
 .topbar-inner {
   max-width: var(--wide);
   margin: 0 auto;
-  padding: var(--s-3) var(--s-5);
+  height: var(--topbar-h);
+  padding: 0 var(--s-5);
   display: flex;
   align-items: center;
   gap: var(--s-4);
-  flex-wrap: wrap;
+}
+
+.topbar-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 
 .brand {
@@ -996,4 +1002,172 @@ section > h2 {
   font-size: 10px;
   line-height: 16px;
   vertical-align: 2px;
+}
+
+
+/* =====================================================================
+   Round 3: sticky glass control bar, headline card titles
+   ===================================================================== */
+
+:root {
+  --topbar-h: 68px;
+}
+
+.control-sticky {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 20;
+  padding: var(--s-3) var(--s-5);
+  pointer-events: none;
+}
+
+.control-bar {
+  pointer-events: auto;
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 10px 16px 12px;
+  border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  /* 14% white glass over a dark translucent base, so light text stays readable even when white cards scroll beneath */
+  background: linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.14)), rgba(8, 18, 32, 0.72);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 12px 32px rgba(0, 0, 0, 0.28);
+  --cb-text: #e6ecf3;
+  --cb-strong: #ffffff;
+  --cb-muted: #aab6c4;
+  --cb-btn-bg: rgba(255, 255, 255, 0.08);
+  --cb-btn-border: rgba(255, 255, 255, 0.22);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.control-bar[data-over="light"] {
+  background: linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.14)), rgba(255, 255, 255, 0.42);
+  border-color: rgba(24, 37, 54, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 12px 32px rgba(8, 24, 45, 0.16);
+  --cb-text: #2f3f52;
+  --cb-strong: #182536;
+  --cb-muted: #5b6b7f;
+  --cb-btn-bg: rgba(24, 37, 54, 0.06);
+  --cb-btn-border: rgba(24, 37, 54, 0.18);
+}
+
+.control-sync {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--s-4);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--cb-text);
+}
+
+.control-sync b {
+  color: var(--cb-strong);
+  font-weight: 800;
+}
+
+.control-sync .pill {
+  padding: 0 7px;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.control-bar .range-picker {
+  margin: 0;
+  gap: var(--s-2) var(--s-4);
+}
+
+.control-bar .range-shortcuts {
+  background: var(--cb-btn-bg);
+  border: 1px solid var(--cb-btn-border);
+  box-shadow: none;
+  padding: 3px;
+}
+
+.control-bar .range-btn {
+  color: var(--cb-text);
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.control-bar .range-btn:hover {
+  color: var(--cb-strong);
+  background: var(--cb-btn-bg);
+}
+
+.control-bar .range-btn.active,
+.control-bar .range-custom .range-btn.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #ffffff;
+}
+
+.control-bar .range-custom .label,
+.control-bar .range-custom .note {
+  color: var(--cb-muted);
+}
+
+.control-bar .range-custom .label {
+  font-size: 11px;
+}
+
+.control-bar .range-custom input[type="date"] {
+  background: rgba(255, 255, 255, 0.9);
+  color: #182536;
+  border: 1px solid var(--cb-btn-border);
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.control-bar .range-custom .range-btn {
+  background: var(--accent-yellow);
+  color: var(--text-on-accent);
+  border-color: transparent;
+}
+
+/* headline-sized yellow card titles (dark gold on light cards, where yellow is unreadable) */
+.kpi .label {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  line-height: 1.2;
+  color: var(--accent-yellow-text);
+}
+
+.kpi-title-xl .label {
+  font-size: var(--text-h2);
+}
+
+.kpi-head {
+  min-height: 48px;
+}
+
+.row-title {
+  margin: 0 0 var(--s-5);
+}
+
+.eyebrow + .row-title {
+  margin-top: calc(-1 * var(--s-3));
+}
+
+.rep-table th.status,
+.rep-table td.status {
+  width: 130px;
+  padding-left: var(--s-6);
+  text-align: left;
+}
+
+.rep-table th.num,
+.rep-table td.num {
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .control-sticky {
+    position: static;
+  }
 }

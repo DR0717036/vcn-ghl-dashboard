@@ -174,3 +174,33 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     unreadable.
 22. **Spacing:** 24px gutters between cards, 28px padding inside, 64px
     band padding top and bottom, 36px headline numbers everywhere.
+
+## 2026-10-13 — Edits round 3: control bar, row order, FS2 card, card titles
+
+23. **No page title block.** The scorecard starts directly under the header.
+24. **Sticky glass control bar** (src/app/ControlBar.tsx) holds the sync
+    details (one small-text line) and the date-range picker (second line).
+    It is pinned under the header, which is now sticky too. Style: a 14%
+    white layer over a dark translucent base with a 24px backdrop blur,
+    a thin translucent border, 18px radius, and an inner highlight. The
+    bar watches which band is scrolling beneath its bottom edge and
+    switches to a light glass with dark text over light bands; over the
+    dark page and the white cards further down it stays dark glass with
+    light text. Both cases were checked in screenshots. (Pure 10–15%
+    white alone was unreadable once white cards scrolled beneath it,
+    hence the dark base.)
+25. **Row order:** Submissions (dark) · Activity (light) · Appointments
+    (dark) · Leads (light). "Primary KPIs" is an eyebrow above the
+    headline-sized yellow "Submissions" heading; the other rows keep
+    eyebrow headings.
+26. **FS2 replaces FS1 on the KPI row.** The third submissions card is now
+    "FS2 Application Submissions": contacts reaching "IAU App Submitted
+    (FS2)", reporting group FS2, the current semester. FS1 stays in
+    config as a tracked historical group (its events keep accumulating)
+    with no card.
+27. **Card titles** on every KPI card are 17px, bold, title case, in the
+    yellow accent (#FFD51F on dark cards, the dark gold step #7A6200 on
+    light cards where yellow is unreadable). The combined Program
+    Submissions title is headline-sized (20px). In its table the Rep goal
+    column is right-aligned and the Status column has a fixed width with
+    left padding.
