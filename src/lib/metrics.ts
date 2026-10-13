@@ -14,6 +14,12 @@ export interface Breakdown {
   value: string;
 }
 
+/** A titled group of breakdown rows shown as its own small table on a card. */
+export interface BreakdownSection {
+  title: string;
+  rows: Breakdown[];
+}
+
 export interface KpiResult {
   key: string;
   title: string;
@@ -25,6 +31,7 @@ export interface KpiResult {
   prev: number | null;
   prevUnavailableReason?: string;
   breakdown: Breakdown[];
+  sections?: BreakdownSection[];
   notes: string[];
 }
 
@@ -63,6 +70,30 @@ function prevReason(range: DateRange, dataStart: string | undefined, what: strin
   return undefined;
 }
 
+// ---- Army / Veteran / Both / No tag buckets (mutually exclusive, from current contact tags) ----
+
+function tagLike(col: string, tags: string[]): { sql: string; params: string[] } {
+  if (tags.length === 0) return { sql: "0", params: [] };
+  return { sql: "(" + tags.map(() => `${col} LIKE ?`).join(" OR ") + ")", params: tags.map((t) => `%"${t}"%`) };
+}
+
+/** SQL CASE expression yielding 'army' | 'veteran' | 'both' | 'untagged' for a contacts.tags column. */
+function tagClassCase(col: string): { sql: string; params: string[] } {
+  const a = tagLike(col, mappingConfig.classificationTags.army);
+  const v = tagLike(col, mappingConfig.classificationTags.veteran);
+  return {
+    sql: `CASE WHEN ${a.sql} AND ${v.sql} THEN 'both' WHEN ${a.sql} THEN 'army' WHEN ${v.sql} THEN 'veteran' ELSE 'untagged' END`,
+    params: [...a.params, ...v.params, ...a.params, ...v.params],
+  };
+}
+
+const TAG_LABELS: Record<string, string> = { army: "Army", veteran: "Veteran", both: "Both (army + veteran)", untagged: "No tag" };
+
+function tagRows(rows: { k: string; c: number }[]): Breakdown[] {
+  const by = new Map(rows.map((r) => [r.k, r.c]));
+  return ["army", "veteran", "both", "untagged"].map((k) => ({ label: TAG_LABELS[k], value: n(by.get(k) ?? 0) }));
+}
+
 // ---- New Leads ---------------------------------------------------------------------
 
 function newLeadsCount(start: string, end: string): number {
@@ -86,7 +117,27 @@ export function kpiNewLeads(range: DateRange): KpiResult {
     end,
   ).c;
   const breakdown: Breakdown[] = sources.map((s) => ({ label: s.source ? `Source: ${s.source}` : "Source: (none)", value: n(s.c) }));
-  const notes = ["Counted by contact creation date (GHL dateAdded), unique contact IDs."];
+  const tc = tagClassCase("tags");
+  const byTag = all<{ k: string; c: number }>(
+    `SELECT ${tc.sql} AS k, COUNT(*) AS c FROM contacts WHERE date_added >= ? AND date_added < ? GROUP BY k`,
+    ...tc.params,
+    start,
+    end,
+  );
+  const byUser = all<{ name: string | null; c: number }>(
+    `SELECT u.name AS name, COUNT(*) AS c FROM contacts c LEFT JOIN users u ON u.id = c.assigned_to
+      WHERE c.date_added >= ? AND c.date_added < ? GROUP BY c.assigned_to ORDER BY c DESC`,
+    start,
+    end,
+  );
+  const sections: BreakdownSection[] = [
+    { title: "By tag", rows: tagRows(byTag) },
+    { title: "Assigned to (current owner)", rows: byUser.map((u) => ({ label: u.name ?? "Unassigned", value: n(u.c) })) },
+  ];
+  const notes = [
+    "Counted by contact creation date (GHL dateAdded), unique contact IDs.",
+    "Tag buckets use the contact's current tags and are mutually exclusive, so they add up to the total. Assignment uses the current owner.",
+  ];
   if (bulk && bulk > 0) {
     breakdown.unshift({ label: "Bulk-created (possible import)", value: n(bulk) });
     notes.push("Bulk-created means 25 or more contacts created within the same minute. This is a name-and-time heuristic, not a GHL import flag.");
@@ -100,6 +151,7 @@ export function kpiNewLeads(range: DateRange): KpiResult {
     goal: goalFor("newLeads", range.key),
     prev: newLeadsCount(iso(range.prevStart), iso(range.prevEnd)),
     breakdown,
+    sections,
     notes,
   };
 }
@@ -109,6 +161,12 @@ export function kpiNewLeads(range: DateRange): KpiResult {
 export function kpiLeadsAssigned(range: DateRange): KpiResult {
   const cov = coverage();
   const currently = one<{ c: number }>(`SELECT COUNT(*) AS c FROM contacts WHERE assigned_to IS NOT NULL AND assigned_to != ''`).c;
+  const tc = tagClassCase("tags");
+  const snapshotByTag = all<{ k: string; c: number }>(
+    `SELECT ${tc.sql} AS k, COUNT(*) AS c FROM contacts WHERE assigned_to IS NOT NULL AND assigned_to != '' GROUP BY k`,
+    ...tc.params,
+  );
+  const snapshotSection: BreakdownSection = { title: "Currently assigned, by tag", rows: tagRows(snapshotByTag) };
   const base: KpiResult = {
     key: "leadsAssigned",
     title: "Total Leads Assigned",
@@ -117,7 +175,11 @@ export function kpiLeadsAssigned(range: DateRange): KpiResult {
     goal: goalFor("leadsAssigned", range.key),
     prev: null,
     breakdown: [{ label: "Currently assigned leads (snapshot)", value: n(currently) }],
-    notes: ["GHL does not expose assignment history. Assignment changes are recorded by this dashboard from its first sync forward."],
+    sections: [snapshotSection],
+    notes: [
+      "GHL does not expose assignment history. Assignment changes are recorded by this dashboard from its first sync forward.",
+      "Tag buckets use the contact's current tags and are mutually exclusive (Army, Veteran, Both, No tag), so they add up to the total.",
+    ],
   };
   if (!cov.firstCoreSyncAt) {
     return { ...base, unavailableReason: "Assignment tracking has not started yet (no completed sync).", prevUnavailableReason: "No assignment history." };
@@ -142,6 +204,14 @@ export function kpiLeadsAssigned(range: DateRange): KpiResult {
   const prevRow = iso(range.prevStart) >= cov.firstCoreSyncAt
     ? one<{ c: number }>(`SELECT COUNT(DISTINCT contact_id) AS c FROM assignment_events WHERE to_user IS NOT NULL AND observed_at >= ? AND observed_at < ?`, iso(range.prevStart), iso(range.prevEnd)).c
     : null;
+  const tcc = tagClassCase("c.tags");
+  const periodByTag = all<{ k: string; c: number }>(
+    `SELECT ${tcc.sql} AS k, COUNT(DISTINCT a.contact_id) AS c FROM assignment_events a LEFT JOIN contacts c ON c.id = a.contact_id
+      WHERE a.to_user IS NOT NULL AND a.observed_at >= ? AND a.observed_at < ? GROUP BY k`,
+    ...tcc.params,
+    start,
+    end,
+  );
   return {
     ...base,
     value: row.unique_c,
@@ -152,6 +222,7 @@ export function kpiLeadsAssigned(range: DateRange): KpiResult {
       { label: "Reassignments", value: n(row.re_c ?? 0) },
       ...base.breakdown,
     ],
+    sections: [{ title: "Assigned in period, by tag", rows: tagRows(periodByTag) }, snapshotSection],
     notes: [...base.notes, "Unique contacts with an assignment change observed during the period. Event time is the sync that noticed the change (within 15 minutes)."],
   };
 }
@@ -384,6 +455,91 @@ export function kpiAppointmentsCompleted(range: DateRange): KpiResult {
       { label: "Other / upcoming", value: n(cur.other - cur.pendingPast) },
     ],
     notes: ["Only an explicit Showed status counts. A past start time or a completed call never counts as attendance."],
+  };
+}
+
+// ---- Appointments Confirmed (stage snapshot per pipeline) -------------------------------
+
+export function kpiAppointmentsConfirmed(range: DateRange): KpiResult {
+  const stages = mappingConfig.snapshotStages.appointmentConfirmed;
+  const perStage = stages.map((s) => {
+    const r = one<{ contacts: number; opps: number }>(
+      `SELECT COUNT(DISTINCT contact_id) AS contacts, COUNT(*) AS opps FROM opportunities WHERE stage_id = ? AND missing_since IS NULL`,
+      s.stageId,
+    );
+    return { ...s, programLabel: mappingConfig.programs[s.program].label, ...r };
+  });
+  const total = perStage.reduce((a, s) => a + s.contacts, 0);
+  const breakdown: Breakdown[] = [];
+  for (const s of perStage) {
+    breakdown.push({ label: `${s.programLabel} pipeline (snapshot)`, value: n(s.contacts) });
+    if (s.opps !== s.contacts) breakdown.push({ label: `…opportunities in the ${s.programLabel} stage`, value: n(s.opps) });
+  }
+  return {
+    key: "appointmentsConfirmed",
+    title: "Appointments Confirmed",
+    subtitle: `Currently in "${stages[0]?.stageName ?? "Appointment Confirmed (VCN)"}" · snapshot per pipeline`,
+    format: "count",
+    value: total,
+    goal: goalFor("appointmentsConfirmed", range.key),
+    prev: null,
+    prevUnavailableReason: "This is a current snapshot of stage occupancy; there is no prior-period value.",
+    breakdown,
+    notes: [
+      "Counts distinct contacts whose opportunity currently sits in the Appointment Confirmed (VCN) stage of each program pipeline, as of the last sync. It is a snapshot, not a count of confirmations during the period.",
+      "Not tied to the date range or to calendar records; the calendar status 'confirmed' is a different field and appears on the Appointments Booked card.",
+    ],
+  };
+}
+
+// ---- Appointments Cancelled ------------------------------------------------------------
+
+function cancelledAgg(start: string, end: string) {
+  const tc = tagClassCase("c.tags");
+  const byTag = all<{ k: string; c: number }>(
+    `SELECT ${tc.sql} AS k, COUNT(*) AS c FROM appointments a LEFT JOIN contacts c ON c.id = a.contact_id
+      WHERE a.deleted = 0 AND lower(COALESCE(a.status, '')) IN ('cancelled', 'canceled') AND a.date_updated >= ? AND a.date_updated < ? GROUP BY k`,
+    ...tc.params,
+    start,
+    end,
+  );
+  const total = byTag.reduce((s, r) => s + r.c, 0);
+  const byStart = one<{ c: number }>(
+    `SELECT COUNT(*) AS c FROM appointments WHERE deleted = 0 AND lower(COALESCE(status, '')) IN ('cancelled', 'canceled') AND start_time >= ? AND start_time < ?`,
+    start,
+    end,
+  ).c;
+  const byBooked = one<{ c: number }>(
+    `SELECT COUNT(*) AS c FROM appointments WHERE deleted = 0 AND lower(COALESCE(status, '')) IN ('cancelled', 'canceled') AND date_added >= ? AND date_added < ?`,
+    start,
+    end,
+  ).c;
+  return { total, byTag, byStart, byBooked };
+}
+
+export function kpiAppointmentsCancelled(range: DateRange): KpiResult {
+  const cov = coverage();
+  const cur = cancelledAgg(iso(range.start), iso(range.end));
+  const reason = prevReason(range, cov.historyStart, "Appointment");
+  const prev = reason ? null : cancelledAgg(iso(range.prevStart), iso(range.prevEnd)).total;
+  return {
+    key: "appointmentsCancelled",
+    title: "Appointments Cancelled",
+    subtitle: "Status cancelled, by last change in period",
+    format: "count",
+    value: cur.total,
+    goal: goalFor("appointmentsCancelled", range.key),
+    prev,
+    prevUnavailableReason: reason,
+    breakdown: [
+      ...tagRows(cur.byTag),
+      { label: "Cancelled, scheduled to start in period", value: n(cur.byStart) },
+      { label: "Cancelled, booked in period", value: n(cur.byBooked) },
+    ],
+    notes: [
+      "GHL does not record when an appointment was cancelled. The headline uses the appointment's last-updated time as the cancellation time, which is exact unless the appointment was edited again after cancelling. The two extra lines count cancelled appointments by scheduled start and by booking date instead.",
+      "Army / Veteran split uses the contact's current tags; buckets are mutually exclusive and add up to the headline.",
+    ],
   };
 }
 

@@ -1,679 +1,709 @@
 {
-  "_comment": "Generated from the live GHL pipelines endpoint (read-only) on 2026-10-11 and reviewed against docs/VCN_Build_Brief.md and docs/DECISIONS.md. Edit this file, not the dashboard code, when a pipeline, stage, fiscal year, or semester changes.",
-  "timezone": "America/New_York",
-  "programs": {
-    "army": {
-      "label": "Army CA",
-      "pipelineId": "e0i7pW6G6oMysgFvxuYY",
-      "pipelineName": "Army CA Pipeline"
-    },
-    "veteran": {
-      "label": "Veteran G.I. Bill",
-      "pipelineId": "d4EiaI9N258GlOTJNIhg",
-      "pipelineName": "Veteran G.I. Bill"
-    }
+ "_comment": "Generated from the live GHL pipelines endpoint (read-only) on 2026-10-11 and reviewed against docs/VCN_Build_Brief.md and docs/DECISIONS.md. Edit this file, not the dashboard code, when a pipeline, stage, fiscal year, or semester changes.",
+ "timezone": "America/New_York",
+ "programs": {
+  "army": {
+   "label": "Army CA",
+   "pipelineId": "e0i7pW6G6oMysgFvxuYY",
+   "pipelineName": "Army CA Pipeline"
   },
-  "nonProgramPipelines": [
-    {
-      "pipelineId": "2D2z3KGiBrWJNilZTc1H",
-      "pipelineName": "Intelagent Partner Inquiry",
-      "includedIn": [
-        "entire_crm_won"
-      ],
-      "excludedFrom": [
-        "army_scorecard",
-        "veteran_scorecard",
-        "milestones",
-        "leaderboard_program_columns"
-      ],
-      "decision": "docs/DECISIONS.md 2026-10-11 #3"
-    }
-  ],
-  "milestones": [
-    {
-      "key": "army_ca101",
-      "program": "army",
-      "label": "CA 101 Submitted",
-      "pipelineId": "e0i7pW6G6oMysgFvxuYY",
-      "stageId": "34114b60-82d4-462a-ac62-9c2ee21fe6eb",
-      "stageName": "CA 101 submitted",
-      "reportingGroup": "FY27",
-      "reportingGroupBasis": "contact_tag",
-      "note": "Fiscal year comes from the contact tag fy27 (owner decision 2026-10-11 #5). Contacts in this stage without an fy tag are reported as unclassified, not assumed FY27.",
-      "reportingGroupTag": "fy27"
-    },
-    {
-      "key": "army_supervisor_approval",
-      "program": "army",
-      "label": "Awaiting Supervisor Approval",
-      "pipelineId": "e0i7pW6G6oMysgFvxuYY",
-      "stageId": "8e5ec35d-61f1-498b-9b57-d1ca68f2892a",
-      "stageName": "Supervisor Approval (5 days)",
-      "reportingGroup": "FY27",
-      "reportingGroupBasis": "contact_tag",
-      "note": "Owner confirmed this stage means awaiting approval, not approved (docs/DECISIONS.md 2026-10-11 #2). Fiscal year comes from the contact tag fy27 (owner decision 2026-10-11 #5). Contacts in this stage without an fy tag are reported as unclassified, not assumed FY27.",
-      "reportingGroupTag": "fy27"
-    },
-    {
-      "key": "army_won_submitted",
-      "program": "army",
-      "label": "Won Submitted (FY27)",
-      "pipelineId": "e0i7pW6G6oMysgFvxuYY",
-      "stageId": "3dc55f66-a7a0-472f-af25-73a350bc4202",
-      "stageName": "Won/Submitted (Fy 27)",
-      "reportingGroup": "FY27",
-      "reportingGroupBasis": "stage_name"
-    },
-    {
-      "key": "vet_iau_app_submitted",
-      "program": "veteran",
-      "label": "IAU App Submitted (FS2)",
-      "pipelineId": "d4EiaI9N258GlOTJNIhg",
-      "stageId": "1b8e7741-68c4-43c8-9646-9b499cdd0eeb",
-      "stageName": "IAU App Submitted (FS2)",
-      "reportingGroup": "FS2",
-      "reportingGroupBasis": "stage_name"
-    },
-    {
-      "key": "vet_iau_app_accepted",
-      "program": "veteran",
-      "label": "IAU App Accepted (FS2)",
-      "pipelineId": "d4EiaI9N258GlOTJNIhg",
-      "stageId": "e73b05e2-0044-47b7-85c8-1050ce479ce2",
-      "stageName": "IAU App Accepted (FS2)",
-      "reportingGroup": "FS2",
-      "reportingGroupBasis": "stage_name"
-    },
-    {
-      "key": "vet_enrolled_won",
-      "program": "veteran",
-      "label": "Enrolled Won (FS2)",
-      "pipelineId": "d4EiaI9N258GlOTJNIhg",
-      "stageId": "3292edc7-1888-473d-a4b4-69d36f36a4ad",
-      "stageName": "Enrolled Won (FS2)",
-      "reportingGroup": "FS2",
-      "reportingGroupBasis": "stage_name"
-    }
-  ],
-  "funnelOnlyStages": [
-    {
-      "program": "veteran",
-      "pipelineId": "d4EiaI9N258GlOTJNIhg",
-      "stageId": "0fe9e3a1-f809-43d6-93c5-7768e63597fc",
-      "stageName": "IAU App Signed (FS2)",
-      "reportingGroup": "FS2",
-      "note": "Not a milestone metric. Shown in funnels and current-in-stage counts only (docs/DECISIONS.md 2026-10-11 #3)."
-    }
-  ],
-  "reportingGroups": {
-    "FY27": {
-      "program": "army",
-      "label": "Fiscal Year 2027",
-      "status": "active",
-      "tag": "fy27",
-      "basis": "Contact tag fy27 for CA 101 and Supervisor Approval; stage name for Won/Submitted (Fy 27)."
-    },
-    "FY26": {
-      "program": "army",
-      "label": "Fiscal Year 2026",
-      "status": "historical",
-      "tag": "fy26",
-      "basis": "Contact tag fy26. No FY26-specific Army stages exist; historical only."
-    },
-    "FS2": {
-      "program": "veteran",
-      "label": "Fall Semester 2 (2026)",
-      "status": "active",
-      "relatedTag": "fall semester 2",
-      "basis": "Stage name (FS2). Tag is informational."
-    },
-    "FS1": {
-      "program": "veteran",
-      "label": "Fall Semester 1",
-      "status": "historical",
-      "stages": [
-        {
-          "stageId": "305d200d-b903-4b0f-82d5-9bc7168522b4",
-          "stageName": "IAU App Submitted (FS 1)"
-        },
-        {
-          "stageId": "897f76bb-af90-4c8d-b46d-410f2cf74279",
-          "stageName": "IAU APP Accepted (FS1)"
-        },
-        {
-          "stageId": "047fb9cb-b597-4138-a664-b7e180812650",
-          "stageName": "IAU App Signed (FS1)"
-        },
-        {
-          "stageId": "71732fff-7565-40bf-82bf-7b569ee1f917",
-          "stageName": "Enrolled/ Won (FS1)"
-        }
-      ],
-      "relatedTag": "fall semester 1",
-      "basis": "Stage name (FS1/FS 1). Tag is informational."
-    },
-    "SS": {
-      "program": "veteran",
-      "label": "Summer Sessions 1 & 2",
-      "status": "historical",
-      "stages": [
-        {
-          "stageId": "ee48e56b-9b16-4b93-a530-cd8e4f350a61",
-          "stageName": "IAU Application Submitted (SS1 & SS2)"
-        },
-        {
-          "stageId": "d90b76f8-86d9-484f-b2a2-0de5fd8f8e96",
-          "stageName": "IAU App Accepted (SS1 & SS2)"
-        },
-        {
-          "stageId": "1d2744d4-c4ca-4f49-bc31-5a5cb28c887f",
-          "stageName": "Enrolled/ Won (Summer Session 1)"
-        },
-        {
-          "stageId": "ce32844d-c6db-4565-935c-74bf75ecf877",
-          "stageName": "Enrolled/ Won (Summer Session 2)"
-        }
-      ],
-      "relatedTags": [
-        "summer session 1",
-        "summer session 2"
-      ],
-      "basis": "Stage names (SS1 & SS2 / Summer Session 1 / Summer Session 2). Tags are informational."
-    }
+  "veteran": {
+   "label": "Veteran G.I. Bill",
+   "pipelineId": "d4EiaI9N258GlOTJNIhg",
+   "pipelineName": "Veteran G.I. Bill"
+  }
+ },
+ "nonProgramPipelines": [
+  {
+   "pipelineId": "2D2z3KGiBrWJNilZTc1H",
+   "pipelineName": "Intelagent Partner Inquiry",
+   "includedIn": [
+    "entire_crm_won"
+   ],
+   "excludedFrom": [
+    "army_scorecard",
+    "veteran_scorecard",
+    "milestones",
+    "leaderboard_program_columns"
+   ],
+   "decision": "docs/DECISIONS.md 2026-10-11 #3"
+  }
+ ],
+ "milestones": [
+  {
+   "key": "army_ca101",
+   "program": "army",
+   "label": "CA 101 Submitted",
+   "pipelineId": "e0i7pW6G6oMysgFvxuYY",
+   "stageId": "34114b60-82d4-462a-ac62-9c2ee21fe6eb",
+   "stageName": "CA 101 submitted",
+   "reportingGroup": "FY27",
+   "reportingGroupBasis": "contact_tag",
+   "note": "Fiscal year comes from the contact tag fy27 (owner decision 2026-10-11 #5). Contacts in this stage without an fy tag are reported as unclassified, not assumed FY27.",
+   "reportingGroupTag": "fy27"
   },
-  "wonRule": "Opportunity status === won. A stage name containing Won is never sufficient on its own.",
-  "valueLabel": "Opportunity Value",
-  "classificationTags": {
-    "army": [
-      "army"
-    ],
-    "veteran": [
-      "veteran"
-    ],
-    "rule": "A contact with an army tag is Army; with a veteran tag is Veteran; with both is Both / Needs Review; with neither is Untagged. Mutually exclusive buckets; an appointment is counted once in the grand total. Owner decision 2026-10-11 #6."
+  {
+   "key": "army_supervisor_approval",
+   "program": "army",
+   "label": "Awaiting Supervisor Approval",
+   "pipelineId": "e0i7pW6G6oMysgFvxuYY",
+   "stageId": "8e5ec35d-61f1-498b-9b57-d1ca68f2892a",
+   "stageName": "Supervisor Approval (5 days)",
+   "reportingGroup": "FY27",
+   "reportingGroupBasis": "contact_tag",
+   "note": "Owner confirmed this stage means awaiting approval, not approved (docs/DECISIONS.md 2026-10-11 #2). Fiscal year comes from the contact tag fy27 (owner decision 2026-10-11 #5). Contacts in this stage without an fy tag are reported as unclassified, not assumed FY27.",
+   "reportingGroupTag": "fy27"
   },
-  "calendars": {
-    "excludedCalendarIds": [],
-    "note": "Count appointments on every calendar, active or inactive. Owner decision 2026-10-11 #7."
+  {
+   "key": "army_won_submitted",
+   "program": "army",
+   "label": "Won Submitted (FY27)",
+   "pipelineId": "e0i7pW6G6oMysgFvxuYY",
+   "stageId": "3dc55f66-a7a0-472f-af25-73a350bc4202",
+   "stageName": "Won/Submitted (Fy 27)",
+   "reportingGroup": "FY27",
+   "reportingGroupBasis": "stage_name"
   },
-  "pipelines": [
-    {
-      "id": "e0i7pW6G6oMysgFvxuYY",
-      "name": "Army CA Pipeline",
-      "stages": [
-        {
-          "id": "f21072a0-ab09-4e0a-98eb-9e1b99dba583",
-          "name": "New Lead",
-          "position": 0
-        },
-        {
-          "id": "ac1d0596-e5a8-43ef-b86e-e3d31c69a05d",
-          "name": "Tier 1",
-          "position": 1
-        },
-        {
-          "id": "d3d119ac-cb3c-46b7-87d1-0f5ba8bfc23e",
-          "name": "Tier 2",
-          "position": 2
-        },
-        {
-          "id": "dc034584-6c8a-41e7-94a9-addc7b594037",
-          "name": "Tier 3",
-          "position": 3
-        },
-        {
-          "id": "368d706d-161a-4eba-a908-40a55a97b1de",
-          "name": "Tier 4",
-          "position": 4
-        },
-        {
-          "id": "1ecf9425-3ded-4909-a246-06ae54cc9577",
-          "name": "Tier 5",
-          "position": 5
-        },
-        {
-          "id": "aff21168-4d54-4141-b342-6a8ac290185a",
-          "name": "Tier 6",
-          "position": 6
-        },
-        {
-          "id": "43e4eafe-cc84-44fd-9b5a-d73657c4b2f3",
-          "name": "Drip",
-          "position": 7
-        },
-        {
-          "id": "389055ff-4dc6-4d5e-88b4-2f694b8bc508",
-          "name": "Active Reply",
-          "position": 8
-        },
-        {
-          "id": "9678bc82-b420-4a0d-a8a1-b9eeb345239e",
-          "name": "Sale in Progress",
-          "position": 9
-        },
-        {
-          "id": "10bc3e49-8507-48c6-b96f-3467ed5062f1",
-          "name": "Appointment Scheduled",
-          "position": 10
-        },
-        {
-          "id": "05278281-91cf-4a3f-82b2-69bf7f69446d",
-          "name": "Appointment Confirmed (VCN)",
-          "position": 11
-        },
-        {
-          "id": "393d8c6c-bdc6-429e-a702-e22cdbbe0ae9",
-          "name": "Appointment missed",
-          "position": 12
-        },
-        {
-          "id": "34114b60-82d4-462a-ac62-9c2ee21fe6eb",
-          "name": "CA 101 submitted",
-          "position": 13
-        },
-        {
-          "id": "8e5ec35d-61f1-498b-9b57-d1ca68f2892a",
-          "name": "Supervisor Approval (5 days)",
-          "position": 14
-        },
-        {
-          "id": "3dc55f66-a7a0-472f-af25-73a350bc4202",
-          "name": "Won/Submitted (Fy 27)",
-          "position": 15
-        },
-        {
-          "id": "a77604e9-2456-41ff-88d1-4fd50691c5ff",
-          "name": "Follow Up",
-          "position": 16
-        },
-        {
-          "id": "ca150845-42fc-45bb-aea0-8203f10e227a",
-          "name": "Next FY",
-          "position": 17
-        },
-        {
-          "id": "dd76259c-0f29-4d4f-9ba6-ac933c8b7586",
-          "name": "Flagged",
-          "position": 18
-        },
-        {
-          "id": "64b629cf-1763-42f3-81b7-ffef0680e5f9",
-          "name": "Veterans",
-          "position": 19
-        },
-        {
-          "id": "bddf10ea-15ef-42f6-abdb-60d0e12d14f9",
-          "name": "Non Army (AF, Navy, Marines, CG)",
-          "position": 20
-        },
-        {
-          "id": "9b1ef63f-6b42-4952-a7b6-5e87412aad0f",
-          "name": "DND",
-          "position": 21
-        },
-        {
-          "id": "f47d36e9-1b6b-48ea-88c8-91001b6c7220",
-          "name": "Not interested",
-          "position": 22
-        },
-        {
-          "id": "d85c0c3b-8d9a-43c3-9b5b-09900f185c88",
-          "name": "Unqualified",
-          "position": 23
-        },
-        {
-          "id": "301a96e6-54e6-4ffb-b3b2-19c33d0a4c45",
-          "name": "Wrong Number",
-          "position": 24
-        }
-      ]
-    },
-    {
-      "id": "2D2z3KGiBrWJNilZTc1H",
-      "name": "Intelagent Partner Inquiry",
-      "stages": [
-        {
-          "id": "93a6590b-800a-4bd3-9cb6-264648f08bb9",
-          "name": "New Lead",
-          "position": 0
-        },
-        {
-          "id": "d92f5c47-4199-4832-ad5c-cd5066a5fff5",
-          "name": "Tier 1",
-          "position": 1
-        },
-        {
-          "id": "a9084c0b-f40d-4537-b209-df6377fc92b6",
-          "name": "Tier 2",
-          "position": 2
-        },
-        {
-          "id": "4c5abe76-3937-49b0-9560-ab67f830eca8",
-          "name": "Tier 3",
-          "position": 3
-        },
-        {
-          "id": "9e8f5c59-5909-4a39-84ca-9b083d146dc1",
-          "name": "Tier 4",
-          "position": 4
-        },
-        {
-          "id": "a39bed2b-63cd-4fc7-acac-4333f428c7d1",
-          "name": "Tier 5",
-          "position": 5
-        },
-        {
-          "id": "5c1ddf70-c17d-4a5c-b5db-2e9f2c9b9271",
-          "name": "Tier 6",
-          "position": 6
-        },
-        {
-          "id": "7b522f29-3fbb-439e-b50d-1047278ef121",
-          "name": "Sale in Progress",
-          "position": 7
-        },
-        {
-          "id": "13f3d59c-692f-47e5-98ce-f6a3f43bebce",
-          "name": "Appointment Scheduled",
-          "position": 8
-        },
-        {
-          "id": "2bd9337c-ccf7-432c-9caf-0ff9df27ad09",
-          "name": "Appointment No Show",
-          "position": 9
-        },
-        {
-          "id": "416af10c-9453-4321-9c45-1503544a2eb5",
-          "name": "Demo Requested",
-          "position": 10
-        },
-        {
-          "id": "2ad7e67b-c681-45de-9408-2ce14bd4dbb1",
-          "name": "Free Lead Request",
-          "position": 11
-        },
-        {
-          "id": "570ecd9a-2149-4958-b973-14d097fb6895",
-          "name": "Signed",
-          "position": 12
-        },
-        {
-          "id": "feb18006-411e-4455-8440-95e831f2f773",
-          "name": "DND",
-          "position": 13
-        },
-        {
-          "id": "efadde5d-f35c-4efc-85ea-20cdc21becca",
-          "name": "Wrong Number",
-          "position": 14
-        },
-        {
-          "id": "d61cc98e-0a40-465f-aad2-84e80a5c6cf9",
-          "name": "Follow Up",
-          "position": 15
-        }
-      ]
-    },
-    {
-      "id": "d4EiaI9N258GlOTJNIhg",
-      "name": "Veteran G.I. Bill",
-      "stages": [
-        {
-          "id": "6ddeab20-af61-4b89-8fbf-92e305bb55c1",
-          "name": "ReSpark",
-          "position": 0
-        },
-        {
-          "id": "a676b842-1c09-4c1e-a6a5-de5bff25685c",
-          "name": "Unassigned",
-          "position": 1
-        },
-        {
-          "id": "016939d3-64b8-4fe2-ab8d-d7279f20384e",
-          "name": "New Lead",
-          "position": 2
-        },
-        {
-          "id": "cd9f9ea4-33a8-42f5-9e69-c81efa7fdbdb",
-          "name": "Tier 1",
-          "position": 3
-        },
-        {
-          "id": "0075510d-93c1-46c7-ab67-d5a249d5ed79",
-          "name": "Tier 2",
-          "position": 4
-        },
-        {
-          "id": "2827af86-3c0d-4e1e-860a-4d66d0e91ea3",
-          "name": "Tier 3",
-          "position": 5
-        },
-        {
-          "id": "fd0f43e6-49b6-4197-8d2b-4578c2421e82",
-          "name": "Tier 4",
-          "position": 6
-        },
-        {
-          "id": "beb06f82-3fff-4118-9515-ddf59f503214",
-          "name": "Tier 5",
-          "position": 7
-        },
-        {
-          "id": "7dbc3512-96f3-40f3-bcd5-1f5f759e8684",
-          "name": "Tier 6",
-          "position": 8
-        },
-        {
-          "id": "802fee90-e57c-43d8-9c90-98e14c47f5a5",
-          "name": "Tier 7",
-          "position": 9
-        },
-        {
-          "id": "3f29b7a0-e113-489d-9b5a-dea8f7cd4a8a",
-          "name": "Drip Sequence",
-          "position": 10
-        },
-        {
-          "id": "0e74d169-d7d8-4f56-b68e-1d5040bb9695",
-          "name": "Active Reply",
-          "position": 11
-        },
-        {
-          "id": "69cf5fe5-fd9e-4db1-9c2b-9ff852fc62d3",
-          "name": "Sale in Progress",
-          "position": 12
-        },
-        {
-          "id": "d8d773f0-8102-4fc1-8d5a-cc8d7a67ef0b",
-          "name": "Appointment Booked (VCN)",
-          "position": 13
-        },
-        {
-          "id": "17f6a2e0-ff5c-42e6-9b6f-ee26634fcb55",
-          "name": "Appointment Confirmed (VCN)",
-          "position": 14
-        },
-        {
-          "id": "371616c4-313c-44b7-8c86-23a10392a289",
-          "name": "Appointment No Show",
-          "position": 15
-        },
-        {
-          "id": "c073f135-22d3-425a-abd7-5efd929b8d78",
-          "name": "Appointment Booked (NGT)",
-          "position": 16
-        },
-        {
-          "id": "02dd2d2c-d5b8-43d2-bac6-a5c7031e6fc1",
-          "name": "Appointment NGT (80%< or 6month <))",
-          "position": 17
-        },
-        {
-          "id": "b36bc9fe-5c32-4938-a05b-20b329e54515",
-          "name": "Appointment NGT (VR&E)",
-          "position": 18
-        },
-        {
-          "id": "873b2dab-50a9-4a0a-a2f9-831a8219bd27",
-          "name": "Appointment No Show (NGT)",
-          "position": 19
-        },
-        {
-          "id": "1b8e7741-68c4-43c8-9646-9b499cdd0eeb",
-          "name": "IAU App Submitted (FS2)",
-          "position": 20
-        },
-        {
-          "id": "57d5229a-dd42-4e0d-a6ef-2de25ede9435",
-          "name": "IAU Appointment Missed",
-          "position": 21
-        },
-        {
-          "id": "e73b05e2-0044-47b7-85c8-1050ce479ce2",
-          "name": "IAU App Accepted (FS2)",
-          "position": 22
-        },
-        {
-          "id": "0fe9e3a1-f809-43d6-93c5-7768e63597fc",
-          "name": "IAU App Signed (FS2)",
-          "position": 23
-        },
-        {
-          "id": "3292edc7-1888-473d-a4b4-69d36f36a4ad",
-          "name": "Enrolled Won (FS2)",
-          "position": 24
-        },
-        {
-          "id": "3fc39e0b-d40e-450e-99a4-f2f5fb8834e5",
-          "name": "Applied for GI Bill",
-          "position": 25
-        },
-        {
-          "id": "0f1595b8-8c75-4b0d-a542-e373e6fa46ce",
-          "name": "Pending Eligibility",
-          "position": 26
-        },
-        {
-          "id": "e4641f6d-3dd6-432f-9fb6-19fcfa580ac3",
-          "name": "Out of Pocket Pending",
-          "position": 27
-        },
-        {
-          "id": "e1c90f6c-9827-402e-b636-a41afb7cb213",
-          "name": "Declined Application (FS2)",
-          "position": 28
-        },
-        {
-          "id": "9a73759b-0454-4ad5-a7af-dc55e3cf7c5a",
-          "name": "Declined Application",
-          "position": 29
-        },
-        {
-          "id": "1f0c1148-a6bd-4e0d-a0e2-bad28489fd0f",
-          "name": "Summer 2026",
-          "position": 30
-        },
-        {
-          "id": "6793cde0-cb90-499a-aba9-d576b664e145",
-          "name": "Fall Session 2 Follow Up",
-          "position": 31
-        },
-        {
-          "id": "9d01db98-1e93-4c43-8963-4a0cf4c289b2",
-          "name": "Fall Semester 2026",
-          "position": 32
-        },
-        {
-          "id": "2edca0e5-b5eb-4a41-bdad-a82ea0ac1ceb",
-          "name": "Follow Up",
-          "position": 33
-        },
-        {
-          "id": "81a3f7c6-63ef-4370-89db-d2d2a34c404d",
-          "name": "Withdraw (Fall Semester)",
-          "position": 34
-        },
-        {
-          "id": "bc8a820f-bf36-45fb-a0f7-ea1e41dcd2e9",
-          "name": "Active Duty Military",
-          "position": 35
-        },
-        {
-          "id": "f156d5e6-613b-4dfb-a5c2-299325f5b0cf",
-          "name": "Montgomery GI Bill",
-          "position": 36
-        },
-        {
-          "id": "e7cdecee-9238-46f5-9a0e-5f4f780e1f03",
-          "name": "Expired Benefits",
-          "position": 37
-        },
-        {
-          "id": "3b69965d-e2b7-4259-86d6-fa3e167cf762",
-          "name": "DND",
-          "position": 38
-        },
-        {
-          "id": "699e0706-d9fb-4177-8030-13baeb5170fb",
-          "name": "Not Interested",
-          "position": 39
-        },
-        {
-          "id": "45a97088-31bf-41e5-a08f-51cab97617ca",
-          "name": "Unqualified",
-          "position": 40
-        },
-        {
-          "id": "5d64b4ec-15fb-401f-854b-b10eeb042e69",
-          "name": "Wrong Number",
-          "position": 41
-        },
-        {
-          "id": "dc971bb1-49c7-4ec6-aded-a0773068b7f3",
-          "name": "Vet Tech",
-          "position": 42
-        },
-        {
-          "id": "71732fff-7565-40bf-82bf-7b569ee1f917",
-          "name": "Enrolled/ Won (FS1)",
-          "position": 43
-        },
-        {
-          "id": "897f76bb-af90-4c8d-b46d-410f2cf74279",
-          "name": "IAU APP Accepted (FS1)",
-          "position": 44
-        },
-        {
-          "id": "047fb9cb-b597-4138-a664-b7e180812650",
-          "name": "IAU App Signed (FS1)",
-          "position": 45
-        },
-        {
-          "id": "d90b76f8-86d9-484f-b2a2-0de5fd8f8e96",
-          "name": "IAU App Accepted (SS1 & SS2)",
-          "position": 46
-        },
-        {
-          "id": "305d200d-b903-4b0f-82d5-9bc7168522b4",
-          "name": "IAU App Submitted (FS 1)",
-          "position": 47
-        },
-        {
-          "id": "ee48e56b-9b16-4b93-a530-cd8e4f350a61",
-          "name": "IAU Application Submitted (SS1 & SS2)",
-          "position": 48
-        },
-        {
-          "id": "ce32844d-c6db-4565-935c-74bf75ecf877",
-          "name": "Enrolled/ Won (Summer Session 2)",
-          "position": 49
-        },
-        {
-          "id": "1d2744d4-c4ca-4f49-bc31-5a5cb28c887f",
-          "name": "Enrolled/ Won (Summer Session 1)",
-          "position": 50
-        }
-      ]
-    }
+  {
+   "key": "vet_iau_app_submitted",
+   "program": "veteran",
+   "label": "IAU App Submitted (FS2)",
+   "pipelineId": "d4EiaI9N258GlOTJNIhg",
+   "stageId": "1b8e7741-68c4-43c8-9646-9b499cdd0eeb",
+   "stageName": "IAU App Submitted (FS2)",
+   "reportingGroup": "FS2",
+   "reportingGroupBasis": "stage_name"
+  },
+  {
+   "key": "vet_iau_app_accepted",
+   "program": "veteran",
+   "label": "IAU App Accepted (FS2)",
+   "pipelineId": "d4EiaI9N258GlOTJNIhg",
+   "stageId": "e73b05e2-0044-47b7-85c8-1050ce479ce2",
+   "stageName": "IAU App Accepted (FS2)",
+   "reportingGroup": "FS2",
+   "reportingGroupBasis": "stage_name"
+  },
+  {
+   "key": "vet_enrolled_won",
+   "program": "veteran",
+   "label": "Enrolled Won (FS2)",
+   "pipelineId": "d4EiaI9N258GlOTJNIhg",
+   "stageId": "3292edc7-1888-473d-a4b4-69d36f36a4ad",
+   "stageName": "Enrolled Won (FS2)",
+   "reportingGroup": "FS2",
+   "reportingGroupBasis": "stage_name"
+  }
+ ],
+ "funnelOnlyStages": [
+  {
+   "program": "veteran",
+   "pipelineId": "d4EiaI9N258GlOTJNIhg",
+   "stageId": "0fe9e3a1-f809-43d6-93c5-7768e63597fc",
+   "stageName": "IAU App Signed (FS2)",
+   "reportingGroup": "FS2",
+   "note": "Not a milestone metric. Shown in funnels and current-in-stage counts only (docs/DECISIONS.md 2026-10-11 #3)."
+  }
+ ],
+ "kpiMilestones": [
+  {
+   "key": "vet_iau_app_submitted_fs1",
+   "program": "veteran",
+   "label": "FS1 Application Submissions",
+   "pipelineId": "d4EiaI9N258GlOTJNIhg",
+   "stageId": "305d200d-b903-4b0f-82d5-9bc7168522b4",
+   "stageName": "IAU App Submitted (FS 1)",
+   "reportingGroup": "FS1",
+   "reportingGroupBasis": "stage_name",
+   "note": "Historical semester. Tracked as an event milestone for the Primary KPI card only; not one of the six program milestone cards (owner edits round 1, 2026-10-13)."
+  }
+ ],
+ "snapshotStages": {
+  "_comment": "Stages read as current-occupancy snapshots (never events). Used by the Appointments Confirmed KPI card.",
+  "appointmentConfirmed": [
+   {
+    "program": "army",
+    "pipelineId": "e0i7pW6G6oMysgFvxuYY",
+    "stageId": "05278281-91cf-4a3f-82b2-69bf7f69446d",
+    "stageName": "Appointment Confirmed (VCN)"
+   },
+   {
+    "program": "veteran",
+    "pipelineId": "d4EiaI9N258GlOTJNIhg",
+    "stageId": "17f6a2e0-ff5c-42e6-9b6f-ee26634fcb55",
+    "stageName": "Appointment Confirmed (VCN)"
+   }
   ]
+ },
+ "reportingGroups": {
+  "FY27": {
+   "program": "army",
+   "label": "Fiscal Year 2027",
+   "status": "active",
+   "tag": "fy27",
+   "basis": "Contact tag fy27 for CA 101 and Supervisor Approval; stage name for Won/Submitted (Fy 27)."
+  },
+  "FY26": {
+   "program": "army",
+   "label": "Fiscal Year 2026",
+   "status": "historical",
+   "tag": "fy26",
+   "basis": "Contact tag fy26. No FY26-specific Army stages exist; historical only."
+  },
+  "FS2": {
+   "program": "veteran",
+   "label": "Fall Semester 2 (2026)",
+   "status": "active",
+   "relatedTag": "fall semester 2",
+   "basis": "Stage name (FS2). Tag is informational."
+  },
+  "FS1": {
+   "program": "veteran",
+   "label": "Fall Semester 1",
+   "status": "historical",
+   "stages": [
+    {
+     "stageId": "305d200d-b903-4b0f-82d5-9bc7168522b4",
+     "stageName": "IAU App Submitted (FS 1)"
+    },
+    {
+     "stageId": "897f76bb-af90-4c8d-b46d-410f2cf74279",
+     "stageName": "IAU APP Accepted (FS1)"
+    },
+    {
+     "stageId": "047fb9cb-b597-4138-a664-b7e180812650",
+     "stageName": "IAU App Signed (FS1)"
+    },
+    {
+     "stageId": "71732fff-7565-40bf-82bf-7b569ee1f917",
+     "stageName": "Enrolled/ Won (FS1)"
+    }
+   ],
+   "relatedTag": "fall semester 1",
+   "basis": "Stage name (FS1/FS 1). Tag is informational."
+  },
+  "SS": {
+   "program": "veteran",
+   "label": "Summer Sessions 1 & 2",
+   "status": "historical",
+   "stages": [
+    {
+     "stageId": "ee48e56b-9b16-4b93-a530-cd8e4f350a61",
+     "stageName": "IAU Application Submitted (SS1 & SS2)"
+    },
+    {
+     "stageId": "d90b76f8-86d9-484f-b2a2-0de5fd8f8e96",
+     "stageName": "IAU App Accepted (SS1 & SS2)"
+    },
+    {
+     "stageId": "1d2744d4-c4ca-4f49-bc31-5a5cb28c887f",
+     "stageName": "Enrolled/ Won (Summer Session 1)"
+    },
+    {
+     "stageId": "ce32844d-c6db-4565-935c-74bf75ecf877",
+     "stageName": "Enrolled/ Won (Summer Session 2)"
+    }
+   ],
+   "relatedTags": [
+    "summer session 1",
+    "summer session 2"
+   ],
+   "basis": "Stage names (SS1 & SS2 / Summer Session 1 / Summer Session 2). Tags are informational."
+  }
+ },
+ "wonRule": "Opportunity status === won. A stage name containing Won is never sufficient on its own.",
+ "valueLabel": "Opportunity Value",
+ "classificationTags": {
+  "army": [
+   "army"
+  ],
+  "veteran": [
+   "veteran"
+  ],
+  "rule": "A contact with an army tag is Army; with a veteran tag is Veteran; with both is Both / Needs Review; with neither is Untagged. Mutually exclusive buckets; an appointment is counted once in the grand total. Owner decision 2026-10-11 #6."
+ },
+ "calendars": {
+  "excludedCalendarIds": [],
+  "note": "Count appointments on every calendar, active or inactive. Owner decision 2026-10-11 #7."
+ },
+ "pipelines": [
+  {
+   "id": "e0i7pW6G6oMysgFvxuYY",
+   "name": "Army CA Pipeline",
+   "stages": [
+    {
+     "id": "f21072a0-ab09-4e0a-98eb-9e1b99dba583",
+     "name": "New Lead",
+     "position": 0
+    },
+    {
+     "id": "ac1d0596-e5a8-43ef-b86e-e3d31c69a05d",
+     "name": "Tier 1",
+     "position": 1
+    },
+    {
+     "id": "d3d119ac-cb3c-46b7-87d1-0f5ba8bfc23e",
+     "name": "Tier 2",
+     "position": 2
+    },
+    {
+     "id": "dc034584-6c8a-41e7-94a9-addc7b594037",
+     "name": "Tier 3",
+     "position": 3
+    },
+    {
+     "id": "368d706d-161a-4eba-a908-40a55a97b1de",
+     "name": "Tier 4",
+     "position": 4
+    },
+    {
+     "id": "1ecf9425-3ded-4909-a246-06ae54cc9577",
+     "name": "Tier 5",
+     "position": 5
+    },
+    {
+     "id": "aff21168-4d54-4141-b342-6a8ac290185a",
+     "name": "Tier 6",
+     "position": 6
+    },
+    {
+     "id": "43e4eafe-cc84-44fd-9b5a-d73657c4b2f3",
+     "name": "Drip",
+     "position": 7
+    },
+    {
+     "id": "389055ff-4dc6-4d5e-88b4-2f694b8bc508",
+     "name": "Active Reply",
+     "position": 8
+    },
+    {
+     "id": "9678bc82-b420-4a0d-a8a1-b9eeb345239e",
+     "name": "Sale in Progress",
+     "position": 9
+    },
+    {
+     "id": "10bc3e49-8507-48c6-b96f-3467ed5062f1",
+     "name": "Appointment Scheduled",
+     "position": 10
+    },
+    {
+     "id": "05278281-91cf-4a3f-82b2-69bf7f69446d",
+     "name": "Appointment Confirmed (VCN)",
+     "position": 11
+    },
+    {
+     "id": "393d8c6c-bdc6-429e-a702-e22cdbbe0ae9",
+     "name": "Appointment missed",
+     "position": 12
+    },
+    {
+     "id": "34114b60-82d4-462a-ac62-9c2ee21fe6eb",
+     "name": "CA 101 submitted",
+     "position": 13
+    },
+    {
+     "id": "8e5ec35d-61f1-498b-9b57-d1ca68f2892a",
+     "name": "Supervisor Approval (5 days)",
+     "position": 14
+    },
+    {
+     "id": "3dc55f66-a7a0-472f-af25-73a350bc4202",
+     "name": "Won/Submitted (Fy 27)",
+     "position": 15
+    },
+    {
+     "id": "a77604e9-2456-41ff-88d1-4fd50691c5ff",
+     "name": "Follow Up",
+     "position": 16
+    },
+    {
+     "id": "ca150845-42fc-45bb-aea0-8203f10e227a",
+     "name": "Next FY",
+     "position": 17
+    },
+    {
+     "id": "dd76259c-0f29-4d4f-9ba6-ac933c8b7586",
+     "name": "Flagged",
+     "position": 18
+    },
+    {
+     "id": "64b629cf-1763-42f3-81b7-ffef0680e5f9",
+     "name": "Veterans",
+     "position": 19
+    },
+    {
+     "id": "bddf10ea-15ef-42f6-abdb-60d0e12d14f9",
+     "name": "Non Army (AF, Navy, Marines, CG)",
+     "position": 20
+    },
+    {
+     "id": "9b1ef63f-6b42-4952-a7b6-5e87412aad0f",
+     "name": "DND",
+     "position": 21
+    },
+    {
+     "id": "f47d36e9-1b6b-48ea-88c8-91001b6c7220",
+     "name": "Not interested",
+     "position": 22
+    },
+    {
+     "id": "d85c0c3b-8d9a-43c3-9b5b-09900f185c88",
+     "name": "Unqualified",
+     "position": 23
+    },
+    {
+     "id": "301a96e6-54e6-4ffb-b3b2-19c33d0a4c45",
+     "name": "Wrong Number",
+     "position": 24
+    }
+   ]
+  },
+  {
+   "id": "2D2z3KGiBrWJNilZTc1H",
+   "name": "Intelagent Partner Inquiry",
+   "stages": [
+    {
+     "id": "93a6590b-800a-4bd3-9cb6-264648f08bb9",
+     "name": "New Lead",
+     "position": 0
+    },
+    {
+     "id": "d92f5c47-4199-4832-ad5c-cd5066a5fff5",
+     "name": "Tier 1",
+     "position": 1
+    },
+    {
+     "id": "a9084c0b-f40d-4537-b209-df6377fc92b6",
+     "name": "Tier 2",
+     "position": 2
+    },
+    {
+     "id": "4c5abe76-3937-49b0-9560-ab67f830eca8",
+     "name": "Tier 3",
+     "position": 3
+    },
+    {
+     "id": "9e8f5c59-5909-4a39-84ca-9b083d146dc1",
+     "name": "Tier 4",
+     "position": 4
+    },
+    {
+     "id": "a39bed2b-63cd-4fc7-acac-4333f428c7d1",
+     "name": "Tier 5",
+     "position": 5
+    },
+    {
+     "id": "5c1ddf70-c17d-4a5c-b5db-2e9f2c9b9271",
+     "name": "Tier 6",
+     "position": 6
+    },
+    {
+     "id": "7b522f29-3fbb-439e-b50d-1047278ef121",
+     "name": "Sale in Progress",
+     "position": 7
+    },
+    {
+     "id": "13f3d59c-692f-47e5-98ce-f6a3f43bebce",
+     "name": "Appointment Scheduled",
+     "position": 8
+    },
+    {
+     "id": "2bd9337c-ccf7-432c-9caf-0ff9df27ad09",
+     "name": "Appointment No Show",
+     "position": 9
+    },
+    {
+     "id": "416af10c-9453-4321-9c45-1503544a2eb5",
+     "name": "Demo Requested",
+     "position": 10
+    },
+    {
+     "id": "2ad7e67b-c681-45de-9408-2ce14bd4dbb1",
+     "name": "Free Lead Request",
+     "position": 11
+    },
+    {
+     "id": "570ecd9a-2149-4958-b973-14d097fb6895",
+     "name": "Signed",
+     "position": 12
+    },
+    {
+     "id": "feb18006-411e-4455-8440-95e831f2f773",
+     "name": "DND",
+     "position": 13
+    },
+    {
+     "id": "efadde5d-f35c-4efc-85ea-20cdc21becca",
+     "name": "Wrong Number",
+     "position": 14
+    },
+    {
+     "id": "d61cc98e-0a40-465f-aad2-84e80a5c6cf9",
+     "name": "Follow Up",
+     "position": 15
+    }
+   ]
+  },
+  {
+   "id": "d4EiaI9N258GlOTJNIhg",
+   "name": "Veteran G.I. Bill",
+   "stages": [
+    {
+     "id": "6ddeab20-af61-4b89-8fbf-92e305bb55c1",
+     "name": "ReSpark",
+     "position": 0
+    },
+    {
+     "id": "a676b842-1c09-4c1e-a6a5-de5bff25685c",
+     "name": "Unassigned",
+     "position": 1
+    },
+    {
+     "id": "016939d3-64b8-4fe2-ab8d-d7279f20384e",
+     "name": "New Lead",
+     "position": 2
+    },
+    {
+     "id": "cd9f9ea4-33a8-42f5-9e69-c81efa7fdbdb",
+     "name": "Tier 1",
+     "position": 3
+    },
+    {
+     "id": "0075510d-93c1-46c7-ab67-d5a249d5ed79",
+     "name": "Tier 2",
+     "position": 4
+    },
+    {
+     "id": "2827af86-3c0d-4e1e-860a-4d66d0e91ea3",
+     "name": "Tier 3",
+     "position": 5
+    },
+    {
+     "id": "fd0f43e6-49b6-4197-8d2b-4578c2421e82",
+     "name": "Tier 4",
+     "position": 6
+    },
+    {
+     "id": "beb06f82-3fff-4118-9515-ddf59f503214",
+     "name": "Tier 5",
+     "position": 7
+    },
+    {
+     "id": "7dbc3512-96f3-40f3-bcd5-1f5f759e8684",
+     "name": "Tier 6",
+     "position": 8
+    },
+    {
+     "id": "802fee90-e57c-43d8-9c90-98e14c47f5a5",
+     "name": "Tier 7",
+     "position": 9
+    },
+    {
+     "id": "3f29b7a0-e113-489d-9b5a-dea8f7cd4a8a",
+     "name": "Drip Sequence",
+     "position": 10
+    },
+    {
+     "id": "0e74d169-d7d8-4f56-b68e-1d5040bb9695",
+     "name": "Active Reply",
+     "position": 11
+    },
+    {
+     "id": "69cf5fe5-fd9e-4db1-9c2b-9ff852fc62d3",
+     "name": "Sale in Progress",
+     "position": 12
+    },
+    {
+     "id": "d8d773f0-8102-4fc1-8d5a-cc8d7a67ef0b",
+     "name": "Appointment Booked (VCN)",
+     "position": 13
+    },
+    {
+     "id": "17f6a2e0-ff5c-42e6-9b6f-ee26634fcb55",
+     "name": "Appointment Confirmed (VCN)",
+     "position": 14
+    },
+    {
+     "id": "371616c4-313c-44b7-8c86-23a10392a289",
+     "name": "Appointment No Show",
+     "position": 15
+    },
+    {
+     "id": "c073f135-22d3-425a-abd7-5efd929b8d78",
+     "name": "Appointment Booked (NGT)",
+     "position": 16
+    },
+    {
+     "id": "02dd2d2c-d5b8-43d2-bac6-a5c7031e6fc1",
+     "name": "Appointment NGT (80%< or 6month <))",
+     "position": 17
+    },
+    {
+     "id": "b36bc9fe-5c32-4938-a05b-20b329e54515",
+     "name": "Appointment NGT (VR&E)",
+     "position": 18
+    },
+    {
+     "id": "873b2dab-50a9-4a0a-a2f9-831a8219bd27",
+     "name": "Appointment No Show (NGT)",
+     "position": 19
+    },
+    {
+     "id": "1b8e7741-68c4-43c8-9646-9b499cdd0eeb",
+     "name": "IAU App Submitted (FS2)",
+     "position": 20
+    },
+    {
+     "id": "57d5229a-dd42-4e0d-a6ef-2de25ede9435",
+     "name": "IAU Appointment Missed",
+     "position": 21
+    },
+    {
+     "id": "e73b05e2-0044-47b7-85c8-1050ce479ce2",
+     "name": "IAU App Accepted (FS2)",
+     "position": 22
+    },
+    {
+     "id": "0fe9e3a1-f809-43d6-93c5-7768e63597fc",
+     "name": "IAU App Signed (FS2)",
+     "position": 23
+    },
+    {
+     "id": "3292edc7-1888-473d-a4b4-69d36f36a4ad",
+     "name": "Enrolled Won (FS2)",
+     "position": 24
+    },
+    {
+     "id": "3fc39e0b-d40e-450e-99a4-f2f5fb8834e5",
+     "name": "Applied for GI Bill",
+     "position": 25
+    },
+    {
+     "id": "0f1595b8-8c75-4b0d-a542-e373e6fa46ce",
+     "name": "Pending Eligibility",
+     "position": 26
+    },
+    {
+     "id": "e4641f6d-3dd6-432f-9fb6-19fcfa580ac3",
+     "name": "Out of Pocket Pending",
+     "position": 27
+    },
+    {
+     "id": "e1c90f6c-9827-402e-b636-a41afb7cb213",
+     "name": "Declined Application (FS2)",
+     "position": 28
+    },
+    {
+     "id": "9a73759b-0454-4ad5-a7af-dc55e3cf7c5a",
+     "name": "Declined Application",
+     "position": 29
+    },
+    {
+     "id": "1f0c1148-a6bd-4e0d-a0e2-bad28489fd0f",
+     "name": "Summer 2026",
+     "position": 30
+    },
+    {
+     "id": "6793cde0-cb90-499a-aba9-d576b664e145",
+     "name": "Fall Session 2 Follow Up",
+     "position": 31
+    },
+    {
+     "id": "9d01db98-1e93-4c43-8963-4a0cf4c289b2",
+     "name": "Fall Semester 2026",
+     "position": 32
+    },
+    {
+     "id": "2edca0e5-b5eb-4a41-bdad-a82ea0ac1ceb",
+     "name": "Follow Up",
+     "position": 33
+    },
+    {
+     "id": "81a3f7c6-63ef-4370-89db-d2d2a34c404d",
+     "name": "Withdraw (Fall Semester)",
+     "position": 34
+    },
+    {
+     "id": "bc8a820f-bf36-45fb-a0f7-ea1e41dcd2e9",
+     "name": "Active Duty Military",
+     "position": 35
+    },
+    {
+     "id": "f156d5e6-613b-4dfb-a5c2-299325f5b0cf",
+     "name": "Montgomery GI Bill",
+     "position": 36
+    },
+    {
+     "id": "e7cdecee-9238-46f5-9a0e-5f4f780e1f03",
+     "name": "Expired Benefits",
+     "position": 37
+    },
+    {
+     "id": "3b69965d-e2b7-4259-86d6-fa3e167cf762",
+     "name": "DND",
+     "position": 38
+    },
+    {
+     "id": "699e0706-d9fb-4177-8030-13baeb5170fb",
+     "name": "Not Interested",
+     "position": 39
+    },
+    {
+     "id": "45a97088-31bf-41e5-a08f-51cab97617ca",
+     "name": "Unqualified",
+     "position": 40
+    },
+    {
+     "id": "5d64b4ec-15fb-401f-854b-b10eeb042e69",
+     "name": "Wrong Number",
+     "position": 41
+    },
+    {
+     "id": "dc971bb1-49c7-4ec6-aded-a0773068b7f3",
+     "name": "Vet Tech",
+     "position": 42
+    },
+    {
+     "id": "71732fff-7565-40bf-82bf-7b569ee1f917",
+     "name": "Enrolled/ Won (FS1)",
+     "position": 43
+    },
+    {
+     "id": "897f76bb-af90-4c8d-b46d-410f2cf74279",
+     "name": "IAU APP Accepted (FS1)",
+     "position": 44
+    },
+    {
+     "id": "047fb9cb-b597-4138-a664-b7e180812650",
+     "name": "IAU App Signed (FS1)",
+     "position": 45
+    },
+    {
+     "id": "d90b76f8-86d9-484f-b2a2-0de5fd8f8e96",
+     "name": "IAU App Accepted (SS1 & SS2)",
+     "position": 46
+    },
+    {
+     "id": "305d200d-b903-4b0f-82d5-9bc7168522b4",
+     "name": "IAU App Submitted (FS 1)",
+     "position": 47
+    },
+    {
+     "id": "ee48e56b-9b16-4b93-a530-cd8e4f350a61",
+     "name": "IAU Application Submitted (SS1 & SS2)",
+     "position": 48
+    },
+    {
+     "id": "ce32844d-c6db-4565-935c-74bf75ecf877",
+     "name": "Enrolled/ Won (Summer Session 2)",
+     "position": 49
+    },
+    {
+     "id": "1d2744d4-c4ca-4f49-bc31-5a5cb28c887f",
+     "name": "Enrolled/ Won (Summer Session 1)",
+     "position": 50
+    }
+   ]
+  }
+ ]
 }

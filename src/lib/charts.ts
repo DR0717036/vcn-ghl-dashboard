@@ -1,54 +1,166 @@
 // Data for the scorecard charts. Reads the local cache only.
 
 import { getDb } from "@/lib/db";
-import { addDays, dayKeysBetween, nyDayKey, startOfWeek, type DateRange } from "@/lib/dates";
-import { mappingConfig } from "@/lib/mapping-config";
+import { addDays, dayKeysBetween, hourKeysBetween, nyDayKey, nyHourKey, startOfWeek, type DateRange } from "@/lib/dates";
+import { mappingConfig, type MilestoneMapping } from "@/lib/mapping-config";
+import { HISTORY_START } from "@/lib/sync/core";
+
+export type Grouping = "hourly" | "daily" | "weekly";
 
 export interface TimePoint {
-  key: string; // YYYY-MM-DD (New York) of the bucket start
+  key: string; // bucket start: YYYY-MM-DD (New York) or YYYY-MM-DDTHH
   label: string;
   count: number;
+  /** Optional second measure (e.g. Opportunity Value) for the same bucket. */
+  value?: number;
 }
 
 export interface TimeSeries {
-  grouping: "daily" | "weekly";
+  grouping: Grouping;
   points: TimePoint[];
   total: number;
 }
 
+/** A series for the selected range plus the same measure over the comparison period, aligned bucket by bucket. */
+export interface ComparedSeries extends TimeSeries {
+  prior: TimePoint[] | null;
+  priorReason?: string;
+  priorTotal: number | null;
+}
+
 const shortDay = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" });
+const hourFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric" });
 
-/** New contacts per New York day (or per Monday-start week when the range is long). */
-export function newLeadsSeries(range: DateRange): TimeSeries {
-  const rows = getDb()
-    .prepare(`SELECT date_added FROM contacts WHERE date_added >= ? AND date_added < ?`)
-    .all(range.start.toISOString(), range.end.toISOString()) as { date_added: string }[];
-  const days = dayKeysBetween(range.start, range.end);
-  const grouping: TimeSeries["grouping"] = days.length > 92 ? "weekly" : "daily";
+interface Buckets {
+  grouping: Grouping;
+  keys: string[];
+  labels: string[];
+  bucketOf: (d: Date) => string;
+}
 
-  const bucketOf = (d: Date) => (grouping === "daily" ? nyDayKey(d) : nyDayKey(startOfWeek(d)));
-  const counts = new Map<string, number>();
-  const keys: string[] = [];
-  if (grouping === "daily") {
-    for (const k of days) keys.push(k);
-  } else {
-    let cur = startOfWeek(range.start);
-    while (cur.getTime() < range.end.getTime()) {
+/** Hourly for a single day, daily up to 92 days, weekly (Monday start) beyond. */
+function buckets(start: Date, end: Date): Buckets {
+  const days = dayKeysBetween(start, end);
+  const grouping: Grouping = days.length <= 1 ? "hourly" : days.length > 92 ? "weekly" : "daily";
+  let keys: string[];
+  if (grouping === "hourly") keys = hourKeysBetween(start, end);
+  else if (grouping === "daily") keys = days;
+  else {
+    keys = [];
+    let cur = startOfWeek(start);
+    while (cur.getTime() < end.getTime()) {
       keys.push(nyDayKey(cur));
       cur = addDays(cur, 7);
     }
   }
-  for (const k of keys) counts.set(k, 0);
-  for (const r of rows) {
-    const k = bucketOf(new Date(r.date_added));
-    counts.set(k, (counts.get(k) ?? 0) + 1);
-  }
-  const points = keys.map((k) => {
-    const [y, m, d] = k.split("-").map(Number);
+  const labels = keys.map((k) => {
+    const [y, m, d] = k.slice(0, 10).split("-").map(Number);
+    if (grouping === "hourly") {
+      const h = Number(k.slice(11, 13));
+      return hourFmt.format(new Date(Date.UTC(2000, 0, 1, h))).replace(" ", " ");
+    }
     const label = shortDay.format(new Date(Date.UTC(y, m - 1, d, 12)));
-    return { key: k, label: grouping === "weekly" ? `wk of ${label}` : label, count: counts.get(k) ?? 0 };
+    return grouping === "weekly" ? `wk of ${label}` : label;
   });
-  return { grouping, points, total: rows.length };
+  const bucketOf = (d: Date) => (grouping === "hourly" ? nyHourKey(d) : grouping === "daily" ? nyDayKey(d) : nyDayKey(startOfWeek(d)));
+  return { grouping, keys, labels, bucketOf };
+}
+
+function fill(b: Buckets, rows: { t: string; c: number; v?: number }[]): TimePoint[] {
+  const counts = new Map<string, { c: number; v: number }>();
+  for (const k of b.keys) counts.set(k, { c: 0, v: 0 });
+  for (const r of rows) {
+    const k = b.bucketOf(new Date(r.t));
+    const cur = counts.get(k);
+    if (!cur) continue; // outside the bucket list (cannot happen for in-range rows)
+    cur.c += r.c;
+    cur.v += r.v ?? 0;
+  }
+  return b.keys.map((k, i) => {
+    const c = counts.get(k)!;
+    return { key: k, label: b.labels[i], count: c.c, value: c.v };
+  });
+}
+
+/** New contacts per bucket (contact creation date). */
+export function newLeadsSeries(range: DateRange): TimeSeries {
+  const rows = getDb()
+    .prepare(`SELECT date_added AS t, 1 AS c FROM contacts WHERE date_added >= ? AND date_added < ?`)
+    .all(range.start.toISOString(), range.end.toISOString()) as { t: string; c: number }[];
+  const b = buckets(range.start, range.end);
+  return { grouping: b.grouping, points: fill(b, rows), total: rows.length };
+}
+
+function compared(range: DateRange, query: (start: string, end: string) => { t: string; c: number; v?: number }[], what: string): ComparedSeries {
+  const b = buckets(range.start, range.end);
+  const rows = query(range.start.toISOString(), range.end.toISOString());
+  const points = fill(b, rows);
+  const total = points.reduce((s, p) => s + p.count, 0);
+  if (range.prevStart.toISOString() < HISTORY_START) {
+    return { grouping: b.grouping, points, total, prior: null, priorTotal: null, priorReason: `${what} history starts ${HISTORY_START.slice(0, 10)}, after the comparison period began.` };
+  }
+  // The comparison period is bucketed on its own calendar, then aligned by position (day 1 ↔ day 1).
+  const pb = buckets(range.prevStart, range.prevEnd);
+  const prior = fill(pb, query(range.prevStart.toISOString(), range.prevEnd.toISOString()));
+  return { grouping: b.grouping, points, total, prior, priorTotal: prior.reduce((s, p) => s + p.count, 0) };
+}
+
+/** Human call attempts per bucket, with the comparison period. */
+export function callsSeries(range: DateRange): ComparedSeries {
+  return compared(
+    range,
+    (start, end) =>
+      getDb()
+        .prepare(
+          `SELECT MIN(date_added) AS t, 1 AS c FROM calls WHERE automated = 0 AND date_added >= ? AND date_added < ? GROUP BY COALESCE(alt_id, id)`,
+        )
+        .all(start, end) as { t: string; c: number }[],
+    "Call",
+  );
+}
+
+/** Recorded call minutes per bucket (completed/answered human calls), with the comparison period. */
+export function talkTimeSeries(range: DateRange): ComparedSeries {
+  const s = compared(
+    range,
+    (start, end) =>
+      getDb()
+        .prepare(
+          `SELECT MIN(date_added) AS t, MAX(duration) AS c FROM calls
+            WHERE automated = 0 AND call_status IN ('completed', 'answered') AND duration > 0 AND date_added >= ? AND date_added < ?
+            GROUP BY COALESCE(alt_id, id)`,
+        )
+        .all(start, end) as { t: string; c: number }[],
+    "Call",
+  );
+  const toMin = (p: TimePoint) => ({ ...p, count: Math.round(p.count / 60) });
+  return {
+    ...s,
+    points: s.points.map(toMin),
+    prior: s.prior ? s.prior.map(toMin) : null,
+    total: Math.round(s.total / 60),
+    priorTotal: s.priorTotal === null ? null : Math.round(s.priorTotal / 60),
+  };
+}
+
+/**
+ * First entries into a milestone stage per bucket: contacts (count) and the
+ * Opportunity Value of the distinct opportunities behind them (value).
+ */
+export function milestoneSeries(m: MilestoneMapping, range: DateRange): TimeSeries {
+  const rows = getDb()
+    .prepare(
+      `SELECT f.t, 1 AS c, COALESCE(MAX(e.value_at_event), 0) AS v
+         FROM (SELECT COALESCE(contact_id, 'opp:' || opportunity_id) AS who, MIN(event_time) AS t
+                 FROM milestone_events WHERE kind = 'milestone' AND milestone_key = ? AND reporting_group = ? GROUP BY who) f
+         JOIN milestone_events e
+           ON COALESCE(e.contact_id, 'opp:' || e.opportunity_id) = f.who AND e.event_time = f.t
+          AND e.kind = 'milestone' AND e.milestone_key = ? AND e.reporting_group = ?
+        WHERE f.t >= ? AND f.t < ? GROUP BY f.who, f.t`,
+    )
+    .all(m.key, m.reportingGroup, m.key, m.reportingGroup, range.start.toISOString(), range.end.toISOString()) as { t: string; c: number; v: number }[];
+  const b = buckets(range.start, range.end);
+  return { grouping: b.grouping, points: fill(b, rows), total: rows.length };
 }
 
 export interface FunnelStep {

@@ -7,7 +7,7 @@ import { getDb } from "@/lib/db";
 import type { DateRange } from "@/lib/dates";
 import { fmtDay } from "@/lib/dates";
 import { goalFor } from "@/lib/goals";
-import { mappingConfig, type MilestoneMapping } from "@/lib/mapping-config";
+import { mappingConfig, trackedMilestones, type MilestoneMapping } from "@/lib/mapping-config";
 import { coverage } from "@/lib/metrics";
 
 export interface RepLine {
@@ -35,6 +35,8 @@ export interface MilestoneResult {
   /** Contacts that entered the stage in the period but could not be placed in a reporting group. */
   unclassified: number;
   prev: number | null;
+  /** Opportunity Value behind the prior-period achievements (null when prev is null). */
+  prevValue: number | null;
   prevUnavailableReason?: string;
   goal: number | null;
   currentInStage: number;
@@ -101,6 +103,7 @@ export function computeMilestone(m: MilestoneMapping, range: DateRange, names: M
     valueMissing: 0,
     unclassified: 0,
     prev: null,
+    prevValue: null,
     goal: goalFor(m.key, range.key),
     currentInStage: 0,
     currentValue: 0,
@@ -167,6 +170,10 @@ export function computeMilestone(m: MilestoneMapping, range: DateRange, names: M
     .get(m.key, start, end) as { c: number };
 
   const prevRows = firstEvents(m.key, group, range.prevStart.toISOString(), range.prevEnd.toISOString());
+  const prevOpps = new Map<string, number | null>();
+  for (const r of prevRows) if (!prevOpps.has(r.opportunity_id)) prevOpps.set(r.opportunity_id, r.value_at_event);
+  let prevValue = 0;
+  for (const v of prevOpps.values()) prevValue += v ?? 0;
   const partialHistory = start < cov.firstCoreSyncAt;
   const prevPartial = range.prevStart.toISOString() < cov.firstCoreSyncAt;
 
@@ -188,6 +195,7 @@ export function computeMilestone(m: MilestoneMapping, range: DateRange, names: M
     valueMissing: missing,
     unclassified: unclassified.c,
     prev: new Set(prevRows.map((r) => r.who)).size,
+    prevValue,
     prevUnavailableReason: prevPartial ? "Comparison period predates full milestone tracking; prior-period count is partial." : undefined,
     reps: [...reps.values()].sort((a, b) => b.contacts - a.contacts || b.value - a.value),
     partialHistory,
@@ -198,6 +206,12 @@ export function computeMilestone(m: MilestoneMapping, range: DateRange, names: M
 export function computeMilestones(range: DateRange): MilestoneResult[] {
   const names = userNames();
   return mappingConfig.milestones.map((m) => computeMilestone(m, range, names));
+}
+
+/** One tracked milestone by key (program milestones and KPI-only milestones alike). */
+export function computeMilestoneByKey(key: string, range: DateRange): MilestoneResult | undefined {
+  const m = trackedMilestones().find((x) => x.key === key);
+  return m ? computeMilestone(m, range, userNames()) : undefined;
 }
 
 export function fmtUsd(v: number): string {

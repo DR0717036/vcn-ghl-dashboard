@@ -36,6 +36,8 @@ export interface DateRange {
   start: Date;
   /** Exclusive end instant. For period-to-date ranges this is "now". */
   end: Date;
+  /** Exclusive end of the whole period (e.g. the start of next month for This Month). Equals end when the period is over. */
+  fullEnd: Date;
   /** The comparable previous period: same elapsed portion for partial periods. */
   prevStart: Date;
   prevEnd: Date;
@@ -143,11 +145,12 @@ export function resolveRange(
   custom?: { from?: string; to?: string },
 ): DateRange {
   const sod = startOfDay(now);
-  const mk = (start: Date, end: Date, prevStart: Date, prevEnd: Date, partial: boolean): DateRange => ({
+  const mk = (start: Date, end: Date, prevStart: Date, prevEnd: Date, partial: boolean, fullEnd?: Date): DateRange => ({
     key,
     label: RANGE_LABELS[key],
     start,
     end,
+    fullEnd: fullEnd ?? end,
     prevStart,
     prevEnd,
     partial,
@@ -156,14 +159,14 @@ export function resolveRange(
 
   switch (key) {
     case "today":
-      return mk(sod, now, addDays(sod, -1), addDays(now, -1), true);
+      return mk(sod, now, addDays(sod, -1), addDays(now, -1), true, addDays(sod, 1));
     case "yesterday": {
       const s = addDays(sod, -1);
       return mk(s, sod, addDays(sod, -2), s, false);
     }
     case "this_week": {
       const s = startOfWeek(now);
-      return mk(s, now, addDays(s, -7), addDays(now, -7), true);
+      return mk(s, now, addDays(s, -7), addDays(now, -7), true, addDays(s, 7));
     }
     case "last_week": {
       const s = addDays(startOfWeek(now), -7);
@@ -175,7 +178,7 @@ export function resolveRange(
       const ps = addMonths(now, -1);
       const elapsed = now.getTime() - s.getTime();
       const pe = new Date(Math.min(ps.getTime() + elapsed, s.getTime()));
-      return mk(s, now, ps, pe, true);
+      return mk(s, now, ps, pe, true, addMonths(now, 1));
     }
     case "last_month": {
       const s = addMonths(now, -1);
@@ -188,7 +191,7 @@ export function resolveRange(
       const ps = nyDate(p.y - 1, 1, 1);
       const elapsed = now.getTime() - s.getTime();
       const pe = new Date(Math.min(ps.getTime() + elapsed, s.getTime()));
-      return mk(s, now, ps, pe, true);
+      return mk(s, now, ps, pe, true, nyDate(p.y + 1, 1, 1));
     }
     case "last_year": {
       const p = nyParts(now);
@@ -203,7 +206,7 @@ export function resolveRange(
       const len = end.getTime() - from.getTime();
       const partial = end.getTime() > now.getTime();
       const effectiveEnd = partial ? now : end;
-      return mk(from, effectiveEnd, new Date(from.getTime() - len), new Date(effectiveEnd.getTime() - len), partial);
+      return mk(from, effectiveEnd, new Date(from.getTime() - len), new Date(effectiveEnd.getTime() - len), partial, end);
     }
   }
 }
@@ -250,4 +253,21 @@ export function dayKeysBetween(start: Date, end: Date): string[] {
     cur = addDays(cur, 1);
   }
   return keys;
+}
+
+/** Every New York clock hour start from start to end (exclusive), as "YYYY-MM-DDTHH". */
+export function hourKeysBetween(start: Date, end: Date): string[] {
+  const keys: string[] = [];
+  let cur = new Date(start.getTime());
+  while (cur.getTime() < end.getTime()) {
+    keys.push(nyHourKey(cur));
+    cur = new Date(cur.getTime() + 3_600_000);
+  }
+  return keys;
+}
+
+/** "YYYY-MM-DDTHH" in New York for a given instant. */
+export function nyHourKey(d: Date): string {
+  const p = nyParts(d);
+  return `${nyDayKey(d)}T${String(p.h).padStart(2, "0")}`;
 }

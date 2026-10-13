@@ -1,17 +1,22 @@
 // Executive scorecard (brief section 3). Reads the local cache only.
 
-import { newLeadsSeries, programFunnels } from "@/lib/charts";
+import { callsSeries, milestoneSeries, newLeadsSeries, programFunnels, talkTimeSeries } from "@/lib/charts";
 import { latestSyncRuns } from "@/lib/db";
 import { fmtDateTime, fmtRange, isRangeKey, REPORTING_TZ, resolveRange, type RangeKey } from "@/lib/dates";
 import { chartSeries } from "@/lib/design";
-import { computePrimaryKpis, coverage, kpiNewLeads } from "@/lib/metrics";
-import { computeMilestones } from "@/lib/milestones";
+import { mappingConfig } from "@/lib/mapping-config";
+import { computePrimaryKpis, coverage, kpiAppointmentsCancelled, kpiAppointmentsConfirmed, kpiNewLeads } from "@/lib/metrics";
+import { computeMilestoneByKey, computeMilestones } from "@/lib/milestones";
+import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { computeWon } from "@/lib/won";
 import BarChart from "./charts/BarChart";
 import FunnelChart from "./charts/FunnelChart";
+import LineChart from "./charts/LineChart";
 import KpiCard from "./KpiCard";
 import MilestoneCard from "./MilestoneCard";
+import MilestoneKpiCard from "./MilestoneKpiCard";
+import SubmissionsCard from "./SubmissionsCard";
 import RangePicker from "./RangePicker";
 import WonSection from "./WonSection";
 
@@ -37,6 +42,23 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const cov = coverage();
   const lastRun = latestSyncRuns(CORE_SYNC_KIND, 1)[0];
   const kpis = computePrimaryKpis(range).map((k) => (k.key === "newLeads" ? kpiNewLeads(newLeadsRange) : k));
+  const kpi = (key: string) => kpis.find((k) => k.key === key)!;
+  const calls = callsSeries(range);
+  const talk = talkTimeSeries(range);
+  const confirmed = kpiAppointmentsConfirmed(range);
+  const cancelled = kpiAppointmentsCancelled(range);
+  // KPI-row milestone cards: the historical FS1 submissions stage plus the two Army stages that feed the combined goal.
+  const kpiMilestoneKeys = [...mappingConfig.kpiMilestones.map((m) => m.key), "army_ca101", "army_supervisor_approval"];
+  const kpiMilestones = kpiMilestoneKeys
+    .map((key) => {
+      const m = computeMilestoneByKey(key, range);
+      const mapping = [...mappingConfig.kpiMilestones, ...mappingConfig.milestones].find((x) => x.key === key);
+      return m && mapping ? { m, series: milestoneSeries(mapping, range) } : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+  const submissions = computeSubmissions(range);
+  const per = calls.grouping === "hourly" ? "per hour" : calls.grouping === "daily" ? "per day" : "per week";
+  const priorLabel = range.key === "this_week" || range.key === "last_week" ? "prior week" : "prior period";
   const milestones = computeMilestones(range);
   const won = computeWon(range);
   const leadsSeries = newLeadsSeries(range);
@@ -84,10 +106,65 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
 
       <section>
         <h2>Primary KPIs</h2>
-        <div className="grid grid-3">
-          {kpis.map((k) => (
-            <KpiCard key={k.key} k={k} />
+        <div className="kpi-grid">
+          <KpiCard k={kpi("leadsAssigned")} />
+          <KpiCard k={kpi("newLeads")} />
+          <KpiCard
+            k={kpi("callsMade")}
+            className="span-2"
+            chart={
+              <div className="kpi-chart-note">
+                <LineChart
+                  height={200}
+                  series={[
+                    { label: `Calls ${per}`, color: chartSeries[0], points: calls.points.map((p) => ({ label: p.label, value: p.count })), format: "count" },
+                    ...(calls.prior
+                      ? [{ label: `${priorLabel} (same length, aligned by ${calls.grouping === "hourly" ? "hour" : "day"})`, color: "var(--series-prior)", points: calls.prior.map((p) => ({ label: p.label, value: p.count })), format: "count" as const, muted: true }]
+                      : []),
+                  ]}
+                />
+                {!calls.prior && calls.priorReason ? <div className="note">Prior overlay unavailable: {calls.priorReason}</div> : null}
+              </div>
+            }
+          />
+          <KpiCard
+            k={kpi("talkTime")}
+            className="span-2"
+            chart={
+              <div className="kpi-chart-note">
+                <BarChart
+                  height={200}
+                  points={talk.points}
+                  prior={talk.prior}
+                  priorLabel={`${priorLabel} (same length, aligned by ${talk.grouping === "hourly" ? "hour" : "day"})`}
+                  color={chartSeries[0]}
+                  unit={`recorded minutes ${per}`}
+                  format="minutes"
+                />
+                {!talk.prior && talk.priorReason ? <div className="note">Prior overlay unavailable: {talk.priorReason}</div> : null}
+              </div>
+            }
+          />
+          <KpiCard k={kpi("appointmentsBooked")} />
+          <KpiCard k={kpi("appointmentsCompleted")} />
+          <KpiCard k={confirmed} />
+          <KpiCard k={cancelled} />
+          {kpiMilestones.map(({ m, series }) => (
+            <MilestoneKpiCard
+              key={m.key}
+              m={m}
+              series={series}
+              className="span-2"
+              subtitle={
+                m.key === "army_ca101"
+                  ? `Army CA · ${m.reportingGroup} · "${m.stageName}" · reached during period · feeds the combined submissions goal`
+                  : m.key === "army_supervisor_approval"
+                    ? `Army CA · ${m.reportingGroup} · "${m.stageName}" · entered during period (awaiting approval)`
+                    : `Veteran G.I. Bill · ${m.reportingGroup} (historical semester) · "${m.stageName}" · reached during period`
+              }
+            />
           ))}
+          <SubmissionsCard s={submissions} className="span-4" />
         </div>
       </section>
 

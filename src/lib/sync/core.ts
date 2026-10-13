@@ -14,7 +14,7 @@
 
 import { finishSyncRun, getDb, getState, setState, startSyncRun } from "@/lib/db";
 import * as ghl from "@/lib/ghl/read";
-import { mappingConfig, type MilestoneMapping } from "@/lib/mapping-config";
+import { mappingConfig, type MilestoneMapping , trackedMilestones } from "@/lib/mapping-config";
 
 export const CORE_SYNC_KIND = "core";
 /** Calls and appointments are loaded from this instant forward. */
@@ -226,7 +226,7 @@ async function syncOpportunities(now: string, firstSyncDone: boolean): Promise<P
     INSERT OR IGNORE INTO milestone_events (kind, milestone_key, contact_id, opportunity_id, pipeline_id, stage_id, reporting_group,
       event_time, time_basis, observed_at, assigned_to_at_event, value_at_event, is_baseline)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const milestoneByStage = new Map(mappingConfig.milestones.map((m) => [m.stageId, m]));
+  const milestoneByStage = new Map(trackedMilestones().map((m) => [m.stageId, m]));
   const pipelineIds = mappingConfig.pipelines.map((p) => p.id);
   const isBaseline = firstSyncDone ? 0 : 1;
 
@@ -307,6 +307,30 @@ async function syncOpportunities(now: string, firstSyncDone: boolean): Promise<P
     }
     // Anything GHL no longer returns is flagged, never deleted.
     db.prepare(`UPDATE opportunities SET missing_since = ? WHERE missing_since IS NULL AND last_seen_at < ?`).run(now, now);
+
+    // Backfill: when a stage is newly added to the tracked list, opportunities
+    // already sitting in it have no event yet. Record one baseline event each,
+    // dated by GHL's own stage-entry time (never invented). Idempotent.
+    const selMissing = db.prepare(`
+      SELECT o.id, o.contact_id, o.pipeline_id, o.stage_id, o.assigned_to, o.monetary_value, o.last_stage_change_at, o.created_at
+        FROM opportunities o WHERE o.stage_id = ? AND o.missing_since IS NULL
+         AND NOT EXISTS (SELECT 1 FROM milestone_events e WHERE e.kind = 'milestone' AND e.milestone_key = ? AND e.opportunity_id = o.id)`);
+    let backfilled = 0;
+    for (const m of trackedMilestones()) {
+      const rows = selMissing.all(m.stageId, m.key) as {
+        id: string; contact_id: string | null; pipeline_id: string; stage_id: string; assigned_to: string | null;
+        monetary_value: number | null; last_stage_change_at: string | null; created_at: string | null;
+      }[];
+      for (const o of rows) {
+        const tagsRow = o.contact_id ? (selTags.get(o.contact_id) as { tags: string | null } | undefined) : undefined;
+        const contactTags = tagsRow?.tags ? (JSON.parse(tagsRow.tags) as string[]) : undefined;
+        const t = o.last_stage_change_at ?? o.created_at;
+        insEvent.run("milestone", m.key, o.contact_id, o.id, o.pipeline_id, o.stage_id, reportingGroupFor(m, contactTags),
+          t ?? now, t ? "ghl_last_stage_change" : "observed", now, o.assigned_to, o.monetary_value, 1);
+        backfilled += 1;
+      }
+    }
+    if (backfilled > 0) res.warnings.push(`Backfilled ${backfilled} baseline milestone event(s) for newly tracked stages.`);
     res.ok = true;
   } catch (e) {
     res.error = (e as Error).message;

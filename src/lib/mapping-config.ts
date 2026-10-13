@@ -42,6 +42,12 @@ export interface MappingConfig {
     reportingGroup: string;
     note?: string;
   })[];
+  /** Event-tracked stages shown as Primary KPI cards, not as program milestone cards. */
+  kpiMilestones: MilestoneMapping[];
+  /** Stages read as current-occupancy snapshots (never events). */
+  snapshotStages: {
+    appointmentConfirmed: (StageRef & { program: ProgramKey; pipelineId: string })[];
+  };
   reportingGroups: Record<
     string,
     {
@@ -78,8 +84,13 @@ export function mappedTags(): { tag: string; use: string }[] {
 
 export const mappingConfig = raw as unknown as MappingConfig;
 
+/** Every stage whose entries are recorded as milestone events: the six program milestones plus KPI-only ones. */
+export function trackedMilestones(): MilestoneMapping[] {
+  return [...mappingConfig.milestones, ...mappingConfig.kpiMilestones];
+}
+
 export function milestoneForStage(stageId: string): MilestoneMapping | undefined {
-  return mappingConfig.milestones.find((m) => m.stageId === stageId);
+  return trackedMilestones().find((m) => m.stageId === stageId);
 }
 
 export function funnelOnlyForStage(stageId: string) {

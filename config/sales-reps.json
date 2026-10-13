@@ -1,0 +1,29 @@
+{
+  "_comment": "The sales reps used for every per-rep goal and the rep leaderboard. Matched to GHL users by email (case-insensitive). Everyone else in GHL still counts in team totals but is excluded from rep goals. Edit this list when the team changes (owner decision 2026-10-13).",
+  "reps": [
+    {
+      "name": "Michael Nieves",
+      "email": "Michaelnieves199@gmail.com"
+    },
+    {
+      "name": "Miguel Torres",
+      "email": "migueltorresc03@gmail.com"
+    },
+    {
+      "name": "Isabela Estrada",
+      "email": "Estradabela1@gmail.com"
+    },
+    {
+      "name": "William Bobier",
+      "email": "Wbobier94@gmail.com"
+    },
+    {
+      "name": "Sam R.",
+      "email": "Sebastianrod619@outlook.com"
+    },
+    {
+      "name": "Anthony N.",
+      "email": "cybertone2.0@gmail.com"
+    }
+  ]
+}
