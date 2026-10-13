@@ -6,7 +6,8 @@
 
 import type { DateRange } from "@/lib/dates";
 import { goalFor, type Goal } from "@/lib/goals";
-import { computeMilestoneByKey, type MilestoneResult } from "@/lib/milestones";
+import { trackedMilestones } from "@/lib/mapping-config";
+import { computeMilestoneByKey, firstEvents, type MilestoneResult } from "@/lib/milestones";
 import { repRoster, type Rep } from "@/lib/reps";
 
 export interface SubmissionRow {
@@ -44,6 +45,34 @@ export interface SubmissionsResult {
 
 const CA101_KEY = "army_ca101";
 const FS2_KEY = "vet_iau_app_submitted";
+
+export interface SubmissionEvent {
+  /** Opportunity owner at the time of the event (the credited user). */
+  userId: string | null;
+  /** Event time (ISO). */
+  time: string;
+  key: string;
+}
+
+/**
+ * Every counted submission inside [start, end): the first entry into CA 101
+ * submitted or IAU App Submitted (FS2) per contact, exactly as the card and the
+ * drilldowns count them. Used to price commission event by event.
+ */
+export function submissionEvents(start: Date, end: Date): SubmissionEvent[] {
+  const out: SubmissionEvent[] = [];
+  for (const key of [CA101_KEY, FS2_KEY]) {
+    const m = trackedMilestones().find((x) => x.key === key);
+    if (!m) continue;
+    const seen = new Set<string>();
+    for (const r of firstEvents(key, m.reportingGroup, start.toISOString(), end.toISOString())) {
+      if (seen.has(r.who)) continue;
+      seen.add(r.who);
+      out.push({ userId: r.assigned_to_at_event, time: r.event_time, key });
+    }
+  }
+  return out;
+}
 
 export function computeSubmissions(range: DateRange): SubmissionsResult {
   const ca = computeMilestoneByKey(CA101_KEY, range);

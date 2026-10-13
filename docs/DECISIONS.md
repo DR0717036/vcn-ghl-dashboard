@@ -288,3 +288,20 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     Reconciled: rows = Combined per rep, quota MTD = Combined with This
     Month, won table = Won (MTD) per rep, rep modals sum to the team
     total.
+38. **Round 7: commission follows the selected range.** Est. commission
+    is the commission earned on the submissions or wins inside the
+    selected date range, each event priced by its place in its own
+    calendar month: a submission pays the retro rate when the rep's
+    submissions in that month, through the end of the range (or now for
+    an open range), reach the threshold; a won pays the first-tier rate
+    when it is among the rep's first N wons of that month by won date;
+    flat plans pay per won. Ranges that span months are priced month by
+    month. The sub-label shows the calculation ("8 × $100 (retro)",
+    "4 won × $250", "1 × $500 + 2 × $250") instead of a plan name. The
+    column is "Est. commission (selected range)" with a header tooltip
+    describing the three plans; the team total and the standalone figure
+    read "Total est. commission · <range>". Monthly quota and Won (MTD)
+    stay month-to-date, and the rep drilldown header shows both the
+    range commission and the month-to-date commission. Verified: This
+    Month equals the previous month-to-date figures for every rep;
+    Today and Yesterday equal that day's events priced per plan.

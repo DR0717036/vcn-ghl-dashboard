@@ -51,7 +51,8 @@ export default function SubmissionsCard({
       ? [
           { label: "Monthly quota", value: `${n(mtd.submissionsMtd)}/${n(mtd.monthlyQuota)}`, title: quotaTitle },
           { label: "Won (MTD)", value: n(mtd.wonMtd), title: `Won opportunities credited this month (${c.monthLabel}).` },
-          { label: "Est. commission", value: `${mtd.commission === null ? DASH : fmtUsd(mtd.commission)}${mtd.planLabel ? ` · ${mtd.planLabel}` : ""}`, title: mtd.commissionBasis },
+          { label: `Est. commission (${rangeLabel})`, value: `${mtd.commission.amount === null ? DASH : fmtUsd(mtd.commission.amount)} · ${mtd.commission.label}`, title: "Commission on the events inside the selected date range." },
+          { label: "Est. commission (month to date)", value: `${mtd.commissionMtd.amount === null ? DASH : fmtUsd(mtd.commissionMtd.amount)} · ${mtd.commissionMtd.label}`, title: `Commission on this calendar month's events so far (${c.monthLabel}).` },
         ]
       : [{ label: "Won (MTD)", value: n(c.othersWon), title: `Won opportunities this month credited to users who are not sales reps (${c.monthLabel}).` }];
     const wonBased = !rep || isWonBased(plan);
@@ -98,9 +99,9 @@ export default function SubmissionsCard({
         <td className="num" title={`Won opportunities credited this month (${c.monthLabel}).`}>
           {n(mtd.wonMtd)}
         </td>
-        <td className="num commission" title={mtd.commissionBasis}>
-          {mtd.commission === null ? DASH : fmtUsd(mtd.commission)}
-          <span className="plan-label">{mtd.planLabel ?? "plan not found"}</span>
+        <td className="num commission" title={`${mtd.commission.label} · ${rangeLabel}. Plan: ${mtd.planKey}.`}>
+          {mtd.commission.amount === null ? DASH : fmtUsd(mtd.commission.amount)}
+          <span className="plan-label">{mtd.commission.label}</span>
         </td>
       </>
     );
@@ -133,7 +134,9 @@ export default function SubmissionsCard({
                 Monthly quota
               </th>
               <th className="num">Won (MTD)</th>
-              <th className="num">Est. commission</th>
+              <th className="num" title={c.planSummary}>
+                Est. commission (selected range)
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -177,7 +180,7 @@ export default function SubmissionsCard({
               <td className="num">{n(c.totalWon)}</td>
               <td className="num commission">
                 {fmtUsd(c.totalCommission)}
-                <span className="plan-label">Total est. commission (MTD)</span>
+                <span className="plan-label">Total est. commission · {rangeLabel}</span>
               </td>
             </tr>
           </tbody>
@@ -185,7 +188,7 @@ export default function SubmissionsCard({
       </div>
       <div className="rep-commission-total">
         <div>
-          <div className="note">Total est. commission (MTD) · {c.monthLabel}</div>
+          <div className="note">Total est. commission · {rangeLabel}</div>
           <div className="stat-value">{fmtUsd(c.totalCommission)}</div>
         </div>
         <div className="note rep-commission-note">Estimated from dashboard counts; the official commission calculation is done outside this dashboard.</div>

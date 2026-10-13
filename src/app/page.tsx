@@ -68,8 +68,8 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
   const submissions = computeSubmissions(range);
-  // Month-to-date quota, won, and commission estimates: always the current calendar month.
-  const commission = computeCommission(now);
+  // Commission on the events inside the selected range (quota and Won (MTD) stay month-to-date).
+  const commission = computeCommission(range, now);
   const milestones = computeMilestones(range);
   const won = computeWon(range);
   const leadsSeries = newLeadsSeries(range);
