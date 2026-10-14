@@ -1973,3 +1973,95 @@ section > h2 {
 .th-static {
   cursor: default;
 }
+
+
+/* =====================================================================
+   Round 10 (owner "edits round 9"): answered filter and recordings in the
+   call drilldown
+   ===================================================================== */
+
+.answer-filter {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: var(--s-5);
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--r-btn);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.seg-btn {
+  background: transparent;
+  color: #d3dbe5;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.seg-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.seg-btn.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #ffffff;
+}
+
+.answer-filter + .modal-toolbar {
+  margin-top: var(--s-3);
+}
+
+.modal-sep {
+  color: #6f7d8e;
+  margin: 0 2px;
+}
+
+.rec-btn {
+  background: rgba(22, 119, 255, 0.14);
+  color: #7fb0ff;
+  border: 1px solid rgba(22, 119, 255, 0.45);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rec-btn:hover {
+  background: rgba(22, 119, 255, 0.26);
+  color: #ffffff;
+}
+
+.rec-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.rec-player {
+  height: 32px;
+  width: 260px;
+  vertical-align: middle;
+}
+
+.drill-table td.drill-rec {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  overflow: visible;
+}
+
+/* "929 / 1,104 · 84%" needs room: wider first number column, never wrapped */
+.rep-table-calls .col-num {
+  width: 176px;
+}
+
+.rep-table-calls td.dials {
+  white-space: nowrap;
+}

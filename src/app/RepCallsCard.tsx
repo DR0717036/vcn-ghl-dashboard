@@ -23,19 +23,24 @@ export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = ""
     title: `${row.name} · ${n(row.dials)} ${row.dials === 1 ? "dial" : "dials"}`,
     subtitle: `Calls in the selected range · ${rangeLabel}`,
     facts: [
+      { label: "Answered / dials", value: `${n(row.answered)} / ${n(row.dials)}`, title: "Answered = outbound, status completed or answered, duration above zero." },
       { label: "Total talk time", value: mins(row.talkSeconds), title: "Recorded duration of connected calls in the range." },
       { label: "Avg talk time per call", value: row.avgSeconds === null ? DASH : fmtDuration(row.avgSeconds), title: `${n(row.connected)} connected calls counted.` },
       { label: "First call (avg)", value: row.firstCallAvg ?? DASH, title: `Average of the first outbound attempt on each of the ${n(row.firstCallDays)} days with any outbound call.` },
     ],
     columns: CALL_COLUMNS,
     perDayTable: { title: "Per day: dials, talk time, and first outbound call" },
+    answeredFilter: true,
+    expectedAnswered: row.answered,
     notes,
     csvName: `${row.name} calls ${rangeLabel}`,
   });
 
   const cells = (row: RepCallRow) => (
     <>
-      <td className="num dials">{n(row.dials)}</td>
+      <td className="num dials" title="Answered outbound calls / outbound dials. Answered = status completed or answered with a duration above zero (connected, not verified conversation).">
+        {`${n(row.answered)} / ${n(row.dials)} · ${row.dials > 0 ? `${Math.round((row.answered / row.dials) * 100)}%` : DASH}`}
+      </td>
       <td className="status">
         {row.callStatus ? (
           <StatusPill status={row.callStatus} title={row.callGoal ? `Own goal ${Math.round(row.callGoal.full)} dials${row.callGoal.scaled !== row.callGoal.full ? ` (${Math.round(row.callGoal.scaled)} by now)` : ""}` : undefined} />
@@ -75,7 +80,7 @@ export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = ""
         <thead>
           <tr>
             <th>Sales rep</th>
-            <th className="num">Dials</th>
+            <th className="num">Answered / Dials</th>
             <th className="status">Call goal</th>
             <th className="num">Total talk time</th>
             <th className="num">Avg talk / call</th>
@@ -98,7 +103,7 @@ export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = ""
           ) : null}
           <tr className="rep-total">
             <td className="rep-name">Team total</td>
-            <td className="num dials">{n(r.total.dials)}</td>
+            <td className="num dials">{`${n(r.total.answered)} / ${n(r.total.dials)} · ${r.total.dials > 0 ? `${Math.round((r.total.answered / r.total.dials) * 100)}%` : DASH}`}</td>
             <td className="status">
               <GoalPill goal={r.callsGoal} value={r.total.dials} />
             </td>

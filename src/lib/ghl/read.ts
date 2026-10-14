@@ -4,7 +4,7 @@
 // github.com/GoHighLevel/highlevel-api-docs) on 2026-10-11.
 
 import { getEnv } from "@/lib/env";
-import { ghlGet, type GhlResult } from "@/lib/ghl/http";
+import { ghlGet, ghlGetStream, type GhlResult } from "@/lib/ghl/http";
 
 // ---- response shapes (only the fields we rely on) --------------------------
 
@@ -264,6 +264,17 @@ export function exportMessages(p: MessageExportParams): Promise<GhlResult<GhlMes
     sortBy: p.sortBy,
     sortOrder: p.sortOrder,
   });
+}
+
+/**
+ * The audio recording attached to one call message, streamed (read-only GET).
+ * Verified 2026-10-14 against the live account: connected calls return
+ * audio/x-wav with the message id (not altId); calls without a recording
+ * return HTTP 422 "Message does not have recording".
+ */
+export function getCallRecording(messageId: string) {
+  const { locationId } = getEnv();
+  return ghlGetStream(`/conversations/messages/${encodeURIComponent(messageId)}/locations/${encodeURIComponent(locationId)}/recording`, "2021-04-15");
 }
 
 /** One contact by id, read-only. Used by drilldowns for email and phone, one call per listed contact. */

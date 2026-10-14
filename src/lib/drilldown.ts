@@ -51,6 +51,10 @@ export interface DrillRow {
   direction?: string | null;
   outcome?: string | null;
   durationSec?: number | null;
+  /** yes = outbound, status completed/answered, duration > 0; no = other outbound; na = inbound. */
+  answered?: "yes" | "no" | "na";
+  /** GHL message id to stream a recording for (connected calls only); null when none can exist. */
+  recordingId?: string | null;
 }
 
 export interface DrillResult {

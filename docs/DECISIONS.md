@@ -337,3 +337,21 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     Note: the rep table judges dials (outbound only) against the calls
     goal, so its "% of goal" is slightly below the Calls Made card,
     which counts inbound attempts too.
+41. **Round 10 (owner "edits round 9") answered calls and recordings.**
+    The Rep Call Activity table shows "Answered / Dials · %": answered =
+    outbound human call with status completed or answered and duration
+    > 0 (busy, no-answer, failed, voicemail excluded); GHL cannot tell a
+    human pickup from an answering machine, so answered means connected.
+    The call drilldown gained an Answered column ("Yes · completed",
+    "No · voicemail", "n/a · … (inbound)"), an All / Answered / Not
+    answered toggle, the answered count checked against the table row,
+    Answered in the CSV, and a Recording column. Recordings: GET
+    /api/recording?id=<message id> streams the audio from GHL's
+    documented recording endpoint (GET /conversations/messages/{id}/
+    locations/{locationId}/recording, Version 2021-04-15) with the token
+    kept server-side; verified 2026-10-14 that the existing token
+    returns audio/x-wav for connected calls using the message id (altId
+    is rejected) and HTTP 422 when no recording exists, so no scope
+    change was needed. Nothing loads until "Load recording" is clicked;
+    the id must be a human call in the cache; the route is disabled in
+    production until login exists; recordings are never put in the CSV.

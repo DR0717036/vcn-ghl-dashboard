@@ -32,7 +32,9 @@ export type ColumnKey =
   | "direction"
   | "outcome"
   | "duration"
-  | "calledOn";
+  | "calledOn"
+  | "answered"
+  | "recording";
 
 const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "date" }> = {
   name: { label: "Contact name", kind: "text" },
@@ -53,6 +55,8 @@ const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "dat
   outcome: { label: "Outcome", kind: "text" },
   duration: { label: "Duration", kind: "number" },
   calledOn: { label: "Time", kind: "date" },
+  answered: { label: "Answered", kind: "text" },
+  recording: { label: "Recording", kind: "text" },
 };
 
 /** KPI card drilldown columns, in the owner's order. */
@@ -62,7 +66,17 @@ export const REP_COLUMNS: ColumnKey[] = ["name", "email", "phone", "source", "pi
 /** Won opportunities listed under a won-based rep. */
 export const WON_COLUMNS: ColumnKey[] = ["name", "pipeline", "stage", "value", "wonOn"];
 /** A rep's calls (Rep Call Activity drilldown). */
-export const CALL_COLUMNS: ColumnKey[] = ["name", "direction", "outcome", "duration", "calledOn"];
+export const CALL_COLUMNS: ColumnKey[] = ["name", "direction", "answered", "duration", "calledOn", "recording"];
+/** Columns that never go into a CSV (a recording is streamed on click, not a value). */
+const NO_CSV: ColumnKey[] = ["recording"];
+
+function answeredText(row: DrillRow): string {
+  const status = row.outcome ? row.outcome : "no status";
+  if (row.answered === "yes") return `Yes · ${status}`;
+  if (row.answered === "no") return `No · ${status}`;
+  if (row.answered === "na") return `n/a · ${status} (inbound)`;
+  return DASH;
+}
 
 function fmtDuration(sec: number): string {
   const s = Math.round(sec);
@@ -102,6 +116,10 @@ function cell(row: DrillRow, key: ColumnKey): { text: string; sort: string | num
       return { text: row.durationSec === null || row.durationSec === undefined ? DASH : fmtDuration(row.durationSec), sort: row.durationSec ?? null };
     case "direction":
       return { text: row.direction ? row.direction : DASH, sort: row.direction ?? null };
+    case "answered":
+      return { text: answeredText(row), sort: row.answered === "yes" ? "2" : row.answered === "no" ? "1" : row.answered === "na" ? "0" : null };
+    case "recording":
+      return { text: row.recordingId ? "available" : DASH, sort: row.recordingId ? 1 : null };
     case "outcome":
       return { text: row.outcome ? row.outcome : DASH, sort: row.outcome ?? null };
     default: {
@@ -115,7 +133,8 @@ function csvEscape(s: string): string {
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-function downloadCsv(name: string, columns: ColumnKey[], rows: DrillRow[]) {
+function downloadCsv(name: string, allColumns: ColumnKey[], rows: DrillRow[]) {
+  const columns = allColumns.filter((k) => !NO_CSV.includes(k));
   const lines = [columns.map((k) => csvEscape(COLUMNS[k].label)).join(",")];
   for (const r of rows) lines.push(columns.map((k) => csvEscape(cell(r, k).text)).join(","));
   const blob = new Blob(["﻿" + lines.join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
@@ -131,6 +150,63 @@ function downloadCsv(name: string, columns: ColumnKey[], rows: DrillRow[]) {
 
 type Dir = "asc" | "desc";
 
+/**
+ * Inline audio player for one call recording. Nothing is fetched until the
+ * person clicks Load; the audio comes from /api/recording on this server
+ * (the GHL token never reaches the page) and is held as a blob so the
+ * player can scrub and show the duration.
+ */
+function RecordingCell({ id }: { id: string }) {
+  const [state, setState] = useState<"idle" | "loading" | "ready" | "none" | "error">("idle");
+  const [src, setSrc] = useState<string | null>(null);
+  const [err, setErr] = useState<string>("");
+  useEffect(() => {
+    return () => {
+      if (src) URL.revokeObjectURL(src);
+    };
+  }, [src]);
+  const load = async () => {
+    setState("loading");
+    try {
+      const r = await fetch(`/api/recording?id=${encodeURIComponent(id)}`, { cache: "no-store" });
+      if (r.status === 404) {
+        setState("none");
+        return;
+      }
+      if (!r.ok) {
+        let msg = `HTTP ${r.status}`;
+        try {
+          msg = ((await r.json()) as { error?: string }).error ?? msg;
+        } catch {
+          // keep the status text
+        }
+        setErr(msg);
+        setState("error");
+        return;
+      }
+      const blob = await r.blob();
+      setSrc(URL.createObjectURL(blob));
+      setState("ready");
+    } catch (e) {
+      setErr((e as Error).message);
+      setState("error");
+    }
+  };
+  if (state === "ready" && src) return <audio className="rec-player" controls preload="metadata" src={src} />;
+  if (state === "none") return <span className="dash">— no recording</span>;
+  if (state === "error")
+    return (
+      <span className="delta-down" title={err}>
+        unavailable
+      </span>
+    );
+  return (
+    <button type="button" className="rec-btn" onClick={load} disabled={state === "loading"}>
+      {state === "loading" ? "Loading…" : "▶ Load recording"}
+    </button>
+  );
+}
+
 /** One sortable table with its own toolbar (row count, reconciliation pill, CSV button). */
 function SortableTable({
   rows,
@@ -143,7 +219,9 @@ function SortableTable({
   csvName,
   emptyText,
   defaultSort,
+  extraToolbar,
 }: {
+  extraToolbar?: ReactNode;
   rows: DrillRow[];
   columns: ColumnKey[];
   loaded: boolean;
@@ -202,6 +280,7 @@ function SortableTable({
                 )
               ) : null}
               {note ? <span className="modal-note-inline">{note}</span> : null}
+              {extraToolbar}
             </>
           )}
         </div>
@@ -242,6 +321,13 @@ function SortableTable({
               <tr key={`${r.milestoneKey}:${r.opportunityId}:${r.contactId ?? ""}`}>
                 {columns.map((k) => {
                   const c = cell(r, k);
+                  if (k === "recording") {
+                    return (
+                      <td key={k} className={r.recordingId ? "drill-rec" : "dash"}>
+                        {r.recordingId ? <RecordingCell id={r.recordingId} /> : DASH}
+                      </td>
+                    );
+                  }
                   if (k === "name") {
                     return (
                       <td key={k} className="drill-name">
@@ -287,6 +373,10 @@ export interface DrilldownSpec {
   wonTable?: { title: string; expected: number | null };
   /** Call drilldowns: show the per-day summary (dials, talk time, first outbound call). */
   perDayTable?: { title: string };
+  /** Call drilldowns: show the All / Answered / Not answered toggle. */
+  answeredFilter?: boolean;
+  /** The Answered figure on the table row; the modal confirms its Yes rows match it. */
+  expectedAnswered?: number | null;
   notes?: string[];
   csvName: string;
 }
@@ -294,6 +384,11 @@ export interface DrilldownSpec {
 export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose: () => void }) {
   const [data, setData] = useState<DrillResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [answerFilter, setAnswerFilter] = useState<"all" | "yes" | "no">("all");
+  const allRows = data?.rows ?? [];
+  const answeredCount = allRows.filter((r) => r.answered === "yes").length;
+  const shownRows = spec.answeredFilter && answerFilter !== "all" ? allRows.filter((r) => r.answered === answerFilter) : allRows;
+  const answeredMismatch = data && spec.expectedAnswered !== undefined && spec.expectedAnswered !== null && answeredCount !== spec.expectedAnswered;
 
   useEffect(() => {
     let cancelled = false;
@@ -361,17 +456,46 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
           </div>
         ) : null}
 
+        {spec.answeredFilter ? (
+          <div className="answer-filter" role="group" aria-label="Answered filter">
+            {(
+              [
+                ["all", "All"],
+                ["yes", "Answered"],
+                ["no", "Not answered"],
+              ] as const
+            ).map(([key, label]) => (
+              <button key={key} type="button" className={`seg-btn${answerFilter === key ? " active" : ""}`} onClick={() => setAnswerFilter(key)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <SortableTable
-          rows={data?.rows ?? []}
+          rows={shownRows}
           columns={spec.columns}
           loaded={Boolean(data)}
           error={error}
-          expected={spec.expected}
+          expected={spec.answeredFilter && answerFilter !== "all" ? undefined : spec.expected}
           expectedLabel="the card"
           note={data?.detailsNote}
           csvName={spec.csvName}
           emptyText="No contacts in this period."
           defaultSort="reachedOn"
+          extraToolbar={
+            spec.expectedAnswered !== undefined && spec.expectedAnswered !== null ? (
+              <>
+                <span className="modal-sep">·</span>
+                <b>{answeredCount.toLocaleString("en-US")}</b> answered
+                {answeredMismatch ? (
+                  <span className="pill pill-warn modal-pill">does not match the table ({spec.expectedAnswered.toLocaleString("en-US")})</span>
+                ) : (
+                  <span className="pill pill-ok modal-pill">matches the table</span>
+                )}
+              </>
+            ) : null
+          }
         />
 
         {spec.wonTable ? (

@@ -149,3 +149,30 @@ export async function ghlGet<T>(
   }
   return { ok: false, status: null, kind: "other", error: "Gave up after retries" };
 }
+
+
+export interface GhlStreamOk {
+  ok: true;
+  status: number;
+  body: ReadableStream<Uint8Array> | null;
+  contentType: string | null;
+}
+
+/**
+ * One paced GET that returns the raw response body as a stream instead of
+ * parsing JSON. Used for call recordings (audio). Never throws for HTTP errors.
+ */
+export async function ghlGetStream(path: string, version: ApiVersion): Promise<GhlStreamOk | GhlErr> {
+  const { token } = getEnv();
+  const url = new URL(path, BASE_URL);
+  await takeSlot();
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "GET", headers: { Authorization: `Bearer ${token}`, Version: version, Accept: "*/*" }, cache: "no-store" });
+  } catch (err) {
+    return { ok: false, status: null, kind: "network", error: `Could not reach GHL: ${(err as Error).message}` };
+  }
+  if (res.ok) return { ok: true, status: res.status, body: res.body, contentType: res.headers.get("content-type") };
+  const body = summarizeBody(await res.text());
+  return { ok: false, status: res.status, kind: classify(res.status), error: `HTTP ${res.status}: ${body}` };
+}
