@@ -305,3 +305,16 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     range commission and the month-to-date commission. Verified: This
     Month equals the previous month-to-date figures for every rep;
     Today and Yesterday equal that day's events priced per plan.
+39. **Round 8 (owner "edits round 7") layout and chart style.** Content
+    width is 1600px with 32px side padding, applied to the header, the
+    sticky glass bar, every band, and the lower page. The Submissions
+    row is two rows of two half-width cards: Army CA 101 Submissions ·
+    Awaiting Supervisor Approval, then FS2 Application Submissions · FS2
+    Accepted (new: contacts reaching "IAU App Accepted (FS2)", group
+    FS2, no goal, same anatomy and drilldown; its modal reconciles with
+    the card). Program Submissions (combined) stays full width. Line
+    charts use monotone cubic (Fritsch–Carlson) smoothing, which never
+    overshoots between points or dips below zero, 2.5px lines, hollow
+    markers, 260px plots on the four cards (360px in the modals); the
+    Calls Made chart is smoothed too and keeps its dashed muted prior
+    overlay.

@@ -122,7 +122,7 @@ export default function MilestoneKpiCard({
     >
       <KpiShell
         id={m.key}
-        className={`kpi-clickable ${className}`.trim()}
+        className={`kpi-clickable kpi-tall ${className}`.trim()}
         title={cardTitle}
         subtitle={cardSubtitle}
         value={headline}
@@ -130,7 +130,7 @@ export default function MilestoneKpiCard({
         goalLine={<span className="kpi-muted">Goal not set</span>}
         badges={m.partialHistory ? <span className="pill pill-warn">partial history</span> : null}
         deltaLine={<PairDelta m={m} />}
-        chart={unavailable ? <div className="note">No chart: milestone events are unavailable.</div> : <LineChart height={200} leftLabel="Contacts" rightLabel="Opp. Value" series={chart} />}
+        chart={unavailable ? <div className="note">No chart: milestone events are unavailable.</div> : <LineChart height={260} leftLabel="Contacts" rightLabel="Opp. Value" series={chart} />}
         footer={
           <button type="button" className="kpi-details-btn">
             Details

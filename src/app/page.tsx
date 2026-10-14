@@ -59,7 +59,11 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const cancelled = kpiAppointmentsCancelled(range);
   // KPI-row milestone cards, in the owner's order: CA 101, Supervisor Approval, then IAU App Submitted (FS2), the
   // current semester. FS1 stays tracked in config (kpiMilestones) as a historical group but has no card (round 3).
-  const kpiMilestoneKeys = ["army_ca101", "army_supervisor_approval", "vet_iau_app_submitted"];
+  const kpiMilestoneRows = [
+    ["army_ca101", "army_supervisor_approval"],
+    ["vet_iau_app_submitted", "vet_iau_app_accepted"],
+  ];
+  const kpiMilestoneKeys = kpiMilestoneRows.flat();
   const kpiMilestones = kpiMilestoneKeys
     .map((key) => {
       const m = computeMilestoneByKey(key, range);
@@ -85,13 +89,16 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
     army_ca101: "Army CA 101 Submissions",
     army_supervisor_approval: "Awaiting Supervisor Approval",
     vet_iau_app_submitted: "FS2 Application Submissions",
+    vet_iau_app_accepted: "FS2 Accepted",
   };
   const milestoneSubtitle = (k: string, m: { reportingGroup: string; stageName: string }) =>
     k === "army_ca101"
       ? `Army CA · ${m.reportingGroup} · "${m.stageName}" · reached in period`
       : k === "army_supervisor_approval"
         ? `Army CA · ${m.reportingGroup} · awaiting approval · entered in period`
-        : `Veteran G.I. Bill · ${m.reportingGroup}, current semester · reached in period`;
+        : k === "vet_iau_app_accepted"
+          ? `Veteran G.I. Bill · ${m.reportingGroup}, current semester · accepted in period`
+          : `Veteran G.I. Bill · ${m.reportingGroup}, current semester · reached in period`;
 
   return (
     <>
@@ -131,11 +138,15 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         <div className="band-inner">
           <h1 className="page-title">Primary KPIs Overall</h1>
           <h2 className="row-title">Submissions</h2>
-          <div className="kpi-row cols-3">
-            {kpiMilestones.map(({ m, series }) => (
-              <MilestoneKpiCard key={m.key} m={m} series={series} title={milestoneTitle[m.key]} subtitle={milestoneSubtitle(m.key, m)} rangeQuery={rangeQuery} rangeLabel={range.label} />
-            ))}
-          </div>
+          {kpiMilestoneRows.map((keys) => (
+            <div className="kpi-row cols-2" key={keys.join("+")}>
+              {kpiMilestones
+                .filter(({ m }) => keys.includes(m.key))
+                .map(({ m, series }) => (
+                  <MilestoneKpiCard key={m.key} m={m} series={series} title={milestoneTitle[m.key]} subtitle={milestoneSubtitle(m.key, m)} rangeQuery={rangeQuery} rangeLabel={range.label} />
+                ))}
+            </div>
+          ))}
           <div className="kpi-row cols-1">
             <SubmissionsCard s={submissions} c={commission} rangeQuery={rangeQuery} rangeLabel={range.label} />
           </div>

@@ -4,8 +4,9 @@
 // container's measured width and a FIXED pixel height so text never
 // stretches. Supports a muted prior-period overlay (aligned by position)
 // and, when the owner asks for it, a second measure on a right-hand axis.
-// 2px lines, >=8px hit targets, recessive grid, crosshair tooltip across all
-// series, legend in HTML above the plot. Colors come from the shared tokens.
+// 2.5px smooth monotone lines (never overshooting between points), small
+// hollow markers, >=8px hit targets, recessive grid, crosshair tooltip across
+// all series, legend in HTML above the plot. Colors come from the shared tokens.
 
 import { useState } from "react";
 import { useWidth } from "./useWidth";
@@ -41,6 +42,49 @@ function fmtTick(v: number, f: ValueFormat): string {
   if (f === "usd") return v >= 1000 ? `$${(v / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })}K` : `$${v}`;
   if (f === "minutes") return v >= 60 ? `${(v / 60).toLocaleString("en-US", { maximumFractionDigits: 1 })}h` : `${v}m`;
   return v.toLocaleString("en-US");
+}
+
+/**
+ * Smooth path through the points using monotone cubic (Fritsch–Carlson)
+ * interpolation: the curve never overshoots between points and never dips
+ * below the lower of two neighbours, so a series that is >= 0 stays >= 0.
+ */
+export function monotonePath(pts: { x: number; y: number }[]): string {
+  const n = pts.length;
+  if (n === 0) return "";
+  if (n === 1) return `M${pts[0].x},${pts[0].y}`;
+  const dx: number[] = [];
+  const dy: number[] = [];
+  const m: number[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    dx.push(pts[i + 1].x - pts[i].x);
+    dy.push(pts[i + 1].y - pts[i].y);
+    m.push(dx[i] === 0 ? 0 : dy[i] / dx[i]);
+  }
+  const t: number[] = [m[0]];
+  for (let i = 1; i < n - 1; i++) t.push(m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2);
+  t.push(m[n - 2]);
+  for (let i = 0; i < n - 1; i++) {
+    if (m[i] === 0) {
+      t[i] = 0;
+      t[i + 1] = 0;
+      continue;
+    }
+    const a = t[i] / m[i];
+    const b = t[i + 1] / m[i];
+    const s = a * a + b * b;
+    if (s > 9) {
+      const tau = 3 / Math.sqrt(s);
+      t[i] = tau * a * m[i];
+      t[i + 1] = tau * b * m[i];
+    }
+  }
+  let d = `M${pts[0].x},${pts[0].y}`;
+  for (let i = 0; i < n - 1; i++) {
+    const h = dx[i] / 3;
+    d += ` C${pts[i].x + h},${pts[i].y + h * t[i]} ${pts[i + 1].x - h},${pts[i + 1].y - h * t[i + 1]} ${pts[i + 1].x},${pts[i + 1].y}`;
+  }
+  return d;
 }
 
 function niceCeil(v: number): number {
@@ -135,7 +179,7 @@ export default function LineChart({
           )}
           {series.map((s) => {
             const y = yFor(s);
-            const d = s.points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(p.value)}`).join(" ");
+            const d = monotonePath(s.points.map((p, i) => ({ x: x(i), y: y(p.value) })));
             return (
               <g key={s.label}>
                 <path
@@ -150,7 +194,7 @@ export default function LineChart({
                 />
                 {showMarkers && !s.muted
                   ? s.points.map((p, i) => (
-                      <circle key={i} cx={x(i)} cy={y(p.value)} r={hover === i ? 5 : 3.5} fill={s.color} stroke="var(--surface-card)" strokeWidth={2} />
+                      <circle key={i} cx={x(i)} cy={y(p.value)} r={hover === i ? 5 : 3.5} fill="var(--surface-card)" stroke={s.color} strokeWidth={2} />
                     ))
                   : null}
               </g>

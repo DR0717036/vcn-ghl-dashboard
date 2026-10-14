@@ -1857,3 +1857,42 @@ section > h2 {
   max-width: 520px;
   text-align: right;
 }
+
+
+/* =====================================================================
+   Round 8 (owner "edits round 7"): 1600px content width with 32px side
+   padding everywhere, taller charts on the four submissions cards
+   ===================================================================== */
+
+.topbar-inner,
+.band-inner,
+.foot {
+  padding-left: var(--s-6);
+  padding-right: var(--s-6);
+}
+
+.page {
+  padding-left: var(--s-6);
+  padding-right: var(--s-6);
+}
+
+.control-sticky {
+  padding-left: var(--s-6);
+  padding-right: var(--s-6);
+}
+
+/* 260px plot + legend row */
+.kpi-tall .kpi-chart {
+  height: 296px;
+}
+
+@media (max-width: 640px) {
+  .topbar-inner,
+  .band-inner,
+  .foot,
+  .page,
+  .control-sticky {
+    padding-left: var(--s-4);
+    padding-right: var(--s-4);
+  }
+}
