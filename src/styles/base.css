@@ -1896,3 +1896,80 @@ section > h2 {
     padding-right: var(--s-4);
   }
 }
+
+
+/* =====================================================================
+   Round 9 (owner "edits round 8"): Rep Call Activity table on the light
+   Activity band, per-day mini-table in the calls drilldown
+   ===================================================================== */
+
+.rep-table-calls {
+  min-width: 980px;
+}
+
+.rep-table-calls .col-name {
+  width: 220px;
+}
+
+.rep-table-calls .col-num {
+  width: 100px;
+}
+
+.rep-table-calls .col-status {
+  width: 130px;
+}
+
+.rep-table-calls .col-talk {
+  width: 140px;
+}
+
+.rep-table-calls .col-first {
+  width: 140px;
+}
+
+.rep-table-calls th.status,
+.rep-table-calls td.status {
+  padding-left: var(--s-4);
+}
+
+/* the same table on a white card: dark text, dark gold total, soft blue hover */
+.band-light .rep-table td.num {
+  color: #2f3f52;
+}
+
+.band-light .rep-table td.num.combined,
+.band-light .rep-table td.rep-name {
+  color: #182536;
+}
+
+.band-light .rep-table tbody tr.rep-row-click td.rep-name {
+  color: #0f5fd1;
+}
+
+.band-light .rep-table tbody tr:hover td,
+.band-light .rep-table tbody tr.rep-row-click:hover td {
+  background: rgba(22, 119, 255, 0.08);
+}
+
+.band-light .rep-table .rep-total td,
+.band-light .rep-table .rep-total td.num,
+.band-light .rep-table .rep-total td.rep-name {
+  color: #7a6200;
+  background: rgba(8, 24, 45, 0.03);
+}
+
+.band-light .rep-table th {
+  border-bottom-color: rgba(8, 24, 45, 0.15);
+}
+
+.band-light .kpi-title-xl .kpi-line .pill {
+  margin-left: var(--s-2);
+}
+
+.modal-table-compact {
+  max-height: 40vh;
+}
+
+.th-static {
+  cursor: default;
+}

@@ -318,3 +318,22 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     markers, 260px plots on the four cards (360px in the modals); the
     Calls Made chart is smoothed too and keeps its dashed muted prior
     overlay.
+40. **Round 9 (owner "edits round 8") Rep Call Activity.** The Activity
+    heading is headline-sized. A full-width card under Calls Made and
+    Talk Time lists every configured rep (sorted by dials), an "Other
+    users, not sales reps" row (including calls with no user), and a
+    gold team total. Dials = outbound human call attempts, one per call
+    id, automated/campaign calls excluded (= the Calls Made card's
+    Outbound line). Talk time = recorded duration of completed/answered
+    human calls in either direction (= the Talk Time card). Avg talk per
+    call = talk time ÷ connected calls. First call (avg) = the rep's
+    first outbound attempt on each New York day with any outbound call,
+    averaged over those days only. Goal pills use each rep's own
+    calls-per-day and talk-time goals (Sam at 0.5). Clicking a row opens
+    the user's calls (contact, direction, outcome, duration, time) with
+    sorting and CSV, plus a per-day table of dials, talk time, and first
+    outbound call. Reconciled: team dials = Calls Made Outbound, team
+    talk = Talk Time card, per-day dials = row dials for every row.
+    Note: the rep table judges dials (outbound only) against the calls
+    goal, so its "% of goal" is slightly below the Calls Made card,
+    which counts inbound attempts too.

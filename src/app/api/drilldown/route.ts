@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { isRangeKey, resolveRange } from "@/lib/dates";
 import { milestoneDrilldown, repDrilldown } from "@/lib/drilldown";
+import { callsDrilldown } from "@/lib/repCalls";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +23,14 @@ export async function GET(req: Request): Promise<NextResponse> {
   const kind = sp.get("kind");
   try {
     const result =
-      kind === "milestone" ? await milestoneDrilldown(sp.get("key") ?? "", range) : kind === "rep" ? await repDrilldown(sp.get("user") ?? "", range, month) : undefined;
-    if (result === undefined) return NextResponse.json({ ok: false, error: "kind must be milestone or rep." }, { status: 400 });
+      kind === "milestone"
+        ? await milestoneDrilldown(sp.get("key") ?? "", range)
+        : kind === "rep"
+          ? await repDrilldown(sp.get("user") ?? "", range, month)
+          : kind === "calls"
+            ? callsDrilldown(sp.get("user") ?? "", range)
+            : undefined;
+    if (result === undefined) return NextResponse.json({ ok: false, error: "kind must be milestone, rep, or calls." }, { status: 400 });
     if (result === null) return NextResponse.json({ ok: false, error: "Unknown milestone or user." }, { status: 404 });
     return NextResponse.json(result);
   } catch (err) {

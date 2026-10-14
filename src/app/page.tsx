@@ -15,6 +15,7 @@ import { mappingConfig } from "@/lib/mapping-config";
 import { computePrimaryKpis, coverage, kpiAppointmentsCancelled, kpiAppointmentsConfirmed, kpiNewLeads } from "@/lib/metrics";
 import { computeMilestoneByKey, computeMilestones } from "@/lib/milestones";
 import { computeCommission } from "@/lib/commission";
+import { computeRepCalls } from "@/lib/repCalls";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { computeWon } from "@/lib/won";
@@ -26,6 +27,7 @@ import KpiCard from "./KpiCard";
 import MilestoneCard from "./MilestoneCard";
 import MilestoneKpiCard from "./MilestoneKpiCard";
 import RangePicker from "./RangePicker";
+import RepCallsCard from "./RepCallsCard";
 import Reveal from "./Reveal";
 import SubmissionsCard from "./SubmissionsCard";
 import WonSection from "./WonSection";
@@ -72,6 +74,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
   const submissions = computeSubmissions(range);
+  const repCalls = computeRepCalls(range);
   // Commission on the events inside the selected range (quota and Won (MTD) stay month-to-date).
   const commission = computeCommission(range, now);
   const milestones = computeMilestones(range);
@@ -155,7 +158,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
 
       <section className="band band-light">
         <div className="band-inner">
-          <div className="eyebrow">Activity</div>
+          <h2 className="row-title">Activity</h2>
           <div className="kpi-row cols-2">
             <KpiCard
               k={kpi("callsMade")}
@@ -185,6 +188,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
                 />
               }
             />
+          </div>
+          <div className="kpi-row cols-1">
+            <RepCallsCard r={repCalls} rangeQuery={rangeQuery} rangeLabel={range.label} />
           </div>
         </div>
       </section>

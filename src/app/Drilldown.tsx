@@ -14,7 +14,25 @@ import { createPortal } from "react-dom";
 import type { DrillResult, DrillRow } from "@/lib/drilldown";
 import LineChart, { type LineSeries } from "./charts/LineChart";
 
-export type ColumnKey = "name" | "source" | "assignedUser" | "pipeline" | "status" | "phone" | "email" | "value" | "stage" | "stageReached" | "tags" | "createdOn" | "reachedOn" | "wonOn";
+export type ColumnKey =
+  | "name"
+  | "source"
+  | "assignedUser"
+  | "pipeline"
+  | "status"
+  | "phone"
+  | "email"
+  | "value"
+  | "stage"
+  | "stageReached"
+  | "tags"
+  | "createdOn"
+  | "reachedOn"
+  | "wonOn"
+  | "direction"
+  | "outcome"
+  | "duration"
+  | "calledOn";
 
 const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "date" }> = {
   name: { label: "Contact name", kind: "text" },
@@ -31,6 +49,10 @@ const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "dat
   createdOn: { label: "Created on", kind: "date" },
   reachedOn: { label: "Reached stage on", kind: "date" },
   wonOn: { label: "Won on", kind: "date" },
+  direction: { label: "Direction", kind: "text" },
+  outcome: { label: "Outcome", kind: "text" },
+  duration: { label: "Duration", kind: "number" },
+  calledOn: { label: "Time", kind: "date" },
 };
 
 /** KPI card drilldown columns, in the owner's order. */
@@ -39,6 +61,16 @@ export const KPI_COLUMNS: ColumnKey[] = ["name", "source", "assignedUser", "pipe
 export const REP_COLUMNS: ColumnKey[] = ["name", "email", "phone", "source", "pipeline", "stageReached", "tags", "reachedOn"];
 /** Won opportunities listed under a won-based rep. */
 export const WON_COLUMNS: ColumnKey[] = ["name", "pipeline", "stage", "value", "wonOn"];
+/** A rep's calls (Rep Call Activity drilldown). */
+export const CALL_COLUMNS: ColumnKey[] = ["name", "direction", "outcome", "duration", "calledOn"];
+
+function fmtDuration(sec: number): string {
+  const s = Math.round(sec);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  return h > 0 ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m ${String(r).padStart(2, "0")}s`;
+}
 
 const DASH = "—";
 const dateFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
@@ -64,7 +96,14 @@ function cell(row: DrillRow, key: ColumnKey): { text: string; sort: string | num
       return { text: fmtDate(row.createdOn), sort: row.createdOn };
     case "reachedOn":
     case "wonOn":
+    case "calledOn":
       return { text: fmtDate(row.reachedOn), sort: row.reachedOn };
+    case "duration":
+      return { text: row.durationSec === null || row.durationSec === undefined ? DASH : fmtDuration(row.durationSec), sort: row.durationSec ?? null };
+    case "direction":
+      return { text: row.direction ? row.direction : DASH, sort: row.direction ?? null };
+    case "outcome":
+      return { text: row.outcome ? row.outcome : DASH, sort: row.outcome ?? null };
     default: {
       const v = row[key];
       return { text: v ? v : DASH, sort: v ? v.toLowerCase() : null };
@@ -246,6 +285,8 @@ export interface DrilldownSpec {
   columns: ColumnKey[];
   /** Rep drilldowns: also list the won opportunities counted this month, checked against this number. */
   wonTable?: { title: string; expected: number | null };
+  /** Call drilldowns: show the per-day summary (dials, talk time, first outbound call). */
+  perDayTable?: { title: string };
   notes?: string[];
   csvName: string;
 }
@@ -347,6 +388,49 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
               emptyText="No won opportunities this month."
               defaultSort="wonOn"
             />
+          </>
+        ) : null}
+
+        {spec.perDayTable && data?.perDay ? (
+          <>
+            <div className="modal-table-title">{spec.perDayTable.title}</div>
+            <div className="modal-table-wrap modal-table-compact">
+              <table className="drill-table">
+                <thead>
+                  <tr>
+                    <th>
+                      <span className="th-sort th-static">Day</span>
+                    </th>
+                    <th className="num">
+                      <span className="th-sort th-static">Dials</span>
+                    </th>
+                    <th className="num">
+                      <span className="th-sort th-static">Talk time</span>
+                    </th>
+                    <th className="num">
+                      <span className="th-sort th-static">First outbound call</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.perDay.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="note">
+                        No calls in this period.
+                      </td>
+                    </tr>
+                  ) : null}
+                  {data.perDay.map((d) => (
+                    <tr key={d.day}>
+                      <td>{d.day}</td>
+                      <td className="num">{d.dials.toLocaleString("en-US")}</td>
+                      <td className={`num${d.talk === DASH ? " dash" : ""}`}>{d.talk}</td>
+                      <td className={`num${d.firstCall === DASH ? " dash" : ""}`}>{d.firstCall}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         ) : null}
 

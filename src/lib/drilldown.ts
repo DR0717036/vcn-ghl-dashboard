@@ -45,8 +45,12 @@ export interface DrillRow {
   tags: string[];
   /** Contact creation date in GHL (ISO). */
   createdOn: string | null;
-  /** Event time (ISO): stage entry, or the won transition for won rows. */
+  /** Event time (ISO): stage entry, the won transition for won rows, or the call time for call rows. */
   reachedOn: string;
+  /** Call rows only. */
+  direction?: string | null;
+  outcome?: string | null;
+  durationSec?: number | null;
 }
 
 export interface DrillResult {
@@ -56,6 +60,8 @@ export interface DrillResult {
   count: number;
   /** Rep drilldowns only: the won opportunities counted this calendar month for this user. */
   won?: DrillRow[];
+  /** Call drilldowns only: one line per New York day with any call. */
+  perDay?: { day: string; dials: number; talk: string; firstCall: string }[];
   /** Set when GHL could not supply email/phone for some rows (shown as a dash). */
   detailsNote: string | null;
   fetchedAt: string;
@@ -79,7 +85,7 @@ interface EventLike {
   stageAtEvent?: string;
 }
 
-function contactUrl(contactId: string): string {
+export function contactUrl(contactId: string): string {
   const { locationId } = getEnv();
   const base = (process.env.GHL_APP_BASE_URL?.trim() || "https://app.gohighlevel.com").replace(/\/+$/, "");
   return `${base}/v2/location/${encodeURIComponent(locationId)}/contacts/detail/${encodeURIComponent(contactId)}`;
