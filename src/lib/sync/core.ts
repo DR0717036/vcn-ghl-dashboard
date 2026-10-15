@@ -96,14 +96,21 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
 
   const PHASES = 8;
   try {
-    phases.push(await syncUsers(runStart));
-    phases.push(await syncContacts(runStart, firstSyncDone));
-    phases.push(await syncOpportunities(runStart, firstSyncDone));
-    phases.push(await syncCalls(runStart));
-    phases.push(await syncAppointments(runStart));
-    phases.push(await syncMessages(runStart));
-    phases.push(await syncConversations(runStart));
-    phases.push(await syncEmailTemplates(runStart));
+    // One log line per phase so a stalled run can be located from the server log.
+    const run = async (fn: () => Promise<PhaseResult>) => {
+      const t0 = Date.now();
+      const r = await fn();
+      console.log(`[sync] phase ${r.phase}: ${r.ok ? r.count : "FAILED " + r.error} (${Math.round((Date.now() - t0) / 1000)}s)`);
+      phases.push(r);
+    };
+    await run(() => syncUsers(runStart));
+    await run(() => syncContacts(runStart, firstSyncDone));
+    await run(() => syncOpportunities(runStart, firstSyncDone));
+    await run(() => syncCalls(runStart));
+    await run(() => syncAppointments(runStart));
+    await run(() => syncMessages(runStart));
+    await run(() => syncConversations(runStart));
+    await run(() => syncEmailTemplates(runStart));
   } finally {
     const okCount = phases.filter((p) => p.ok).length;
     const ok = phases.length === PHASES && okCount === PHASES;
