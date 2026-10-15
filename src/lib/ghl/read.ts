@@ -137,6 +137,8 @@ export interface GhlOpportunitySearch {
 
 export interface GhlMessage {
   id: string;
+  altId?: string;
+  body?: string;
   type?: number;
   messageType?: string;
   direction?: string;
@@ -160,6 +162,53 @@ export interface GhlMessageExport {
   messages: GhlMessage[];
   nextCursor?: string;
   total?: number;
+}
+
+export interface GhlConversation {
+  id: string;
+  contactId?: string;
+  assignedTo?: string | null;
+  unreadCount?: number;
+  lastMessageDate?: number | string;
+  lastMessageDirection?: string;
+  lastMessageType?: string;
+  lastMessageBody?: string;
+  lastManualMessageDate?: number | string;
+  lastOutboundMessageAction?: string;
+  type?: string;
+  tags?: string[];
+  /** The paging token GHL returns on each row (passed back as startAfterDate). */
+  sort?: (number | string)[];
+}
+
+export interface GhlConversationSearch {
+  conversations: GhlConversation[];
+  total?: number;
+}
+
+export interface ConversationSearchParams {
+  limit?: number;
+  startAfterDate?: number | string;
+  lastMessageDirection?: "inbound" | "outbound";
+  status?: "all" | "read" | "unread" | "starred" | "recents";
+  assignedTo?: string;
+  sortBy?: "last_message_date" | "last_manual_message_date";
+  sort?: "asc" | "desc";
+}
+
+/** Conversation search (GET, read-only). Verified live 2026-10-15: returns unreadCount, lastMessageDirection, lastMessageDate (epoch ms), lastMessageType, assignedTo, and a sort token for paging. */
+export function searchConversations(p: ConversationSearchParams): Promise<GhlResult<GhlConversationSearch>> {
+  const { locationId } = getEnv();
+  return ghlGet("/conversations/search", "2021-04-15", {
+    locationId,
+    limit: p.limit,
+    startAfterDate: p.startAfterDate,
+    lastMessageDirection: p.lastMessageDirection,
+    status: p.status,
+    assignedTo: p.assignedTo,
+    sortBy: p.sortBy,
+    sort: p.sort,
+  });
 }
 
 export interface GhlContactsPage {

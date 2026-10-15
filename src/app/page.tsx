@@ -15,6 +15,7 @@ import { mappingConfig } from "@/lib/mapping-config";
 import { computePrimaryKpis, coverage, kpiAppointmentsCancelled, kpiAppointmentsConfirmed, kpiNewLeads } from "@/lib/metrics";
 import { computeMilestoneByKey, computeMilestones } from "@/lib/milestones";
 import { computeCommission } from "@/lib/commission";
+import { computeResponseTimes, computeStale } from "@/lib/conversations";
 import { computeRepCalls } from "@/lib/repCalls";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
@@ -28,6 +29,8 @@ import MilestoneCard from "./MilestoneCard";
 import MilestoneKpiCard from "./MilestoneKpiCard";
 import RangePicker from "./RangePicker";
 import RepCallsCard from "./RepCallsCard";
+import ResponseTimeCard from "./ResponseTimeCard";
+import StaleCard from "./StaleCard";
 import Reveal from "./Reveal";
 import SubmissionsCard from "./SubmissionsCard";
 import WonSection from "./WonSection";
@@ -75,6 +78,8 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
     .filter((x): x is NonNullable<typeof x> => x !== null);
   const submissions = computeSubmissions(range);
   const repCalls = computeRepCalls(range);
+  const stale = computeStale(now);
+  const responseTimes = computeResponseTimes(range);
   // Commission on the events inside the selected range (quota and Won (MTD) stay month-to-date).
   const commission = computeCommission(range, now);
   const milestones = computeMilestones(range);
@@ -197,6 +202,18 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
 
       <section className="band band-dark">
         <div className="band-inner">
+          <h2 className="row-title">Conversations</h2>
+          <div className="kpi-row cols-1">
+            <StaleCard s={stale} />
+          </div>
+          <div className="kpi-row cols-1">
+            <ResponseTimeCard r={responseTimes} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+        </div>
+      </section>
+
+      <section className="band band-light">
+        <div className="band-inner">
           <div className="eyebrow">Appointments</div>
           <div className="kpi-row cols-4">
             <KpiCard k={kpi("appointmentsBooked")} />
@@ -207,7 +224,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
 
-      <section className="band band-light">
+      <section className="band band-dark">
         <div className="band-inner">
           <div className="eyebrow">Leads</div>
           <div className="kpi-row cols-2">

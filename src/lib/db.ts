@@ -62,6 +62,46 @@ export function getDb(): DatabaseSync {
       error       TEXT
     );
 
+    -- SMS and email messages (read-only export). Bodies stay in this local
+    -- cache only and are shown solely inside drilldowns, never on cards.
+    CREATE TABLE IF NOT EXISTS messages (
+      id              TEXT PRIMARY KEY,
+      alt_id          TEXT,
+      conversation_id TEXT NOT NULL,
+      contact_id      TEXT,
+      direction       TEXT NOT NULL,
+      channel         TEXT NOT NULL,      -- sms | email
+      message_type    TEXT,
+      status          TEXT,
+      date_added      TEXT NOT NULL,
+      user_id         TEXT,
+      source          TEXT,               -- workflow | app | campaign | bulk_actions | null
+      body            TEXT,
+      body_key        TEXT,               -- normalized text used to group sends into templates
+      first_seen_at   TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS messages_conv ON messages(conversation_id, date_added);
+    CREATE INDEX IF NOT EXISTS messages_date ON messages(date_added);
+    CREATE INDEX IF NOT EXISTS messages_dir ON messages(direction, date_added);
+
+    -- Snapshot of unread, inbound-last conversations from GHL's conversation
+    -- search, replaced on every sync (feeds the stale-conversations card).
+    CREATE TABLE IF NOT EXISTS conversations (
+      id                       TEXT PRIMARY KEY,
+      contact_id               TEXT,
+      assigned_to              TEXT,
+      unread_count             INTEGER NOT NULL DEFAULT 0,
+      last_message_direction   TEXT,
+      last_message_date        TEXT,
+      last_message_type        TEXT,
+      last_manual_message_date TEXT,
+      last_outbound_action     TEXT,
+      type                     TEXT,
+      tags                     TEXT,
+      last_message_body        TEXT,
+      snapshot_at              TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS users (
       id       TEXT PRIMARY KEY,
       name     TEXT,

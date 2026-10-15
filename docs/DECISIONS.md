@@ -436,3 +436,32 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     surface primary color again (white on dark surfaces, near-black on
     light cards); the Limitations label stays upright while its text is
     italic gray.
+49. **Conversations section, stage 1 (2026-10-15).** Verified against the
+    official docs and live data (read-only): the conversation search
+    (GET /conversations/search, Version 2021-04-15) returns unreadCount,
+    lastMessageDirection, lastMessageDate (epoch ms), lastMessageType,
+    assignedTo, lastManualMessageDate, lastOutboundMessageAction, tags,
+    and a per-row sort token for paging; the message export carries
+    source (workflow / app / none for inbound) and userId but NO
+    workflow, campaign, or template id anywhere (export or per-
+    conversation messages); workflows can be listed read-only (72) but
+    cannot be linked to a message; the location has no saved templates
+    (templates endpoint returns none), so "templates" are clusters of
+    normalized outbound text. All scopes needed are already on the token.
+    Two new sync phases: messages (SMS + email export since HISTORY_START,
+    checkpointed per page; ~142k rows on first load, ~20 minutes) and a
+    conversations snapshot (every unread, inbound-last conversation,
+    replaced each sync). The HTTP wrapper now times out a stalled GHL
+    request after 90 s and retries (a stalled export had hung the first
+    run). Cards: Stale Conversations (snapshot: unread + inbound-last +
+    older than staleAfterMinutes, per assigned user, Unassigned row, other
+    users, team total; drilldown with channel, last inbound preview,
+    waiting time, GHL link) and Response Time by Rep (inbound episodes =
+    consecutive inbound SMS/email until the next human outbound; business
+    minutes only, Mon–Sat 7 AM–8 PM New York by default; median, average,
+    % replied within 60 business minutes; rep = replier, else last
+    outbound user before the episode, else Unassigned). Settings live in
+    config/conversations.json. Message bodies are stored only in the
+    local cache and appear only inside drilldowns. Reconciled: stale rows
+    sum to the team total and match the cache; every stale and response
+    drilldown equals its table row.

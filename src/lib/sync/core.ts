@@ -94,13 +94,15 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
   const firstSyncDone = Boolean(getState("first_core_sync_at"));
   const phases: PhaseResult[] = [];
 
-  const PHASES = 5;
+  const PHASES = 7;
   try {
     phases.push(await syncUsers(runStart));
     phases.push(await syncContacts(runStart, firstSyncDone));
     phases.push(await syncOpportunities(runStart, firstSyncDone));
     phases.push(await syncCalls(runStart));
     phases.push(await syncAppointments(runStart));
+    phases.push(await syncMessages(runStart));
+    phases.push(await syncConversations(runStart));
   } finally {
     const okCount = phases.filter((p) => p.ok).length;
     const ok = phases.length === PHASES && okCount === PHASES;
@@ -339,6 +341,116 @@ async function syncOpportunities(now: string, firstSyncDone: boolean): Promise<P
 }
 
 // ---- calls ---------------------------------------------------------------------------
+
+// ---- messages (SMS + email, read-only export) and the unread-inbound conversation snapshot ----
+
+/** Normalized text used to group outbound sends into templates: lowercase, no URLs/numbers/punctuation, contact-name words removed. */
+export function bodyKey(body: string | null | undefined, contactName: string | null | undefined): string | null {
+  if (!body) return null;
+  const nameWords = new Set((contactName ?? "").toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 1));
+  const words = body
+    .toLowerCase()
+    .replace(/https?:\/\/\S+|www\.\S+/g, " ")
+    .replace(/[0-9]+/g, " ")
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w && !nameWords.has(w));
+  return words.length === 0 ? null : words.join(" ").slice(0, 400);
+}
+
+async function syncMessages(now: string): Promise<PhaseResult> {
+  const db = getDb();
+  const res: PhaseResult = { phase: "messages", ok: false, count: 0, warnings: [] };
+  const up = db.prepare(`
+    INSERT INTO messages (id, alt_id, conversation_id, contact_id, direction, channel, message_type, status, date_added, user_id, source, body, body_key, first_seen_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET status = excluded.status, user_id = excluded.user_id, source = excluded.source, body = excluded.body, body_key = excluded.body_key`);
+  const contactName = db.prepare(`SELECT name FROM contacts WHERE id = ?`);
+  try {
+    for (const channel of ["SMS", "Email"] as const) {
+      const key = `messages_${channel.toLowerCase()}_synced_through`;
+      const through = getState(key);
+      const overlapStart = through ? new Date(Date.parse(through) - 86400000).toISOString() : HISTORY_START;
+      const start = overlapStart < HISTORY_START ? HISTORY_START : overlapStart;
+      let cursor: string | undefined;
+      for (let page = 0; page < 5000; page++) {
+        const r = await ghl.exportMessages({ channel, limit: 500, startDate: start, endDate: now, sortBy: "createdAt", sortOrder: "asc", cursor });
+        if (!r.ok) throw new Error(`${channel}: ${r.kind}: ${r.error}`);
+        const msgs = r.data.messages ?? [];
+        let newest: string | null = null;
+        db.exec("BEGIN");
+        try {
+          for (const m of msgs) {
+            const added = isoOrNull(m.dateAdded);
+            if (!added || !m.conversationId) continue;
+            if (!newest || added > newest) newest = added;
+            const dir = m.direction === "inbound" ? "inbound" : "outbound";
+            const name = m.contactId ? ((contactName.get(m.contactId) as { name: string | null } | undefined)?.name ?? null) : null;
+            up.run(m.id, m.altId ?? null, m.conversationId, m.contactId ?? null, dir, channel.toLowerCase(), m.messageType ?? null, m.status ?? null, added,
+              m.userId ?? null, m.source ?? null, m.body ?? null, dir === "outbound" ? bodyKey(m.body, name) : null, now);
+            res.count += 1;
+          }
+          db.exec("COMMIT");
+        } catch (e) {
+          db.exec("ROLLBACK");
+          throw e;
+        }
+        if (newest) setState(key, newest);
+        console.log(`[sync] messages ${channel} page ${page + 1}: ${msgs.length} rows, through ${newest ?? "n/a"}, total so far ${res.count}`);
+        if (msgs.length === 0 || !r.data.nextCursor) break;
+        cursor = r.data.nextCursor;
+      }
+      setState(key, now);
+    }
+    res.ok = true;
+  } catch (e) {
+    res.error = (e as Error).message;
+  }
+  return res;
+}
+
+async function syncConversations(now: string): Promise<PhaseResult> {
+  const db = getDb();
+  const res: PhaseResult = { phase: "conversations", ok: false, count: 0, warnings: [] };
+  const rows: unknown[][] = [];
+  try {
+    let startAfterDate: number | string | undefined;
+    for (let page = 0; page < 500; page++) {
+      const r = await ghl.searchConversations({ limit: 100, lastMessageDirection: "inbound", status: "unread", sortBy: "last_message_date", sort: "desc", startAfterDate });
+      if (!r.ok) throw new Error(`${r.kind}: ${r.error}`);
+      const list = r.data.conversations ?? [];
+      for (const c of list) {
+        rows.push([
+          c.id, c.contactId ?? null, c.assignedTo || null, Number(c.unreadCount ?? 0), c.lastMessageDirection ?? null, isoOrNull(c.lastMessageDate),
+          c.lastMessageType ?? null, isoOrNull(c.lastManualMessageDate), c.lastOutboundMessageAction ?? null, c.type ?? null,
+          JSON.stringify(normTags(c.tags)), c.lastMessageBody ?? null, now,
+        ]);
+      }
+      const last = list[list.length - 1];
+      const token = last?.sort?.[0];
+      if (list.length === 0 || token === undefined || token === startAfterDate) break;
+      startAfterDate = token;
+    }
+    // Replace the snapshot only after the whole read succeeded.
+    const ins = db.prepare(`INSERT OR REPLACE INTO conversations (id, contact_id, assigned_to, unread_count, last_message_direction, last_message_date, last_message_type,
+      last_manual_message_date, last_outbound_action, type, tags, last_message_body, snapshot_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    db.exec("BEGIN");
+    try {
+      db.exec("DELETE FROM conversations");
+      for (const row of rows) ins.run(...(row as (string | number | null)[]));
+      db.exec("COMMIT");
+    } catch (e) {
+      db.exec("ROLLBACK");
+      throw e;
+    }
+    setState("conversations_snapshot_at", now);
+    res.count = rows.length;
+    res.ok = true;
+  } catch (e) {
+    res.error = (e as Error).message;
+  }
+  return res;
+}
 
 function isAutomatedCall(messageType: string | undefined, source: string | undefined): boolean {
   if (messageType && /CAMPAIGN|IVR/i.test(messageType)) return true;

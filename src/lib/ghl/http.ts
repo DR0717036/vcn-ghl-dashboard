@@ -116,6 +116,8 @@ export async function ghlGet<T>(
           Accept: "application/json",
         },
         cache: "no-store",
+        // A stalled GHL response must not hang the sync forever: give up after 90 s and retry.
+        signal: AbortSignal.timeout(90_000),
       });
     } catch (err) {
       if (attempt < maxAttempts) {
@@ -168,7 +170,7 @@ export async function ghlGetStream(path: string, version: ApiVersion): Promise<G
   await takeSlot();
   let res: Response;
   try {
-    res = await fetch(url, { method: "GET", headers: { Authorization: `Bearer ${token}`, Version: version, Accept: "*/*" }, cache: "no-store" });
+    res = await fetch(url, { method: "GET", headers: { Authorization: `Bearer ${token}`, Version: version, Accept: "*/*" }, cache: "no-store", signal: AbortSignal.timeout(120_000) });
   } catch (err) {
     return { ok: false, status: null, kind: "network", error: `Could not reach GHL: ${(err as Error).message}` };
   }

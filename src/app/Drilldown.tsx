@@ -37,7 +37,15 @@ export type ColumnKey =
   | "duration"
   | "calledOn"
   | "callOutcome"
-  | "recording";
+  | "recording"
+  | "channel"
+  | "preview"
+  | "waiting"
+  | "unread"
+  | "inboundAt"
+  | "repliedAt"
+  | "responseTime"
+  | "withinTarget";
 
 const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "date" }> = {
   name: { label: "Contact name", kind: "text" },
@@ -60,6 +68,14 @@ const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "dat
   calledOn: { label: "Time", kind: "date" },
   callOutcome: { label: "Outcome", kind: "text" },
   recording: { label: "Recording", kind: "text" },
+  channel: { label: "Channel", kind: "text" },
+  preview: { label: "Last inbound message", kind: "text" },
+  waiting: { label: "Waiting", kind: "number" },
+  unread: { label: "Unread", kind: "number" },
+  inboundAt: { label: "Inbound at", kind: "date" },
+  repliedAt: { label: "Replied at", kind: "date" },
+  responseTime: { label: "Response (business time)", kind: "number" },
+  withinTarget: { label: "Within target", kind: "text" },
 };
 
 /** KPI card drilldown columns, in the owner's order. */
@@ -68,6 +84,19 @@ export const KPI_COLUMNS: ColumnKey[] = ["name", "source", "assignedUser", "pipe
 export const REP_COLUMNS: ColumnKey[] = ["name", "email", "phone", "source", "pipeline", "stageReached", "tags", "reachedOn"];
 /** Won opportunities listed under a won-based rep. */
 export const WON_COLUMNS: ColumnKey[] = ["name", "pipeline", "stage", "value", "wonOn"];
+/** Stale conversations for one rep. */
+export const STALE_COLUMNS: ColumnKey[] = ["name", "channel", "preview", "unread", "waiting", "inboundAt"];
+/** Inbound episodes for one rep (response time drilldown). */
+export const RESPONSE_COLUMNS: ColumnKey[] = ["name", "channel", "preview", "unread", "inboundAt", "repliedAt", "responseTime", "withinTarget"];
+
+function fmtWait(minutes: number): string {
+  const m = Math.round(minutes);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 48) return `${h}h ${String(m % 60).padStart(2, "0")}m`;
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
 /** A rep's calls (Rep Call Activity drilldown). */
 export const CALL_COLUMNS: ColumnKey[] = ["name", "direction", "callOutcome", "duration", "calledOn", "recording"];
 /** Columns that never go into a CSV (a recording is streamed on click, not a value). */
@@ -122,6 +151,22 @@ function cell(row: DrillRow, key: ColumnKey): { text: string; sort: string | num
       return { text: row.direction ? row.direction : DASH, sort: row.direction ?? null };
     case "callOutcome":
       return { text: outcomeText(row), sort: row.callOutcome ? OUTCOME_RANK[row.callOutcome] : null };
+    case "channel":
+      return { text: row.channel ? row.channel : DASH, sort: row.channel ?? null };
+    case "preview":
+      return { text: row.preview ? row.preview : DASH, sort: row.preview ? row.preview.toLowerCase() : null };
+    case "waiting":
+      return { text: row.waitingMinutes === null || row.waitingMinutes === undefined ? DASH : fmtWait(row.waitingMinutes), sort: row.waitingMinutes ?? null };
+    case "unread":
+      return { text: row.unread === null || row.unread === undefined ? DASH : row.unread.toLocaleString("en-US"), sort: row.unread ?? null };
+    case "inboundAt":
+      return { text: fmtDate(row.reachedOn), sort: row.reachedOn };
+    case "repliedAt":
+      return { text: row.repliedAt ? fmtDate(row.repliedAt) : "no reply", sort: row.repliedAt ?? null };
+    case "responseTime":
+      return { text: row.responseMinutes === null || row.responseMinutes === undefined ? DASH : fmtWait(row.responseMinutes), sort: row.responseMinutes ?? null };
+    case "withinTarget":
+      return { text: row.withinTarget === null || row.withinTarget === undefined ? DASH : row.withinTarget ? "Yes" : "No", sort: row.withinTarget === null || row.withinTarget === undefined ? null : row.withinTarget ? "1" : "0" };
     case "recording":
       return { text: row.recordingId ? "available" : DASH, sort: row.recordingId ? 1 : null };
     case "outcome":
@@ -346,7 +391,7 @@ function SortableTable({
                     );
                   }
                   return (
-                    <td key={k} className={`${COLUMNS[k].kind === "number" ? "num" : ""}${c.text === DASH ? " dash" : ""}`.trim()} title={k === "tags" ? c.text : undefined}>
+                    <td key={k} className={`${COLUMNS[k].kind === "number" ? "num" : ""}${c.text === DASH ? " dash" : ""}${k === "preview" ? " drill-preview" : ""}`.trim()} title={k === "tags" || k === "preview" ? c.text : undefined}>
                       {c.text}
                     </td>
                   );

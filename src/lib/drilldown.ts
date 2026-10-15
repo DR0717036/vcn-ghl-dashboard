@@ -55,6 +55,15 @@ export interface DrillRow {
   durationSec?: number | null;
   /** Outbound calls: the outcome bucket (Conversation is estimated by duration); inbound calls: "inbound". */
   callOutcome?: CallOutcome | "inbound";
+  /** Conversation rows (stale / response drilldowns). Preview is a short excerpt of an inbound message. */
+  channel?: string | null;
+  preview?: string | null;
+  waitingMinutes?: number | null;
+  repliedAt?: string | null;
+  responseMinutes?: number | null;
+  withinTarget?: boolean | null;
+  /** Unread messages (stale) or inbound messages in the episode (response). */
+  unread?: number | null;
   /** GHL message id to stream a recording for (connected calls only); null when none can exist. */
   recordingId?: string | null;
 }

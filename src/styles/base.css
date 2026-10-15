@@ -2412,3 +2412,31 @@ section > h2 {
 .notes-limits b {
   font-style: normal;
 }
+
+
+/* =====================================================================
+   Conversations band: stale conversations and response time tables
+   ===================================================================== */
+
+.rep-table-conv {
+  min-width: 900px;
+}
+
+.rep-table-conv .col-name {
+  width: 260px;
+}
+
+.rep-table-conv .col-num {
+  width: 150px;
+}
+
+.drill-table td.drill-preview {
+  max-width: 420px;
+  white-space: normal;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.modal .drill-table td.drill-preview {
+  color: #c6cfda;
+}
