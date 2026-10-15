@@ -17,9 +17,10 @@
 
 import { classifyOutcome, emptyOutcomes, OUTCOME_LABEL, pickStatus, type CallOutcome } from "@/lib/callOutcomes";
 import { getDb } from "@/lib/db";
-import { nyDayKey, nyParts, type DateRange } from "@/lib/dates";
+import { addDays, fmtDay, nyDayKey, nyParts, startOfDay, type DateRange } from "@/lib/dates";
+import { emptyGrid, type HeatBundle, type HeatData } from "@/lib/heatmap";
 import { contactUrl, type DrillResult, type DrillRow } from "@/lib/drilldown";
-import { conversationMinSeconds, goalFor, repGoalStatus, type Goal, type GoalStatus } from "@/lib/goals";
+import { callHeatmapConfig, conversationMinSeconds, goalFor, repGoalStatus, type Goal, type GoalStatus } from "@/lib/goals";
 import { fmtMinutes } from "@/lib/metrics";
 import { userNames } from "@/lib/milestones";
 import { repRoster, type Rep } from "@/lib/reps";
@@ -53,7 +54,43 @@ export interface RepCallsResult {
   callsGoal: Goal | null;
   talkGoal: Goal | null;
   unmatchedReps: Rep[];
+  /** Team-wide best-times heat map (selected range + last 90 days). */
+  heat: HeatBundle;
   notes: string[];
+}
+
+/** Outbound dials per weekday × hour (New York) for one owner filter, with outcomes, over [start, end). */
+function heatData(label: string, start: Date, end: Date, owned: (u: string | null) => boolean): HeatData {
+  const threshold = conversationMinSeconds();
+  const grid = emptyGrid();
+  let dials = 0;
+  for (const d of dialKeys(start.toISOString(), end.toISOString())) {
+    if (!owned(d.u)) continue;
+    const p = nyParts(new Date(d.t));
+    const day = (p.wd + 6) % 7; // Monday first
+    const cell = grid[day][p.h];
+    cell.dials += 1;
+    dials += 1;
+    const o = classifyOutcome(pickStatus(d.statuses), d.d, threshold);
+    if (o === "conversation" || o === "short") cell.connected += 1;
+    if (o === "conversation") cell.conversations += 1;
+  }
+  return { label, grid, dials };
+}
+
+/** Selected-range and last-90-day heat maps for one owner filter. */
+export function heatBundle(range: DateRange, owned: (u: string | null) => boolean): HeatBundle {
+  const cfg = callHeatmapConfig();
+  const now = range.asOf;
+  const start90 = startOfDay(addDays(now, -89));
+  return {
+    range: heatData(range.label, range.start, range.end, owned),
+    last90: heatData(`Last 90 days (${fmtDay(start90)} – ${fmtDay(now)})`, start90, now, owned),
+    startHour: cfg.startHour,
+    endHour: cfg.endHour,
+    minDials: cfg.minDials,
+    conversationMinSeconds: conversationMinSeconds(),
+  };
 }
 
 interface DialKey {
@@ -213,12 +250,14 @@ export function computeRepCalls(range: DateRange): RepCallsResult {
     callsGoal,
     talkGoal,
     unmatchedReps: roster.unmatched,
+    heat: heatBundle(range, () => true),
     notes: [
       "Dials are outbound human call attempts only, one per call id (linked legs and repeated updates deduplicated). Automated, campaign, and IVR calls are excluded. The team total equals the Outbound line of the Calls Made card.",
       `Each dial has one outcome. Conversation (estimated by duration) = GHL status completed with a recorded duration of at least ${threshold} seconds; Short pickup / likely machine = completed but shorter than ${threshold} seconds; Voicemail = status voicemail; No answer = no-answer or ringing; Failed = failed or busy. GHL marks human pickups and undetected answering machines alike as completed, so Conversation is an estimate, not verified conversation. The threshold is callOutcomes.conversationMinSeconds in config/goals.json.`,
       "Connected = conversations plus short pickups (every completed call). Conversation rate = conversations ÷ dials; answer rate = connected ÷ dials. The answer rate counts answering machines GHL did not detect, which is why it runs far above the conversation rate.",
       "Talk time is the recorded GHL call duration of human calls with status completed or answered, in either direction. It is recorded duration, not verified conversation time; a completed status can include answering-machine pickups GHL did not detect. The team total equals the Talk Time card.",
       "Avg talk time per call is total talk time divided by the connected calls counted.",
+      "Best times to call (in Details and in each rep's drilldown) groups outbound dials by weekday and hour in America/New_York and colors each slot by conversation rate, connected rate, or dial volume; slots under the configured minimum dials are hatched and not ranked. Hours outside the shown window still count in the totals.",
       "First call (avg) uses the rep's first outbound attempt on each New York day they made any outbound call, averaged across those days only; days with no calls are excluded, not counted as zero.",
       "Calls are credited to the user on the call record. Calls with no user, and users who are not sales reps, are grouped as other users and still count in the team total.",
       ...(callsGoal ? [`Call goal basis: ${callsGoal.basis}.`] : []),
@@ -313,5 +352,5 @@ export function callsDrilldown(user: string, range: DateRange): DrillResult {
     .map(([day, v]) => ({ day, dials: v.dials, talk: v.talk > 0 ? fmtMinutes(Math.round(v.talk / 60)) : "—", firstCall: v.first === null ? "—" : fmtClock(v.first) }));
 
   const title = user === "others" ? "Other users, not sales reps" : (roster.byUserId.get(user)?.name ?? names.get(user) ?? user);
-  return { ok: true, title, rows, count: rows.length, perDay, detailsNote: null, fetchedAt: new Date().toISOString() };
+  return { ok: true, title, rows, count: rows.length, perDay, heat: heatBundle(range, owned), detailsNote: null, fetchedAt: new Date().toISOString() };
 }

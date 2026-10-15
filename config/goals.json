@@ -18,6 +18,12 @@
     "_note": "Rep Call Activity: a completed outbound call counts as a Conversation only when its recorded duration is at least this many seconds; shorter completed calls are 'Short pickup / likely machine'. GHL cannot tell a human pickup from an answering machine, so this is an estimate by duration. Talk time is not affected.",
     "conversationMinSeconds": 60
   },
+  "callHeatmap": {
+    "_note": "Best times to call heat map: hour columns shown (inclusive, America/New_York, 24-hour clock) and the minimum dials a weekday×hour slot needs before it is colored normally and eligible for the top-3 ranking. Dials outside the window still count in totals.",
+    "startHour": 7,
+    "endHour": 20,
+    "minDials": 5
+  },
   "snapshotKpis": ["appointmentsConfirmed"],
   "noGoal": [
     "appointmentsCancelled",

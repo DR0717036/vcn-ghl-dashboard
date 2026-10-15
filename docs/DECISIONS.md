@@ -396,3 +396,19 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     pickups (every completed call, machines included). The rep drilldown
     header shows the same three figures and both rates. Reconciled
     against the modals for every row.
+45. **Best times to call heat map (2026-10-15).** Weekday (Mon–Sun) ×
+    hour (America/New_York) grid of outbound dials, in every rep's call
+    drilldown below the call list and, team-wide, in the Rep Call
+    Activity card's Details. Each slot is colored on a single-hue
+    sequential scale (brand blue at rising opacity, so it reads on light
+    and dark surfaces) by conversation rate, connected rate, or dial
+    volume (toggle); a second toggle switches between the selected range
+    and the last 90 days. Slots with no dials are empty; slots under
+    callHeatmap.minDials (config/goals.json, default 5) are hatched and
+    excluded from the top-3 list. The shown hour window is
+    callHeatmap.startHour–endHour (default 7 AM–8 PM, inclusive); dials
+    outside it still count in totals and the footer says how many. Cell
+    tooltip: "Tue 10 AM · 9 conversations / 41 dials · 22%". Reconciled:
+    cell dials, connected, and conversations sum to each row's figures
+    for the selected range, and the team grid's footer matches the team
+    total.

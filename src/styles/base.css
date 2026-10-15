@@ -2090,3 +2090,237 @@ section > h2 {
 .rep-table-calls td.dials .plan-label {
   font-variant-numeric: tabular-nums;
 }
+
+
+/* =====================================================================
+   Best times to call heat map (modal + card Details). Cell fill is the
+   brand blue at an opacity driven by --heat, so it reads on light and dark
+   surfaces alike; text follows the surface tokens until the fill is strong.
+   ===================================================================== */
+
+.heat {
+  margin-top: var(--s-5);
+}
+
+.heat-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.heat-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.modal .heat-title {
+  color: #ffffff;
+}
+
+.heat-sub {
+  margin-top: 2px;
+}
+
+.heat-controls {
+  display: flex;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.heat-seg {
+  margin-top: 0;
+}
+
+/* the segmented buttons on a light card */
+.on-light .answer-filter,
+.band-light .answer-filter {
+  border-color: rgba(8, 24, 45, 0.18);
+  background: rgba(8, 24, 45, 0.04);
+}
+
+.on-light .seg-btn,
+.band-light .seg-btn {
+  color: #2f3f52;
+}
+
+.on-light .seg-btn:hover,
+.band-light .seg-btn:hover {
+  color: #182536;
+  background: rgba(8, 24, 45, 0.06);
+}
+
+.on-light .seg-btn.active,
+.band-light .seg-btn.active {
+  color: #ffffff;
+}
+
+.heat-scroll {
+  overflow-x: auto;
+  margin-top: var(--s-4);
+}
+
+.heat-grid {
+  border-collapse: separate;
+  border-spacing: 3px;
+  width: 100%;
+  min-width: 760px;
+  font-size: 12px;
+}
+
+.heat-grid th {
+  border: 0;
+  padding: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.heat-grid th.heat-day {
+  text-align: right;
+  padding-right: 8px;
+  width: 44px;
+}
+
+.heat-grid th.heat-corner {
+  width: 44px;
+}
+
+.heat-cell {
+  --heat: 0.1;
+  height: 34px;
+  min-width: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  text-align: center;
+  vertical-align: middle;
+  color: var(--text-primary);
+  background: rgba(22, 119, 255, calc(0.12 + 0.88 * var(--heat)));
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  cursor: default;
+  transition: outline-color 120ms ease;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+}
+
+.heat-cell:hover {
+  outline-color: var(--accent-yellow);
+}
+
+.heat-cell.heat-strong {
+  color: #ffffff;
+}
+
+.heat-cell.heat-low {
+  background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0 3px, transparent 3px 7px);
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.heat-cell.heat-empty {
+  background: transparent;
+  outline: 1px dashed var(--border);
+  outline-offset: -1px;
+}
+
+.heat-grid tbody tr:hover td {
+  background-color: rgba(22, 119, 255, calc(0.12 + 0.88 * var(--heat)));
+}
+
+.heat-grid tbody tr:hover td.heat-empty {
+  background: transparent;
+}
+
+.heat-value {
+  font-size: 11px;
+}
+
+.heat-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  margin-top: var(--s-3);
+}
+
+.heat-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.heat-legend-bar {
+  width: 120px;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, rgba(22, 119, 255, 0.12), rgba(22, 119, 255, 1));
+}
+
+.heat-legend-swatch {
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-left: 8px;
+  background: rgba(22, 119, 255, 0.5);
+}
+
+.heat-legend-swatch.heat-low {
+  background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0 3px, transparent 3px 7px);
+}
+
+.heat-legend-swatch.heat-empty {
+  background: transparent;
+  outline: 1px dashed var(--border);
+}
+
+.heat-top {
+  margin-top: var(--s-3);
+}
+
+.heat-top-list {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  color: var(--text-body);
+  font-size: var(--text-small);
+}
+
+.heat-top-list li {
+  margin: 3px 0;
+}
+
+.heat-top-list b {
+  color: var(--text-primary);
+}
+
+.modal .heat-top-list b,
+.modal .heat-cell {
+  color: #ffffff;
+}
+
+.modal .heat-cell.heat-low {
+  color: #aab6c4;
+}
+
+.modal-heat {
+  margin-top: var(--s-5);
+  padding: var(--s-4);
+  border: 1px solid #223750;
+  border-radius: var(--r-card);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.details-heat {
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border-soft);
+}

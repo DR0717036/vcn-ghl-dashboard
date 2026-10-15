@@ -72,6 +72,7 @@ export default function KpiShell({
   notes = [],
   badges,
   footer,
+  details,
   className = "",
 }: {
   id: string;
@@ -92,9 +93,11 @@ export default function KpiShell({
   badges?: ReactNode;
   /** Pinned to the bottom in place of the Details expander (e.g. a button that opens a drilldown). */
   footer?: ReactNode;
+  /** Extra content inside the Details expander, after the breakdown tables and before "How this is counted". */
+  details?: ReactNode;
   className?: string;
 }) {
-  const hasDetails = breakdown.length > 0 || sections.length > 0 || notes.length > 0;
+  const hasDetails = breakdown.length > 0 || sections.length > 0 || notes.length > 0 || Boolean(details);
   return (
     <div className={`stat kpi reveal ${className}`.trim()} data-kpi={id}>
       <div className="kpi-head">
@@ -123,6 +126,7 @@ export default function KpiShell({
             {sections.map((s) => (
               <BreakdownTable key={s.title} rows={s.rows} title={s.title} />
             ))}
+            {details}
             {notes.length > 0 ? (
               <>
                 <div className="label kpi-notes-title">How this is counted</div>

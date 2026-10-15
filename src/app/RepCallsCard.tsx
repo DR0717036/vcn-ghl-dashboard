@@ -8,6 +8,7 @@ import { fmtMinutes } from "@/lib/metrics";
 import { fmtDuration, outcomeRows, type RepCallRow, type RepCallsResult } from "@/lib/repCalls";
 import { CALL_COLUMNS, RepDrilldownRow, type DrilldownSpec } from "./Drilldown";
 import { GoalPill, GoalText, StatusPill } from "./GoalLine";
+import HeatMap from "./charts/HeatMap";
 import KpiShell from "./KpiShell";
 
 const n = (v: number) => v.toLocaleString("en-US");
@@ -44,6 +45,7 @@ export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = ""
     ],
     columns: CALL_COLUMNS,
     perDayTable: { title: "Per day: dials, talk time, and first outbound call" },
+    heatmap: true,
     outcomeFilter: true,
     expectedConversations: row.conversations,
     notes,
@@ -177,6 +179,11 @@ export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = ""
       }
       body={table}
       sections={[{ title: `Team dials by outcome (Conversation = completed and at least ${r.conversationMinSeconds}s, estimated)`, rows: outcomeRows(r.total.outcomes) }]}
+      details={
+        <div className="details-heat">
+          <HeatMap bundle={r.heat} title="Best times to call · whole team" />
+        </div>
+      }
       notes={notes}
     />
   );

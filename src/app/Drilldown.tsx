@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { OUTCOME_SHORT, type CallOutcome } from "@/lib/callOutcomes";
 import type { DrillResult, DrillRow } from "@/lib/drilldown";
+import HeatMap from "./charts/HeatMap";
 import LineChart, { type LineSeries } from "./charts/LineChart";
 
 export type ColumnKey =
@@ -375,6 +376,8 @@ export interface DrilldownSpec {
   wonTable?: { title: string; expected: number | null };
   /** Call drilldowns: show the per-day summary (dials, talk time, first outbound call). */
   perDayTable?: { title: string };
+  /** Call drilldowns: show the best-times heat map below the call list. */
+  heatmap?: boolean;
   /** Call drilldowns: show the outcome filter (All / Conversations / Short pickups / Voicemail / No answer / Failed). */
   outcomeFilter?: boolean;
   /** The Conversations figure on the table row; the modal confirms its Conversation rows match it. */
@@ -519,6 +522,12 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
               defaultSort="wonOn"
             />
           </>
+        ) : null}
+
+        {spec.heatmap && data?.heat ? (
+          <div className="modal-heat">
+            <HeatMap bundle={data.heat} />
+          </div>
         ) : null}
 
         {spec.perDayTable && data?.perDay ? (

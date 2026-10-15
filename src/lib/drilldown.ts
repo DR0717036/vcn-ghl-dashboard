@@ -14,6 +14,7 @@
 // A rep's won list uses the same wonEvents() query as the commission report.
 
 import type { CallOutcome } from "@/lib/callOutcomes";
+import type { HeatBundle } from "@/lib/heatmap";
 import { wonEvents } from "@/lib/commission";
 import { getDb } from "@/lib/db";
 import type { DateRange } from "@/lib/dates";
@@ -67,6 +68,8 @@ export interface DrillResult {
   won?: DrillRow[];
   /** Call drilldowns only: one line per New York day with any call. */
   perDay?: { day: string; dials: number; talk: string; firstCall: string }[];
+  /** Call drilldowns only: weekday × hour dial outcomes for the selected range and the last 90 days. */
+  heat?: HeatBundle;
   /** Set when GHL could not supply email/phone for some rows (shown as a dash). */
   detailsNote: string | null;
   fetchedAt: string;

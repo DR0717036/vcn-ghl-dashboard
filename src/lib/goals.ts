@@ -18,6 +18,7 @@ interface GoalsFile {
   snapshotKpis?: string[];
   noGoal?: string[];
   callOutcomes?: { conversationMinSeconds?: number };
+  callHeatmap?: { startHour?: number; endHour?: number; minDials?: number };
 }
 
 const goals = raw as unknown as GoalsFile;
@@ -51,6 +52,15 @@ export interface Goal {
 export function conversationMinSeconds(): number {
   const v = goals.callOutcomes?.conversationMinSeconds;
   return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : 60;
+}
+
+/** Heat-map window and minimum dials per slot (config/goals.json; defaults 7–20 and 5). */
+export function callHeatmapConfig(): { startHour: number; endHour: number; minDials: number } {
+  const c = goals.callHeatmap ?? {};
+  const int = (v: unknown, lo: number, hi: number, d: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : d);
+  const startHour = int(c.startHour, 0, 23, 7);
+  const endHour = Math.max(startHour, int(c.endHour, 0, 23, 20));
+  return { startHour, endHour, minDials: int(c.minDials, 1, 1000, 5) };
 }
 
 export type GoalStatus = "met" | "on_track" | "missed";
