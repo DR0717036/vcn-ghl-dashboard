@@ -37,8 +37,8 @@ export default function SubmissionsCard({
   const g = s.goal;
   const repGoalCol = hasRepGoals(g);
   const notes = [...s.notes, ...c.notes];
-  if (g) notes.push(`Goal basis: ${g.basis}. Each rep is judged against their own goal; the team total against the sum.`);
-  if (s.unmatchedReps.length > 0) notes.push(`Not found among GHL users (check the userId in config/sales-reps.json): ${s.unmatchedReps.map((r) => r.name).join(", ")}.`);
+  if (g) notes.push(`Goal basis — ${g.basis}; each rep is judged against their own goal, the team total against the sum.`);
+  if (s.unmatchedReps.length > 0) notes.push(`Unmatched reps — not found among GHL users (check the userId in config/sales-reps.json): ${s.unmatchedReps.map((r) => r.name).join(", ")}.`);
 
   const quotaTitle = `Month-to-date combined submissions over the monthly quota. Always the current calendar month (${c.monthLabel}), whatever range is selected.`;
   const mtdOf = (r: SubmissionRow): RepMtd | undefined => (r.userId ? c.reps[r.userId] : undefined);
@@ -65,8 +65,8 @@ export default function SubmissionsCard({
       columns: REP_COLUMNS,
       wonTable: wonBased ? { title: `Won opportunities counted this month (${c.monthLabel})`, expected: mtd ? mtd.wonMtd : c.othersWon } : undefined,
       notes: [
-        "Each row is one contact reaching one stage: CA 101 submitted (Army CA) or IAU App Submitted (FS2) (Veteran G.I. Bill). A contact that reached both appears twice, once per stage, which is how the combined count works.",
-        "Credit goes to the opportunity owner at the time of the event.",
+        "Rows — one contact reaching one stage: CA 101 submitted (Army CA) or IAU App Submitted (FS2) (Veteran G.I. Bill); a contact that reached both appears twice, once per stage, which is how the combined count works.",
+        "Credit — the opportunity owner at the time of the event.",
         ...c.notes,
       ],
       csvName: `${r.name} submissions ${rangeLabel}`,

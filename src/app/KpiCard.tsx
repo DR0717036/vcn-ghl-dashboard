@@ -13,7 +13,7 @@ function fmtValue(k: KpiResult): string {
 export default function KpiCard({ k, chart, className = "" }: { k: KpiResult; chart?: ReactNode; className?: string }) {
   const unavailable = k.value === null;
   const notes: ReactNode[] = [...k.notes];
-  if (k.goal) notes.push(`Goal basis: ${k.goal.basis}.`);
+  if (k.goal) notes.push(`Goal basis — ${k.goal.basis}.`);
   return (
     <KpiShell
       id={k.key}

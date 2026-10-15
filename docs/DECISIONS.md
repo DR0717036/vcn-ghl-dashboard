@@ -412,3 +412,17 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     cell dials, connected, and conversations sum to each row's figures
     for the selected range, and the team grid's footer matches the team
     total.
+46. **"How this is counted" style (2026-10-15).** Every note is a plain
+    string in one of three shapes, rendered by src/app/Notes.tsx on all
+    cards, modals, the program milestone cards, and the Won section:
+    "Term — explanation" (bold term, dash, text), "Limitation: …"
+    (gathered into one italic Limitations line at the end, each
+    sentence capitalized), or plain text. Bullets that explained several
+    terms were split (Conversation, Short pickup, Voicemail, No answer,
+    Failed each have their own line). Lists use 15px text at 1.6 line
+    height, 12px between items, lines capped near 90 characters, and
+    flow into two columns past six items on screens 1000px and wider.
+    Text is the lighter secondary gray on dark surfaces (#aab6c4 on the
+    navy modal, about 8:1) and #46566a on white cards (about 7.5:1),
+    with terms in the surface's primary color. The long "GHL cannot
+    distinguish…" caveats now appear once, in Limitations.

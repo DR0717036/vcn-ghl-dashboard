@@ -2324,3 +2324,86 @@ section > h2 {
   padding-top: var(--s-4);
   border-top: 1px solid var(--border-soft);
 }
+
+
+/* =====================================================================
+   "How this is counted" and Details text: labeled bullets, 15px / 1.6,
+   12px between items, ~90-character lines, two columns past six items
+   ===================================================================== */
+
+.notes {
+  margin-top: var(--s-4);
+}
+
+.notes .kpi-notes-title {
+  margin-top: 0;
+  margin-bottom: 6px;
+}
+
+.notes-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.notes-list li {
+  margin: 0 0 12px;
+  max-width: 90ch;
+  break-inside: avoid;
+}
+
+.notes-list li:last-child {
+  margin-bottom: 0;
+}
+
+.notes-list b {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.notes-limits {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 110ch;
+}
+
+.notes-limits b {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+@media (min-width: 1000px) {
+  .notes-cols .notes-list {
+    columns: 2;
+    column-gap: 40px;
+  }
+}
+
+/* the dark modal: lighter secondary gray, never the muted one */
+.modal .notes-list,
+.modal .notes-limits {
+  color: #aab6c4;
+}
+
+.modal .notes-list b,
+.modal .notes-limits b {
+  color: #ffffff;
+}
+
+/* Details breakdown tables share the same size and rhythm */
+.kpi-details-body .stat-breakdown {
+  font-size: 15px;
+}
+
+.kpi-details-body .stat-breakdown td {
+  padding: 6px 0;
+  line-height: 1.5;
+}
+
+.stat-notes .notes {
+  margin-top: var(--s-2);
+}

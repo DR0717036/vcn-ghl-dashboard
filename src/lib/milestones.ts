@@ -179,12 +179,12 @@ export function computeMilestone(m: MilestoneMapping, range: DateRange, names: M
   const prevPartial = range.prevStart.toISOString() < cov.firstCoreSyncAt;
 
   const notes = [
-    `Counts the first entry into "${m.stageName}" once per contact in reporting group ${group} (${base.groupBasis}). Re-entering the stage does not count again.`,
-    "Opportunity Value is the sum over the distinct opportunities behind these contacts, using the value at the time of the event.",
+    `Counting — the first entry into "${m.stageName}" once per contact in reporting group ${group} (${base.groupBasis}); re-entering the stage does not count again.`,
+    "Opportunity Value — summed over the distinct opportunities behind these contacts, using the value at the time of the event.",
   ];
   if (partialHistory) {
     notes.push(
-      `Milestone tracking began ${fmtDay(new Date(cov.firstCoreSyncAt))}. Before that date only contacts still sitting in this stage at the first sync are known (dated by GHL's stage-entry time); contacts that had already moved on are not counted.`,
+      `Limitation: milestone tracking began ${fmtDay(new Date(cov.firstCoreSyncAt))}; before that date only contacts still sitting in this stage at the first sync are known (dated by GHL's stage-entry time), and contacts that had already moved on are not counted.`,
     );
   }
 

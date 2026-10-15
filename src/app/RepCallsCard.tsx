@@ -28,7 +28,7 @@ const mins = (sec: number) => fmtMinutes(Math.round(sec / 60));
 
 export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = "" }: { r: RepCallsResult; rangeQuery: string; rangeLabel: string; className?: string }) {
   const notes = [...r.notes];
-  if (r.unmatchedReps.length > 0) notes.push(`Not found among GHL users (check the userId in config/sales-reps.json): ${r.unmatchedReps.map((x) => x.name).join(", ")}.`);
+  if (r.unmatchedReps.length > 0) notes.push(`Unmatched reps — not found among GHL users (check the userId in config/sales-reps.json): ${r.unmatchedReps.map((x) => x.name).join(", ")}.`);
 
   const spec = (row: RepCallRow, user: string): DrilldownSpec => ({
     query: `kind=calls&user=${encodeURIComponent(user)}&${rangeQuery}`,

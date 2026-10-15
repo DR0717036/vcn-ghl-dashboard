@@ -149,12 +149,15 @@ export function computeSubmissions(range: DateRange): SubmissionsResult {
     partialHistory,
     parts: { ca101: ca, fs2: fs },
     notes: [
-      `A submission is a CA 101 submitted (Army CA, ${ca.reportingGroup}) or an IAU App Submitted (Veteran G.I. Bill, ${fs.reportingGroup}): the first entry into each stage, once per contact, during the period. The two parts are different programs, so a contact can appear in both.`,
-      "Rep credit uses the opportunity owner at the time of the event. The sales reps come from config/sales-reps.json, matched by GHL user id; everyone else is grouped as other users and still counts in the team total.",
-      "This is the only submissions goal: 5 per rep per week, scaled by each rep's multiplier or override (Sam R. 3). The team goal is the sum of every rep's goal. The Army CA 101, Awaiting Supervisor Approval, and FS2 cards carry no goal of their own.",
-      "Opportunity Value is the value on each opportunity at the time of its event, summed across both parts. It is not revenue, cash, or commission.",
-      "Click a row to see the contacts behind it.",
-      ...(partialHistory ? [ca.notes.find((t) => t.startsWith("Milestone tracking began")) ?? ""] : []),
+      `Submission — a CA 101 submitted (Army CA, ${ca.reportingGroup}) or an IAU App Submitted (Veteran G.I. Bill, ${fs.reportingGroup}): the first entry into each stage, once per contact, during the period.`,
+      "Both programs — a contact can appear in both parts, since they are different programs.",
+      "Rep credit — the opportunity owner at the time of the event.",
+      "Sales reps — from config/sales-reps.json, matched by GHL user id; everyone else is grouped as other users and still counts in the team total.",
+      "Goal — the only submissions goal: 5 per rep per week, scaled by each rep's multiplier or override (Sam R. 3); the team goal is the sum of every rep's goal.",
+      "Other cards — the Army CA 101, Awaiting Supervisor Approval, and FS2 cards carry no goal of their own.",
+      "Opportunity Value — the value on each opportunity at the time of its event, summed across both parts; not revenue, cash, or commission.",
+      "Drilldown — click a row to see the contacts behind it.",
+      ...(partialHistory ? [ca.notes.find((t) => t.startsWith("Limitation: milestone tracking began")) ?? ""] : []),
     ].filter(Boolean),
   };
 }

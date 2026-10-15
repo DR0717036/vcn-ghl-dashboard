@@ -135,12 +135,13 @@ export function kpiNewLeads(range: DateRange): KpiResult {
     { title: "Assigned to (current owner)", rows: byUser.map((u) => ({ label: u.name ?? "Unassigned", value: n(u.c) })) },
   ];
   const notes = [
-    "Counted by contact creation date (GHL dateAdded), unique contact IDs.",
-    "Tag buckets use the contact's current tags and are mutually exclusive, so they add up to the total. Assignment uses the current owner.",
+    "Counting — by contact creation date (GHL dateAdded), unique contact IDs.",
+    "Tag buckets — the contact's current tags, mutually exclusive, so they add up to the total.",
+    "Assigned to — the contact's current owner.",
   ];
   if (bulk && bulk > 0) {
     breakdown.unshift({ label: "Bulk-created (possible import)", value: n(bulk) });
-    notes.push("Bulk-created means 25 or more contacts created within the same minute. This is a name-and-time heuristic, not a GHL import flag.");
+    notes.push("Bulk-created — 25 or more contacts created within the same minute.", "Limitation: bulk-created is a name-and-time heuristic, not a GHL import flag.");
   }
   return {
     key: "newLeads",
@@ -177,8 +178,9 @@ export function kpiLeadsAssigned(range: DateRange): KpiResult {
     breakdown: [{ label: "Currently assigned leads (snapshot)", value: n(currently) }],
     sections: [snapshotSection],
     notes: [
-      "GHL does not expose assignment history. Assignment changes are recorded by this dashboard from its first sync forward.",
-      "Tag buckets use the contact's current tags and are mutually exclusive (Army, Veteran, Both, No tag), so they add up to the total.",
+      "Assignment history — recorded by this dashboard from its first sync forward.",
+      "Tag buckets — the contact's current tags, mutually exclusive (Army, Veteran, Both, No tag), so they add up to the total.",
+      "Limitation: GHL does not expose assignment history, so changes before the first sync are unknown.",
     ],
   };
   if (!cov.firstCoreSyncAt) {
@@ -223,7 +225,7 @@ export function kpiLeadsAssigned(range: DateRange): KpiResult {
       ...base.breakdown,
     ],
     sections: [{ title: "Assigned in period, by tag", rows: tagRows(periodByTag) }, snapshotSection],
-    notes: [...base.notes, "Unique contacts with an assignment change observed during the period. Event time is the sync that noticed the change (within 15 minutes)."],
+    notes: [...base.notes, "Assigned in period — unique contacts with an assignment change observed during the period; the event time is the sync that noticed it (within 15 minutes)."],
   };
 }
 
@@ -283,7 +285,8 @@ export function kpiCallsMade(range: DateRange): KpiResult {
       { label: "Automated / campaign calls (excluded)", value: n(cur.automated) },
     ],
     notes: [
-      "One call per call ID (linked legs and repeated updates deduplicated). Automated, campaign, and IVR calls are excluded from the human count.",
+      "Calls — one per call ID; linked legs and repeated updates are deduplicated.",
+      "Excluded — automated, campaign, and IVR calls.",
     ],
   };
 }
@@ -325,7 +328,9 @@ export function kpiTalkTime(range: DateRange): KpiResult {
       { label: "Connected calls counted", value: n(cur.calls) },
     ],
     notes: [
-      "Sum of GHL call duration on human calls with status completed or answered. Calls GHL flags as voicemail, busy, no-answer, or failed are excluded. A completed status still may include answering-machine pickups GHL did not detect, so this is recorded duration, not verified conversation time.",
+      "Talk time — the sum of GHL call duration on human calls with status completed or answered.",
+      "Excluded — calls GHL flags as voicemail, busy, no-answer, or failed.",
+      "Limitation: GHL cannot distinguish a human pickup from an answering machine, so a completed call can be a machine pickup; talk time is recorded duration, not verified conversation time.",
     ],
   };
 }
@@ -397,8 +402,9 @@ export function kpiAppointmentsBooked(range: DateRange): KpiResult {
       { label: "Rescheduled at least once", value: n(cur.rescheduled) },
     ],
     notes: [
-      "Unique appointment IDs by booking creation time, regardless of when the appointment takes place. Cancellations stay in the count; their status is shown separately.",
-      "Army / Veteran classification is based on the contact's current tags, not tags at booking time.",
+      "Counting — unique appointment IDs by booking creation time, regardless of when the appointment takes place.",
+      "Cancellations — stay in the count; their status is shown separately.",
+      "Army / Veteran — from the contact's current tags, not the tags at booking time.",
     ],
   };
 }
@@ -454,7 +460,7 @@ export function kpiAppointmentsCompleted(range: DateRange): KpiResult {
       { label: "Past start, attendance not yet marked", value: n(cur.pendingPast) },
       { label: "Other / upcoming", value: n(cur.other - cur.pendingPast) },
     ],
-    notes: ["Only an explicit Showed status counts. A past start time or a completed call never counts as attendance."],
+    notes: ["Completed — only an explicit Showed status counts.", "Not counted — a past start time or a completed call never counts as attendance."],
   };
 }
 
@@ -486,8 +492,9 @@ export function kpiAppointmentsConfirmed(range: DateRange): KpiResult {
     prevUnavailableReason: "This is a current snapshot of stage occupancy; there is no prior-period value.",
     breakdown,
     notes: [
-      "Counts distinct contacts whose opportunity currently sits in the Appointment Confirmed (VCN) stage of each program pipeline, as of the last sync. It is a snapshot, not a count of confirmations during the period.",
-      "Not tied to the date range or to calendar records; the calendar status 'confirmed' is a different field and appears on the Appointments Booked card.",
+      "Snapshot — distinct contacts whose opportunity currently sits in the Appointment Confirmed (VCN) stage of each program pipeline, as of the last sync; not a count of confirmations during the period.",
+      "Date range — not applied; this is a current snapshot.",
+      "Calendar status — the calendar's own 'confirmed' status is a different field and appears on the Appointments Booked card.",
     ],
   };
 }
@@ -537,8 +544,10 @@ export function kpiAppointmentsCancelled(range: DateRange): KpiResult {
       { label: "Cancelled, booked in period", value: n(cur.byBooked) },
     ],
     notes: [
-      "GHL does not record when an appointment was cancelled. The headline uses the appointment's last-updated time as the cancellation time, which is exact unless the appointment was edited again after cancelling. The two extra lines count cancelled appointments by scheduled start and by booking date instead.",
-      "Army / Veteran split uses the contact's current tags; buckets are mutually exclusive and add up to the headline.",
+      "Cancellation time — the appointment's last-updated time, which is exact unless the appointment was edited again after cancelling.",
+      "Extra lines — count cancelled appointments by scheduled start and by booking date instead.",
+      "Army / Veteran — the contact's current tags; buckets are mutually exclusive and add up to the headline.",
+      "Limitation: GHL does not record when an appointment was cancelled.",
     ],
   };
 }

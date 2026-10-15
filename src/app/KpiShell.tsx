@@ -10,6 +10,7 @@
 
 import type { ReactNode } from "react";
 import { fmtMinutes, type Breakdown, type BreakdownSection } from "@/lib/metrics";
+import Notes from "./Notes";
 
 export function Delta({ value, prev, format = "count", reason, what }: { value: number | null; prev: number | null; format?: "count" | "minutes" | "usd"; reason?: string; what?: string }) {
   if (value === null || prev === null) {
@@ -127,16 +128,7 @@ export default function KpiShell({
               <BreakdownTable key={s.title} rows={s.rows} title={s.title} />
             ))}
             {details}
-            {notes.length > 0 ? (
-              <>
-                <div className="label kpi-notes-title">How this is counted</div>
-                <ul className="plain note">
-                  {notes.map((t, i) => (
-                    <li key={i}>{t}</li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
+            <Notes notes={notes} />
           </div>
         </details>
       ) : null}

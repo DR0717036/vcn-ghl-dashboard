@@ -71,10 +71,11 @@ export default function MilestoneKpiCard({
   ];
   const notes = [
     ...m.notes,
-    "Opportunity Value is the value on the opportunity at the time of the event. It is not revenue, cash, or commission.",
-    "The chart uses two scales: contacts on the left axis, Opportunity Value on the right. Read each line against its own axis.",
-    "Assigned user is the opportunity owner at the time of the event, the user the submission is credited to. Stage is where the opportunity sits now.",
-    "This card carries no goal of its own. The only submissions goal is on Program Submissions (combined): 5 per rep per week, scaled per rep.",
+    "Opportunity Value — the value on the opportunity at the time of the event; not revenue, cash, or commission.",
+    "Chart — two scales: contacts on the left axis, Opportunity Value on the right; read each line against its own axis.",
+    "Assigned user — the opportunity owner at the time of the event, the user the submission is credited to.",
+    "Stage — where the opportunity sits now.",
+    "Goal — none on this card; the only submissions goal is on Program Submissions (combined): 5 per rep per week, scaled per rep.",
   ];
   const chart: LineSeries[] = [
     { label: `Contacts ${per}`, color: chartSeries[0], points: series.points.map((p) => ({ label: p.label, value: p.count })), axis: "left", format: "count" },

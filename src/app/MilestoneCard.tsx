@@ -1,3 +1,4 @@
+import Notes from "./Notes";
 import { fmtUsd, type MilestoneResult } from "@/lib/milestones";
 
 const n = (v: number) => v.toLocaleString("en-US");
@@ -83,12 +84,7 @@ export default function MilestoneCard({ m }: { m: MilestoneResult }) {
       </table>
       <details className="stat-notes">
         <summary className="note">How this is counted</summary>
-        <ul className="plain note">
-          {m.notes.map((t) => (
-            <li key={t}>{t}</li>
-          ))}
-          <li>Rep credit uses the opportunity owner at the time of the event, not the current owner.</li>
-        </ul>
+        <Notes title={null} notes={[...m.notes, "Rep credit — the opportunity owner at the time of the event, not the current owner."]} />
       </details>
     </div>
   );

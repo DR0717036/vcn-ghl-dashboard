@@ -15,6 +15,7 @@ import { OUTCOME_SHORT, type CallOutcome } from "@/lib/callOutcomes";
 import type { DrillResult, DrillRow } from "@/lib/drilldown";
 import HeatMap from "./charts/HeatMap";
 import LineChart, { type LineSeries } from "./charts/LineChart";
+import Notes from "./Notes";
 
 export type ColumnKey =
   | "name"
@@ -574,14 +575,7 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
         ) : null}
 
         {spec.notes && spec.notes.length > 0 ? (
-          <div className="modal-notes">
-            <div className="label kpi-notes-title">How this is counted</div>
-            <ul className="plain note">
-              {spec.notes.map((t, i) => (
-                <li key={i}>{t}</li>
-              ))}
-            </ul>
-          </div>
+          <Notes notes={spec.notes} className="modal-notes" />
         ) : null}
       </div>
     </div>,

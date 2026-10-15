@@ -339,10 +339,13 @@ export function computeCommission(range: DateRange, now: Date): CommissionReport
     wonByUser,
     planSummary: planSummary(),
     notes: [
-      `Est. commission follows the selected date range: the commission earned on the submissions or wins (per the rep's plan) that fall inside the range. Each event is priced by its place in its own calendar month, because the thresholds are monthly: a submission pays the retro rate when the rep's submissions in that month, through the end of the range, reach the threshold; a won pays the first-tier rate when it is among the rep's first wons of that month by won date. Ranges that span months are priced month by month.`,
-      `Monthly quota and Won (MTD) are always month-to-date for the current calendar month (${monthLabel}), regardless of the selected date range.`,
-      "Won means opportunity status = won: the first won transition, once per opportunity id, in the Army CA or Veteran G.I. Bill pipeline, credited to the opportunity owner at the won event.",
-      "Estimated from dashboard counts; the official commission calculation is done outside this dashboard. Plans and rates live in config/commission.json.",
+      "Est. commission — follows the selected date range: the commission earned on the submissions or wins (per the rep's plan) that fall inside the range.",
+      "Monthly thresholds — each event is priced by its place in its own calendar month: a submission pays the retro rate when the rep's submissions in that month, through the end of the range, reach the threshold; a won pays the first-tier rate when it is among the rep's first wons of that month by won date.",
+      "Ranges spanning months — priced month by month.",
+      `Monthly quota and Won (MTD) — always month-to-date for the current calendar month (${monthLabel}), regardless of the selected date range.`,
+      "Won — opportunity status = won: the first won transition, once per opportunity id, in the Army CA or Veteran G.I. Bill pipeline, credited to the opportunity owner at the won event.",
+      "Plans and rates — config/commission.json.",
+      "Limitation: commission is estimated from dashboard counts; the official commission calculation is done outside this dashboard.",
     ],
   };
 }

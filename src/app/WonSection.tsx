@@ -1,4 +1,5 @@
 import { fmtUsd } from "@/lib/milestones";
+import Notes from "./Notes";
 import type { WonReport, WonView } from "@/lib/won";
 
 const n = (v: number) => v.toLocaleString("en-US");
@@ -62,11 +63,7 @@ function WonCard({ v }: { v: WonView }) {
       <div className="note">Scope: {v.scope}</div>
       <details className="stat-notes">
         <summary className="note">How this is counted</summary>
-        <ul className="plain note">
-          {v.notes.map((t) => (
-            <li key={t}>{t}</li>
-          ))}
-        </ul>
+        <Notes title={null} notes={v.notes} />
       </details>
     </div>
   );

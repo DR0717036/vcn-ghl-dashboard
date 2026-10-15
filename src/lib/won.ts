@@ -158,8 +158,9 @@ export function computeWon(range: DateRange): WonReport {
       goal: goalFor(goalKey, range)?.full ?? null,
       current: totalsOf(snapshot.rows.map((r) => r.monetary_value)),
       notes: [
-        "Became Won During Period counts the first time each opportunity reached status = won, by GHL's status-change time. An opportunity reopened and won again is not counted twice; reversals are listed and never subtracted.",
-        "Currently Won is a snapshot of opportunities whose status is won right now, valued at their current Opportunity Value.",
+        "Became Won During Period — the first time each opportunity reached status = won, by GHL's status-change time; an opportunity reopened and won again is not counted twice.",
+        "Reversals — listed separately and never subtracted.",
+        "Currently Won — a snapshot of opportunities whose status is won right now, at their current Opportunity Value.",
         ...extraNotes,
       ],
     };
@@ -173,7 +174,7 @@ export function computeWon(range: DateRange): WonReport {
       { pipelineIds: [army], tag: mappingConfig.reportingGroups.FY27?.tag },
       `Army CA Pipeline, contacts tagged "${mappingConfig.reportingGroups.FY27?.tag}"`,
       "wonArmy",
-      ["FY27 membership comes from the contact tag, per the owner decision of 2026-10-11."],
+      ["FY27 membership — from the contact tag, per the owner decision of 2026-10-11."],
     ),
     view("wonVeteran", "Veteran G.I. Bill won opportunities", { pipelineIds: [vet] }, "Veteran G.I. Bill pipeline, every stage", "wonVeteran"),
     view(
@@ -182,7 +183,7 @@ export function computeWon(range: DateRange): WonReport {
       { pipelineIds: allIds },
       `Every pipeline in the connected VCN sub-account: Army CA, Veteran G.I. Bill, and ${otherNames.join(", ")}`,
       "wonEntireCrm",
-      ["Entire CRM means this one sub-account, not every sub-account in the agency. The non-program pipeline is included here and nowhere else."],
+      ["Entire CRM — this one sub-account, not every sub-account in the agency; the non-program pipeline is included here and nowhere else."],
     ),
   ];
 
