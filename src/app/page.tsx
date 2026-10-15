@@ -85,7 +85,8 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const messaging = analyzeMessaging(range);
   const optOuts = keywordCard(messaging, "optout");
   const interest = keywordCard(messaging, "interest");
-  const replyRate = replyRateCard(messaging);
+  const replyRateSms = replyRateCard(messaging, "sms");
+  const replyRateEmail = replyRateCard(messaging, "email");
   const inboundChannel = inboundChannelCard(messaging);
   // Commission on the events inside the selected range (quota and Won (MTD) stay month-to-date).
   const commission = computeCommission(range, now);
@@ -221,7 +222,10 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
             <KeywordCard k={interest} rangeQuery={rangeQuery} rangeLabel={range.label} />
           </div>
           <div className="kpi-row cols-1">
-            <ReplyRateCard r={replyRate} rangeQuery={rangeQuery} rangeLabel={range.label} />
+            <ReplyRateCard r={replyRateSms} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-1">
+            <ReplyRateCard r={replyRateEmail} rangeQuery={rangeQuery} rangeLabel={range.label} />
           </div>
           <div className="kpi-row cols-1">
             <InboundChannelCard c={inboundChannel} rangeLabel={range.label} />

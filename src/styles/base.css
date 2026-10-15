@@ -2575,3 +2575,40 @@ section > h2 {
   padding: 1px 6px;
   font-size: 10px;
 }
+
+
+/* channel-specific cards: a colored top edge and a matching pill so SMS and Email never look alike */
+.kpi.card-channel {
+  border-top-width: 4px;
+  border-top-style: solid;
+}
+
+.kpi.card-sms {
+  border-top-color: var(--accent-blue);
+}
+
+.kpi.card-email {
+  border-top-color: #8178e0;
+}
+
+.pill-sms {
+  background: rgba(22, 119, 255, 0.16);
+  color: #7fb0ff;
+  border-color: rgba(22, 119, 255, 0.5);
+}
+
+.pill-email {
+  background: rgba(129, 120, 224, 0.18);
+  color: #b9b3ff;
+  border-color: rgba(129, 120, 224, 0.6);
+}
+
+.on-light .pill-sms,
+.band-light .pill-sms {
+  color: #0f5fd1;
+}
+
+.on-light .pill-email,
+.band-light .pill-email {
+  color: #5a4fc9;
+}

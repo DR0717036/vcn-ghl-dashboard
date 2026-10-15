@@ -308,8 +308,13 @@ function emptyBy(): Record<TagClass, number> {
 }
 
 /** Sends grouped by template over the range, with replies/opt-outs/interest attributed to them. */
-export function templateStats(a: MessagingAnalysis, dedupedOptOuts: Reply[], dedupedInterests: Reply[]): Map<string, TemplateRow> {
+export type Channel = "sms" | "email";
+
+export function templateStats(a: MessagingAnalysis, dedupedOptOuts: Reply[], dedupedInterests: Reply[], channel?: Channel): Map<string, TemplateRow> {
   const rows = new Map<string, TemplateRow>();
+  const sendsIn = channel ? a.sends.filter((s) => s.channel === channel) : a.sends;
+  const optOutsIn = channel ? dedupedOptOuts.filter((r) => r.channel === channel) : dedupedOptOuts;
+  const interestsIn = channel ? dedupedInterests.filter((r) => r.channel === channel) : dedupedInterests;
   const get = (key: string): TemplateRow => {
     let r = rows.get(key);
     if (!r) {
@@ -319,7 +324,7 @@ export function templateStats(a: MessagingAnalysis, dedupedOptOuts: Reply[], ded
     return r;
   };
   const sentByOf = new Map<string, Set<string>>();
-  for (const s of a.sends) {
+  for (const s of sendsIn) {
     const r = get(s.templateKey);
     r.sends += 1;
     r.sendsBy[s.cls] += 1;
@@ -331,8 +336,8 @@ export function templateStats(a: MessagingAnalysis, dedupedOptOuts: Reply[], ded
     set.add(s.source === "workflow" || s.source === "campaign" || s.source === "bulk_actions" ? "workflow" : "rep");
     sentByOf.set(s.templateKey, set);
   }
-  for (const r of dedupedOptOuts) get(r.templateKey).optOuts += 1;
-  for (const r of dedupedInterests) get(r.templateKey).interests += 1;
+  for (const r of optOutsIn) get(r.templateKey).optOuts += 1;
+  for (const r of interestsIn) get(r.templateKey).interests += 1;
   // Two templates can open with the same nine words; number the duplicates so rows and drilldowns stay distinct.
   const seenLabel = new Map<string, number>();
   for (const r of [...rows.values()].sort((x, y) => y.sends - x.sends || x.key.localeCompare(y.key))) {
@@ -399,6 +404,8 @@ export function keywordCard(a: MessagingAnalysis, kind: "optout" | "interest"): 
 }
 
 export interface ReplyRateResult {
+  channel: Channel;
+  channelLabel: string;
   rows: TemplateRow[];
   rest: TemplateRow | null;
   templateCount: number;
@@ -406,19 +413,27 @@ export interface ReplyRateResult {
   notes: string[];
 }
 
-export function replyRateCard(a: MessagingAnalysis): ReplyRateResult {
+export function replyRateCard(a: MessagingAnalysis, channel: Channel): ReplyRateResult {
   const optOuts = dedupeByContact(a.replies.filter((r) => r.optOut));
   const interests = dedupeByContact(a.replies.filter((r) => r.interest));
-  const stats = templateStats(a, optOuts, interests);
+  const stats = templateStats(a, optOuts, interests, channel);
+  const word = channel === "email" ? "emails" : "SMS messages";
+  for (const t of stats.values()) {
+    if (t.key === MANUAL_KEY) t.label = `Manual ${word} (typed by a rep)`;
+    if (t.key === NOTEXT_KEY) t.label = channel === "email" ? "No text (media or attachment only)" : "No text (MMS media only)";
+  }
   const ranked = [...stats.values()].filter((t) => t.sends > 0).sort((x, y) => y.sends - x.sends);
   const { rows, rest } = capRows(ranked, REPLY_ROWS_MAX);
   const totals = ranked.reduce((t, r) => ({ sends: t.sends + r.sends, replies: t.replies + r.replies, optOuts: t.optOuts + r.optOuts, interests: t.interests + r.interests }), { sends: 0, replies: 0, optOuts: 0, interests: 0 });
   return {
+    channel,
+    channelLabel: channel === "email" ? "Email" : "SMS",
     rows,
     rest,
     templateCount: ranked.length,
     totals,
     notes: [
+      `Channel — this card covers outbound ${channel === "email" ? "emails" : "SMS messages"} only; the other channel has its own card.`,
       `Rows — the ${REPLY_ROWS_MAX} templates with the most sends; the rest are summed into one row.`,
       "Sends — outbound SMS and email messages in the selected range, grouped into templates by their opening words (best match); one-off messages typed by a rep are grouped as manual messages; messages with no text as media only.",
       `Reply — the first inbound message from the contact after the send, within ${a.cfg.replyWindowDays} days and before the next outbound; reply rate = replies ÷ sends.`,

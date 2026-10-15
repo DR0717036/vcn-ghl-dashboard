@@ -174,15 +174,15 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
   const t = r.totals;
   return (
     <KpiShell
-      id="replyRate"
-      className={`kpi-title-xl ${className}`.trim()}
-      title="Reply Rate by Template"
-      subtitle={`Templates that sent in ${rangeLabel}, most sends first · replies, opt-outs, and interest replies attributed by best match`}
+      id={r.channel === "email" ? "replyRateEmail" : "replyRateSms"}
+      className={`kpi-title-xl card-channel card-${r.channel} ${className}`.trim()}
+      title={`${r.channelLabel} Reply Rate by Template`}
+      subtitle={`${r.channelLabel} templates that sent in ${rangeLabel}, most sends first · replies, opt-outs, and interest replies attributed by best match`}
       value={
         <div className="stat-pair">
           <div>
             <div className="stat-value">{n(t.sends)}</div>
-            <div className="note">Sends</div>
+            <div className="note">{r.channelLabel} sends</div>
           </div>
           <div>
             <div className="stat-value">{pct(t.sends ? t.replies / t.sends : null, 1)}</div>
@@ -190,7 +190,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
           </div>
         </div>
       }
-      pill={<span className="pill pill-neutral">Best match</span>}
+      pill={<span className={`pill ${r.channel === "email" ? "pill-email" : "pill-sms"}`}>{r.channelLabel} only</span>}
       goalLine={<span className="kpi-muted">Goal not set</span>}
       deltaLine={
         <span className="kpi-muted">
@@ -254,7 +254,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
                 </tr>
               ) : null}
               <tr className="rep-total">
-                <td className="rep-name">All templates ({n(r.templateCount)})</td>
+                <td className="rep-name">All {r.channelLabel} templates ({n(r.templateCount)})</td>
                 <td />
                 <td className="num">{n(t.sends)}</td>
                 <td className="num">{n(t.replies)}</td>

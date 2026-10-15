@@ -520,3 +520,9 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     templates not in the list, which show "Not mapped yet" until added.
     The email normalizer now decodes a double-escaped "&amp;lt;" before
     stripping tags.
+53. **Reply rate split by channel (2026-10-15).** The Reply Rate by
+    Template card is now two cards, "SMS Reply Rate by Template" and
+    "Email Reply Rate by Template", each covering only its channel's
+    sends and attributed replies, with a blue (SMS) or purple (Email)
+    top edge and a matching "SMS only" / "Email only" pill. Manual and
+    media-only buckets are per channel.
