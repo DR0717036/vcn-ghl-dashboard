@@ -94,7 +94,7 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
   const firstSyncDone = Boolean(getState("first_core_sync_at"));
   const phases: PhaseResult[] = [];
 
-  const PHASES = 7;
+  const PHASES = 8;
   try {
     phases.push(await syncUsers(runStart));
     phases.push(await syncContacts(runStart, firstSyncDone));
@@ -103,6 +103,7 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
     phases.push(await syncAppointments(runStart));
     phases.push(await syncMessages(runStart));
     phases.push(await syncConversations(runStart));
+    phases.push(await syncEmailTemplates(runStart));
   } finally {
     const okCount = phases.filter((p) => p.ok).length;
     const ok = phases.length === PHASES && okCount === PHASES;
@@ -453,6 +454,56 @@ async function syncConversations(now: string): Promise<PhaseResult> {
     }
     setState("conversations_snapshot_at", now);
     res.count = rows.length;
+    res.ok = true;
+  } catch (e) {
+    res.error = (e as Error).message;
+  }
+  return res;
+}
+
+// ---- email builder templates: names, folder path, and rendered preview HTML (read-only) ----
+
+async function syncEmailTemplates(now: string): Promise<PhaseResult> {
+  const db = getDb();
+  const res: PhaseResult = { phase: "emailTemplates", ok: false, count: 0, warnings: [] };
+  try {
+    const items: { id: string; name: string; path: string; lastUpdated: string | null; previewUrl: string | null }[] = [];
+    const walk = async (parentId: string | undefined, path: string, depth: number) => {
+      if (depth > 4) return;
+      const r = await ghl.listEmailBuilder(parentId);
+      if (!r.ok) throw new Error(`${r.kind}: ${r.error}`);
+      for (const b of r.data.builders ?? []) {
+        if (b.templateType === "folder") await walk(b.id, `${path}/${b.name.trim()}`, depth + 1);
+        else items.push({ id: b.id, name: b.name.trim(), path, lastUpdated: isoOrNull(b.lastUpdated), previewUrl: b.previewUrl ?? null });
+      }
+    };
+    await walk(undefined, "", 0);
+    const existing = new Map((db.prepare(`SELECT id, last_updated FROM email_templates`).all() as { id: string; last_updated: string | null }[]).map((r) => [r.id, r.last_updated]));
+    const up = db.prepare(`INSERT INTO email_templates (id, name, path, last_updated, html, body_key, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET name = excluded.name, path = excluded.path, last_updated = excluded.last_updated, html = excluded.html, body_key = excluded.body_key, fetched_at = excluded.fetched_at`);
+    const touch = db.prepare(`UPDATE email_templates SET name = ?, path = ? WHERE id = ?`);
+    for (const t of items) {
+      if (existing.has(t.id) && existing.get(t.id) === t.lastUpdated) {
+        touch.run(t.name, t.path, t.id);
+        continue;
+      }
+      let html: string | null = null;
+      if (t.previewUrl) {
+        try {
+          const r = await fetch(t.previewUrl, { signal: AbortSignal.timeout(20_000), cache: "no-store" });
+          if (r.ok) {
+            const text = await r.text();
+            if (text.length <= 2_000_000) html = text;
+          } else res.warnings.push(`preview ${t.name}: HTTP ${r.status}`);
+        } catch (e) {
+          res.warnings.push(`preview ${t.name}: ${(e as Error).message}`);
+        }
+      }
+      up.run(t.id, t.name, t.path, t.lastUpdated, html, html ? bodyKey(html, null) : null, now);
+      res.count += 1;
+    }
+    const ids = new Set(items.map((t) => t.id));
+    for (const id of existing.keys()) if (!ids.has(id)) db.prepare(`DELETE FROM email_templates WHERE id = ?`).run(id);
     res.ok = true;
   } catch (e) {
     res.error = (e as Error).message;

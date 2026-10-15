@@ -8,6 +8,7 @@ import { rateLevel, TAG_CLASS_LABEL, type InboundChannelResult, type KeywordResu
 import { KEYWORD_COLUMNS, RepDrilldownRow, type DrilldownSpec } from "./Drilldown";
 import CollapsibleTable from "./CollapsibleTable";
 import DonutChart from "./charts/DonutChart";
+import { EmailTemplateRow } from "./EmailTemplateModal";
 import { chartSeries } from "@/lib/design";
 import KpiShell from "./KpiShell";
 
@@ -183,26 +184,6 @@ export function KeywordCard({ k, rangeQuery, rangeLabel, className = "" }: { k: 
   );
 }
 
-function EmailTiles({ e, rangeLabel }: { e: NonNullable<ReplyRateResult["emailStats"]>; rangeLabel: string }) {
-  const tiles: { label: string; value: string; caption: string; unavailable?: boolean }[] = [
-    { label: "Emails sent", value: n(e.sent), caption: `outbound emails · ${rangeLabel}` },
-    { label: "Bounced", value: "unavailable", caption: `GHL reports no bounce status (${n(e.failed)} failed sends are send errors, not bounces)`, unavailable: true },
-    { label: "Delivery rate", value: "unavailable", caption: `GHL leaves emails at status "sent"; only ${n(e.delivered)} of ${n(e.sent)} marked delivered`, unavailable: true },
-    { label: "Opt-out rate", value: "unavailable", caption: "GHL exposes no email unsubscribe event or dated opt-out", unavailable: true },
-  ];
-  return (
-    <div className="stat-tiles" data-check={JSON.stringify({ sent: e.sent })}>
-      {tiles.map((t) => (
-        <div key={t.label} className={`stat-tile${t.unavailable ? " is-unavailable" : ""}`}>
-          <div className="label">{t.label}</div>
-          <div className={`stat-value${t.unavailable ? " unavailable" : ""}`}>{t.value}</div>
-          <div className="note stat-tile-caption">{t.caption}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r: ReplyRateResult; rangeQuery: string; rangeLabel: string; className?: string }) {
   const t = r.totals;
   return (
@@ -232,7 +213,6 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
       }
       body={
         <>
-        {r.emailStats ? <EmailTiles e={r.emailStats} rangeLabel={rangeLabel} /> : null}
         <CollapsibleTable rows={r.rows.length + (r.rest ? 1 : 0) + 1}>
         <div className="scroll kpi-body">
           <table className="stat-breakdown rep-table rep-table-tpl rep-table-tpl-wide">
@@ -261,7 +241,22 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
               </tr>
             </thead>
             <tbody>
-              {r.rows.map((row) => (
+              {r.rows.map((row) =>
+                r.channel === "email" ? (
+                  <EmailTemplateRow key={row.key} spec={{ templateKey: row.key, rangeQuery, label: row.label }}>
+                    <td className="rep-name tpl-label" title={row.label}>
+                      {row.label}
+                    </td>
+                    <WorkflowCell row={row} />
+                    <td className="num">{n(row.sends)}</td>
+                    <td className="num">{n(row.replies)}</td>
+                    <td className="num combined">{pct(row.replyRate, 1)}</td>
+                    <td className="num">{pct(row.optOutRate, 1)}</td>
+                    <td className="num">{pct(row.interestRate, 1)}</td>
+                    <td className="num">{row.sendsBy.army ? `${n(row.sendsBy.army)} · ${pct(row.repliesBy.army / row.sendsBy.army)}` : DASH}</td>
+                    <td className="num">{row.sendsBy.veteran ? `${n(row.sendsBy.veteran)} · ${pct(row.repliesBy.veteran / row.sendsBy.veteran)}` : DASH}</td>
+                  </EmailTemplateRow>
+                ) : (
                 <RepDrilldownRow key={row.key} spec={templateSpec("reply", row, rangeQuery, rangeLabel, r.notes)}>
                   <td className="rep-name tpl-label" title={row.label}>
                     {row.label}
@@ -275,7 +270,8 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
                   <td className="num">{row.sendsBy.army ? `${n(row.sendsBy.army)} · ${pct(row.repliesBy.army / row.sendsBy.army)}` : DASH}</td>
                   <td className="num">{row.sendsBy.veteran ? `${n(row.sendsBy.veteran)} · ${pct(row.repliesBy.veteran / row.sendsBy.veteran)}` : DASH}</td>
                 </RepDrilldownRow>
-              ))}
+                ),
+              )}
               {r.rest ? (
                 <tr>
                   <td className="note">{r.rest.label}</td>

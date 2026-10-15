@@ -455,11 +455,8 @@ export function replyRateCard(a: MessagingAnalysis, channel: Channel): ReplyRate
       `Channel — this card covers outbound ${channel === "email" ? "emails" : "SMS messages"} only; the other channel has its own card.`,
       ...(channel === "email"
         ? [
-            "Emails sent — outbound emails in the selected range; equals the sends total of the table.",
-            "Bounced — unavailable: GHL's message export never reports a bounce status for this account's emails (the only statuses seen are sent, delivered, failed, and none); failed means GHL could not send, which is not a bounce.",
-            "Delivery rate — unavailable: GHL leaves almost every email at status sent and marks only a handful delivered, so delivered ÷ sent would be meaningless.",
-            "Opt-out rate — unavailable: GHL exposes no email unsubscribe event or dated opt-out (no opt_out message status in the export, and contacts' DND settings carry neither an email entry nor a date).",
-            "Limitation: the figures above are read from GHL's message status field; GHL's own email reporting may hold delivery and bounce data that is not available through the API this dashboard uses.",
+            "Drilldown — click a template row for its engagement stats (what the API supports), a sandboxed preview of the email with its subject, and daily sends.",
+            "Limitation: GHL's API exposes no delivery, open, click, bounce, unsubscribe, or spam figures for workflow-sent emails; those read \"unavailable in API\" in the drilldown, with a link to GHL's own reporting.",
           ]
         : []),
       `Rows — the ${REPLY_ROWS_MAX} templates with the most sends; the rest are summed into one row.`,

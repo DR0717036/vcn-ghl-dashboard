@@ -211,6 +211,22 @@ export function searchConversations(p: ConversationSearchParams): Promise<GhlRes
   });
 }
 
+export interface GhlEmailBuilderItem {
+  id: string;
+  name: string;
+  templateType?: string; // folder | html | builder
+  parentId?: string;
+  /** Signed URL that serves the rendered template HTML (verified 2026-10-15). */
+  previewUrl?: string;
+  lastUpdated?: string;
+}
+
+/** Email builder templates and folders (GET, read-only). Pass a folder id to list its children. */
+export function listEmailBuilder(parentId?: string): Promise<GhlResult<{ builders: GhlEmailBuilderItem[] }>> {
+  const { locationId } = getEnv();
+  return ghlGet("/emails/builder", "2021-07-28", { locationId, parentId, limit: 100 });
+}
+
 export interface GhlContactsPage {
   contacts: unknown[];
   meta?: { total?: number; startAfterId?: string; startAfter?: number; nextPageUrl?: string };

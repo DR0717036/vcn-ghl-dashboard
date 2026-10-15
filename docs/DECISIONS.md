@@ -564,3 +564,25 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     document.body with position: fixed and flip left/up near the
     viewport edges, so no card or chart box can clip them; the portaled
     tooltip carries its own dark-card colors.
+58. **Email template drilldown (2026-10-15).** Verified first: GHL's API
+    exposes no delivery, open, click, bounce, unsubscribe, or spam
+    figures for this account's emails (the export keeps them at status
+    "sent"; GET /emails/schedule and GET /campaigns are empty because the
+    emails are sent by workflows; workflows expose only id/name/status;
+    no scope is missing). Template HTML IS readable: GET /emails/builder
+    lists 50 templates with a signed previewUrl serving the rendered
+    HTML, so a new sync phase (emailTemplates) caches name, folder path,
+    HTML, and a normalized text key, refetching only when lastUpdated
+    changes. The four stat tiles were removed; each Email Reply Rate row
+    opens a modal with the template name, mapped workflow (and the
+    matched builder template), sends; a stats row where Delivered,
+    Opened, Clicked, Soft/Hard bounced, Unsubscribed, and Spam read
+    "unavailable in API" with a "View in GHL" link to the marketing
+    emails page, and Replied is computed; a daily sends/replies chart; a
+    sandboxed iframe preview (no scripts, forms, or non-image requests;
+    HTML sanitized server-side with a CSP) of the builder template whose
+    rendered text opens like the cluster (name match preferred, at least
+    six opening words required), else the latest send's body labeled
+    "preview from last send"; the subject of the latest send read with a
+    narrow export; and How this is counted. Message content is served by
+    GET /api/email-template, disabled in production until login exists.

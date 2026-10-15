@@ -102,6 +102,18 @@ export function getDb(): DatabaseSync {
       snapshot_at              TEXT NOT NULL
     );
 
+    -- Email builder templates (read-only list + rendered preview HTML),
+    -- refreshed by the sync when GHL reports a newer lastUpdated.
+    CREATE TABLE IF NOT EXISTS email_templates (
+      id            TEXT PRIMARY KEY,
+      name          TEXT NOT NULL,
+      path          TEXT,
+      last_updated  TEXT,
+      html          TEXT,
+      body_key      TEXT,
+      fetched_at    TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS users (
       id       TEXT PRIMARY KEY,
       name     TEXT,
