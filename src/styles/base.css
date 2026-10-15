@@ -2836,3 +2836,34 @@ section > h2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* fixed, portaled chart tooltip (never clipped by a card) and the gray goal marker */
+.chart-tip-fixed {
+  position: fixed;
+  z-index: 200;
+}
+
+:root {
+  --chart-goal: #b8c2cf;
+}
+
+.legend-goal {
+  width: 16px !important;
+  height: 0 !important;
+  border-top: 2px dashed var(--chart-goal) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+/* the portaled tooltip lives on <body>, outside any card, so it carries its own dark-card colors */
+.chart-tip-fixed {
+  background: #13263d;
+  border-color: #27405e;
+  color: #d3dbe5;
+}
+
+.chart-tip-fixed .chart-tip-title,
+.chart-tip-fixed b {
+  color: #ffffff;
+}

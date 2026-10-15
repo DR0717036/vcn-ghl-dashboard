@@ -4,6 +4,7 @@
 // dashed reference line, and a hover tooltip. Fixed height, measured width.
 
 import { useState } from "react";
+import ChartTooltip, { type TipPos } from "./ChartTooltip";
 import { useWidth } from "./useWidth";
 
 export interface HBarRow {
@@ -18,7 +19,7 @@ export interface HBarRow {
 
 export default function HBarChart({ rows, height = 220, line, lineLabel, maxValue, emptyText = "No data in range." }: { rows: HBarRow[]; height?: number; line?: number; lineLabel?: string; maxValue?: number; emptyText?: string }) {
   const [wrapRef, W] = useWidth<HTMLDivElement>();
-  const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<({ i: number } & TipPos) | null>(null);
   // the longest bar reaches about 85% of the plot, never the edge; a reference line beyond that is pinned at the right edge
   const max = Math.max(1, maxValue ?? 0, ...rows.map((r) => r.value)) / 0.85;
   const lineX = line === undefined ? null : line <= max ? null : "edge";
@@ -49,7 +50,7 @@ export default function HBarChart({ rows, height = 220, line, lineLabel, maxValu
           {rows.map((r, i) => {
             const y = padT + i * rowH;
             return (
-              <g key={r.label} onMouseMove={(e) => setHover({ i, x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY })}>
+              <g key={r.label} onMouseMove={(e) => setHover({ i, clientX: e.clientX, clientY: e.clientY })}>
                 <text x={padL - 10} y={y + barH / 2 + 4} textAnchor="end" className="chart-row-label">
                   {r.label}
                 </text>
@@ -63,15 +64,17 @@ export default function HBarChart({ rows, height = 220, line, lineLabel, maxValu
           })}
         </svg>
       )}
-      {hover ? (
-        <div className="chart-tip" style={{ left: Math.max(0, Math.min(hover.x + 12, W - 240)), top: Math.max(0, Math.min(hover.y + 12, height - 70)) }}>
-          <div className="chart-tip-title">{rows[hover.i].label}</div>
-          <div>
-            <b>{rows[hover.i].text}</b>
-          </div>
-          {rows[hover.i].detail ? <div>{rows[hover.i].detail}</div> : null}
-        </div>
-      ) : null}
+      <ChartTooltip pos={hover}>
+        {hover ? (
+          <>
+            <div className="chart-tip-title">{rows[hover.i].label}</div>
+            <div>
+              <b>{rows[hover.i].text}</b>
+            </div>
+            {rows[hover.i].detail ? <div>{rows[hover.i].detail}</div> : null}
+          </>
+        ) : null}
+      </ChartTooltip>
     </div>
   );
 }

@@ -558,3 +558,9 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     emails at status "sent" (31 delivered and 24 failed out of 54,000
     all-time, never "bounced" or "opt_out"), and contacts carry no email
     DND entry or opt-out date. Nothing is estimated.
+57. **Submissions chart marker and tooltips (2026-10-15).** The pro-rated
+    goal marker is a short dashed light-gray line. Chart tooltips on the
+    grouped-bar and horizontal-bar charts render in a portal on
+    document.body with position: fixed and flip left/up near the
+    viewport edges, so no card or chart box can clip them; the portaled
+    tooltip carries its own dark-card colors.

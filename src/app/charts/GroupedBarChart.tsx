@@ -7,6 +7,7 @@
 // chart box. Fixed height, measured width.
 
 import { useState } from "react";
+import ChartTooltip, { type TipPos } from "./ChartTooltip";
 import { useWidth } from "./useWidth";
 
 export interface GroupBar {
@@ -45,7 +46,7 @@ function shorten(label: string, slot: number): string {
 
 export default function GroupedBarChart({ groups, legend, height = 220, emptyText = "No data in range." }: { groups: BarGroup[]; legend: { label: string; color: string }[]; height?: number; emptyText?: string }) {
   const [wrapRef, W] = useWidth<HTMLDivElement>();
-  const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<({ i: number } & TipPos) | null>(null);
   const legendH = 24;
   const padL = 36;
   const padR = 12;
@@ -67,7 +68,6 @@ export default function GroupedBarChart({ groups, legend, height = 220, emptyTex
   for (let v = 0; v <= max; v += step) ticks.push(v);
   const check = JSON.stringify(groups.map((g) => ({ label: g.label, values: g.bars.map((b) => b.value), tick: g.tick ?? null })));
   const tipW = 220;
-  const tipH = 24 + (barsPer + 1) * 18;
 
   return (
     <div className="chart-wrap chart-rel" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
@@ -78,7 +78,7 @@ export default function GroupedBarChart({ groups, legend, height = 220, emptyTex
           </span>
         ))}
         <span className="legend">
-          <span className="legend-swatch legend-tick" /> goal by now (pro-rated)
+          <span className="legend-swatch legend-goal" /> goal by now (pro-rated)
         </span>
       </div>
       {groups.length === 0 ? (
@@ -96,7 +96,7 @@ export default function GroupedBarChart({ groups, legend, height = 220, emptyTex
           {groups.map((g, i) => {
             const gx = padL + i * slot + (slot - groupW) / 2;
             return (
-              <g key={g.label} onMouseMove={(e) => setHover({ i, x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY })}>
+              <g key={g.label} onMouseMove={(e) => setHover({ i, clientX: e.clientX, clientY: e.clientY })}>
                 <rect x={padL + i * slot} y={padT} width={slot} height={plotH} fill={hover?.i === i ? "rgba(22,119,255,0.08)" : "transparent"} />
                 {g.bars.map((b, j) => {
                   const bx = gx + j * (barW + 3);
@@ -112,7 +112,7 @@ export default function GroupedBarChart({ groups, legend, height = 220, emptyTex
                     </g>
                   );
                 })}
-                {g.tick !== null && g.tick !== undefined ? <line x1={gx - 4} x2={gx + groupW + 4} y1={y(g.tick)} y2={y(g.tick)} stroke="var(--accent-yellow)" strokeWidth={2.5} strokeLinecap="round" /> : null}
+                {g.tick !== null && g.tick !== undefined ? <line x1={gx - 6} x2={gx + groupW + 6} y1={y(g.tick)} y2={y(g.tick)} stroke="var(--chart-goal)" strokeWidth={2} strokeDasharray="4 3" strokeLinecap="round" /> : null}
                 <text x={padL + i * slot + slot / 2} y={H - 10} textAnchor="middle" className="chart-row-label">
                   <title>{g.label}</title>
                   {shorten(g.label, slot)}
@@ -122,8 +122,9 @@ export default function GroupedBarChart({ groups, legend, height = 220, emptyTex
           })}
         </svg>
       )}
-      {hover ? (
-        <div className="chart-tip" style={{ left: Math.max(0, Math.min(hover.x + 12, W - tipW)), top: Math.max(0, Math.min(hover.y + 12, legendH + H - tipH)), width: tipW }}>
+      <ChartTooltip pos={hover} width={tipW}>
+        {hover ? (
+          <>
           <div className="chart-tip-title">{groups[hover.i].label}</div>
           {groups[hover.i].bars.map((b) => (
             <div key={b.label}>
@@ -134,8 +135,9 @@ export default function GroupedBarChart({ groups, legend, height = 220, emptyTex
             Combined: <b>{n(groups[hover.i].bars.reduce((s, b) => s + b.value, 0))}</b>
             {groups[hover.i].tick !== null && groups[hover.i].tick !== undefined ? ` · ${groups[hover.i].tickLabel ?? "goal"} ${n(Math.round(groups[hover.i].tick as number))}` : ""}
           </div>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </ChartTooltip>
     </div>
   );
 }
