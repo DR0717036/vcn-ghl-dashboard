@@ -21,6 +21,8 @@ export interface ConversationsConfig {
   replyWindowDays: number;
   optOutKeywords: string[];
   interestKeywords: string[];
+  optOutRateLevels: { high: number; medium: number };
+  interestRateLevels: { high: number; medium: number };
 }
 
 export function conversationsConfig(): ConversationsConfig {
@@ -34,6 +36,8 @@ export function conversationsConfig(): ConversationsConfig {
     replyWindowDays: int(c.replyWindowDays, 7),
     optOutKeywords: Array.isArray(c.optOutKeywords) ? c.optOutKeywords : ["stop"],
     interestKeywords: Array.isArray(c.interestKeywords) ? c.interestKeywords : ["cyber", "it"],
+    optOutRateLevels: { high: int(c.optOutRateLevels?.high, 0.025), medium: int(c.optOutRateLevels?.medium, 0.01) },
+    interestRateLevels: { high: int(c.interestRateLevels?.high, 0.02), medium: int(c.interestRateLevels?.medium, 0.01) },
   };
 }
 

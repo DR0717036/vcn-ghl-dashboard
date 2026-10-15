@@ -21,6 +21,7 @@ import { contactUrl, type DrillResult, type DrillRow } from "@/lib/drilldown";
 import { mappingConfig } from "@/lib/mapping-config";
 import { userNames } from "@/lib/milestones";
 import { businessMinutesBetween, businessWindowLabel, conversationsConfig, type ConversationsConfig } from "@/lib/conversations";
+import { mappingCount, workflowFor } from "@/lib/workflowMap";
 
 export type TagClass = "army" | "veteran" | "both" | "untagged";
 export const TAG_CLASS_LABEL: Record<TagClass, string> = { army: "Army", veteran: "Veteran", both: "Both (army + veteran)", untagged: "No tag" };
@@ -250,6 +251,8 @@ export interface TemplateRow {
   key: string;
   label: string;
   sentBy: "workflow" | "rep" | "mixed" | "none";
+  /** Workflow name from config/workflow-templates.json, or null when not mapped. */
+  workflow: string | null;
   sends: number;
   sendsBy: Record<TagClass, number>;
   replies: number;
@@ -265,7 +268,7 @@ export interface TemplateRow {
 export function capRows(rows: TemplateRow[], max: number): { rows: TemplateRow[]; rest: TemplateRow | null } {
   if (rows.length <= max) return { rows, rest: null };
   const tail = rows.slice(max);
-  const rest: TemplateRow = { key: "__rest", label: `Other templates (${tail.length} more, each with fewer sends)`, sentBy: "mixed", sends: 0, sendsBy: emptyBy(), replies: 0, repliesBy: emptyBy(), optOuts: 0, interests: 0, replyRate: null, optOutRate: null, interestRate: null };
+  const rest: TemplateRow = { key: "__rest", label: `Other templates (${tail.length} more, each with fewer sends)`, sentBy: "mixed", workflow: null, sends: 0, sendsBy: emptyBy(), replies: 0, repliesBy: emptyBy(), optOuts: 0, interests: 0, replyRate: null, optOutRate: null, interestRate: null };
   for (const t of tail) {
     rest.sends += t.sends;
     rest.replies += t.replies;
@@ -310,7 +313,7 @@ export function templateStats(a: MessagingAnalysis, dedupedOptOuts: Reply[], ded
   const get = (key: string): TemplateRow => {
     let r = rows.get(key);
     if (!r) {
-      r = { key, label: templateLabel(key, a.sample.get(key) ?? null), sentBy: "none", sends: 0, sendsBy: emptyBy(), replies: 0, repliesBy: emptyBy(), optOuts: 0, interests: 0, replyRate: null, optOutRate: null, interestRate: null };
+      r = { key, label: templateLabel(key, a.sample.get(key) ?? null), sentBy: "none", workflow: key.startsWith("w:") || key.startsWith("m:") ? workflowFor(key) : null, sends: 0, sendsBy: emptyBy(), replies: 0, repliesBy: emptyBy(), optOuts: 0, interests: 0, replyRate: null, optOutRate: null, interestRate: null };
       rows.set(key, r);
     }
     return r;
@@ -387,7 +390,8 @@ export function keywordCard(a: MessagingAnalysis, kind: "optout" | "interest"): 
       "Contacts — each contact counts once, on their first matching message in the range; the message count before de-duplication is shown for reference.",
       "Army / Veteran / Both / No tag — from the contact's current tags.",
       `Template (best match) — the most recent outbound message in the same conversation before the ${what}, within ${a.cfg.replyWindowDays} days; sends are the messages of that template in the range; rate = ${what === "opt-out" ? "opt-outs" : "interest replies"} ÷ sends.`,
-      "Sent by — Workflow when GHL marks the message as sent by a workflow, Rep when a person typed it; GHL does not expose which workflow sent a message, so workflow names cannot be shown.",
+      workflowMappingNote(),
+      `${kind === "optout" ? "Opt-out level" : "Interest level"} — the template's rate against the thresholds in config/conversations.json (${kind === "optout" ? "optOutRateLevels" : "interestRateLevels"}): High at or above ${(a.cfg[kind === "optout" ? "optOutRateLevels" : "interestRateLevels"].high * 100).toFixed(1)}%, Medium at or above ${(a.cfg[kind === "optout" ? "optOutRateLevels" : "interestRateLevels"].medium * 100).toFixed(1)}%, otherwise Low.`,
       "Drilldown — click a template row for the contacts and their messages.",
       "Limitation: templates are clusters of the first ten words of outbound text with names, numbers, and links removed (best match, not a GHL template id), and a reply is attributed to the last outbound before it even if the contact was answering something older.",
     ],
@@ -420,7 +424,8 @@ export function replyRateCard(a: MessagingAnalysis): ReplyRateResult {
       `Reply — the first inbound message from the contact after the send, within ${a.cfg.replyWindowDays} days and before the next outbound; reply rate = replies ÷ sends.`,
       "Opt-out rate and interest rate — opt-outs (or interest replies) attributed to the template ÷ its sends, each contact counted once.",
       "Army / Veteran — sends and reply rate split by the contact's current tags (Both and No tag are in the totals only).",
-      "Sent by — Workflow, Rep, or Mixed when the same text was sent both ways; GHL does not expose which workflow sent a message, so workflow names cannot be shown.",
+      workflowMappingNote(),
+      "Manual messages — texts typed by a rep, grouped on one row; they belong to no workflow.",
       "Limitation: a template is the first ten normalized words of the text, so two workflows that open the same way share a row, and personalized openings can split one template into several rows.",
     ],
   };
@@ -546,4 +551,21 @@ export function keywordDrilldown(range: DateRange, which: "optout" | "interest" 
   const label = template === "all" ? "all templates" : labelOf(template);
   const title = which === "optout" ? `Opt-outs · ${label}` : which === "interest" ? `Interest replies · ${label}` : `Replies · ${label}`;
   return { ok: true, title, rows, count: rows.length, detailsNote: null, fetchedAt: new Date().toISOString() };
+}
+
+
+export type RateLevel = "high" | "medium" | "low";
+
+/** High / medium / low against the configured thresholds (null when there is no rate). */
+export function rateLevel(rate: number | null, levels: { high: number; medium: number }): RateLevel | null {
+  if (rate === null) return null;
+  if (rate >= levels.high) return "high";
+  if (rate >= levels.medium) return "medium";
+  return "low";
+}
+
+/** One sentence for How this is counted about the workflow mapping's coverage. */
+export function workflowMappingNote(): string {
+  const m = mappingCount();
+  return `Workflow — from config/workflow-templates.json, where each template's opening words are paired with the workflow that sends it (${m.named} of ${m.total} entries have a name so far); GHL does not record the workflow on a message, so unmapped templates say "not mapped" until the file is filled in.`;
 }

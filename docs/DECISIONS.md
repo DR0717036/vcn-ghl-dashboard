@@ -494,3 +494,17 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     rows (plus the summed remainder) equal the card totals, every
     template drilldown equals its row, reply-rate totals equal the row
     sums, and channel rows add up.
+51. **Workflow names on the template cards (2026-10-15).** GHL records no
+    workflow on a message, so names come from an owner-maintained map,
+    config/workflow-templates.json: each entry pairs a template's opening
+    words (as the cards show them) with the workflow's name; the cards
+    match on "starts with", longest entry wins. The file was pre-filled
+    with the 60 largest workflow-sent templates (sends, channels, dates,
+    and a longer opening in a note) with blank names for the owner to
+    fill; unmapped templates read "Not mapped yet" and manual rep
+    messages "Manual (rep), no workflow". The Opt-outs card shows an
+    Opt-out level pill (High red / Medium orange / Low green) and the
+    Interest card an Interest level pill (High green / Medium orange /
+    Low red) against thresholds in config/conversations.json
+    (optOutRateLevels 2.5% / 1%, interestRateLevels 2% / 1%). The
+    Workflow column replaces Sent by on all three template cards.

@@ -2516,3 +2516,62 @@ section > h2 {
 .rep-table-tpl-wide .col-num {
   width: 96px;
 }
+
+
+/* workflow and level columns on the template tables */
+.rep-table-tpl .col-wf {
+  width: 150px;
+}
+
+.rep-table-tpl .col-level {
+  width: 96px;
+}
+
+.rep-table-tpl-wide .col-wf {
+  width: 170px;
+}
+
+.rep-table td.wf-name {
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rep-table td.wf-unmapped {
+  font-style: italic;
+}
+
+.rep-table-tpl th.status,
+.rep-table-tpl td.status {
+  padding-left: var(--s-3);
+  width: auto;
+}
+
+
+/* keyword tables: six columns in a half-width card */
+.rep-table-tpl {
+  min-width: 556px;
+}
+
+.rep-table-tpl .col-tpl {
+  width: 176px;
+}
+
+.rep-table-tpl .col-wf {
+  width: 118px;
+}
+
+.rep-table-tpl .col-num {
+  width: 60px;
+}
+
+.rep-table-tpl .col-level {
+  width: 84px;
+}
+
+.rep-table-tpl td.status .pill {
+  padding: 1px 6px;
+  font-size: 10px;
+}

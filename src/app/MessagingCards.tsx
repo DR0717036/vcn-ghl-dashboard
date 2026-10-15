@@ -3,7 +3,8 @@
 // the contacts and their messages; message text never appears on the cards.
 
 import { fmtWait } from "@/lib/conversations";
-import { TAG_CLASS_LABEL, type InboundChannelResult, type KeywordResult, type ReplyRateResult, type TagClass, type TemplateRow } from "@/lib/messaging";
+import { conversationsConfig } from "@/lib/conversations";
+import { rateLevel, TAG_CLASS_LABEL, type InboundChannelResult, type KeywordResult, type RateLevel, type ReplyRateResult, type TagClass, type TemplateRow } from "@/lib/messaging";
 import { KEYWORD_COLUMNS, RepDrilldownRow, type DrilldownSpec } from "./Drilldown";
 import KpiShell from "./KpiShell";
 
@@ -12,6 +13,31 @@ const DASH = "—";
 const pct = (v: number | null, digits = 0) => (v === null ? DASH : `${(v * 100).toFixed(digits)}%`);
 const SENT_BY: Record<TemplateRow["sentBy"], string> = { workflow: "Workflow", rep: "Rep (manual)", mixed: "Workflow + rep", none: DASH };
 const SENT_BY_TITLE = "Workflow = GHL marks the message as sent by a workflow (GHL does not expose which one); Rep = typed by a person.";
+const WORKFLOW_TITLE = "The workflow that sends this template, from config/workflow-templates.json. GHL does not record the workflow on a message, so unmapped templates say 'not mapped' until the file is filled in.";
+
+/** Workflow cell: the mapped name, or what we do know (manual / not mapped). */
+function WorkflowCell({ row }: { row: TemplateRow }) {
+  if (row.key === "__rest" || row.key === "__none") return <td className="note">{DASH}</td>;
+  if (row.workflow) return <td className="wf-name">{row.workflow}</td>;
+  if (row.sentBy === "rep") return <td className="note">Manual (rep), no workflow</td>;
+  return (
+    <td className="note wf-unmapped" title={WORKFLOW_TITLE}>
+      Not mapped yet
+    </td>
+  );
+}
+
+const LEVEL_LABEL: Record<RateLevel, string> = { high: "High", medium: "Medium", low: "Low" };
+/** Opt-outs: high is bad (red). Interest: high is good (green). */
+function LevelPill({ level, goodIsHigh, title }: { level: RateLevel | null; goodIsHigh: boolean; title?: string }) {
+  if (!level) return <span className="note">{DASH}</span>;
+  const cls = level === "medium" ? "pill-warn" : (level === "high") === goodIsHigh ? "pill-ok" : "pill-bad";
+  return (
+    <span className={`pill ${cls}`} title={title}>
+      {LEVEL_LABEL[level]}
+    </span>
+  );
+}
 const CLASSES: TagClass[] = ["army", "veteran", "both", "untagged"];
 
 function templateSpec(which: "optout" | "interest" | "reply", row: TemplateRow, rangeQuery: string, rangeLabel: string, notes: string[]): DrilldownSpec {
@@ -20,7 +46,7 @@ function templateSpec(which: "optout" | "interest" | "reply", row: TemplateRow, 
   return {
     query: `kind=keyword&which=${which}&template=${encodeURIComponent(row.key)}&${rangeQuery}`,
     title: `${row.label} · ${n(count)} ${what}`,
-    subtitle: `Sent by ${SENT_BY[row.sentBy]}${row.sentBy === "workflow" ? " (GHL does not expose the workflow name)" : ""} · ${n(row.sends)} sends in ${rangeLabel} · best-match attribution`,
+    subtitle: `${row.workflow ? `Workflow: ${row.workflow}` : row.sentBy === "rep" ? "Manual messages typed by a rep" : "Workflow not mapped yet (config/workflow-templates.json)"} · ${n(row.sends)} sends in ${rangeLabel} · best-match attribution`,
     expected: count,
     facts: [
       { label: "Sends", value: n(row.sends) },
@@ -35,6 +61,8 @@ function templateSpec(which: "optout" | "interest" | "reply", row: TemplateRow, 
 }
 
 export function KeywordCard({ k, rangeQuery, rangeLabel, className = "" }: { k: KeywordResult; rangeQuery: string; rangeLabel: string; className?: string }) {
+  const cfg = conversationsConfig();
+  const levels = k.kind === "optout" ? cfg.optOutRateLevels : cfg.interestRateLevels;
   const metric = (t: TemplateRow) => (k.kind === "optout" ? t.optOuts : t.interests);
   const rate = (t: TemplateRow) => (k.kind === "optout" ? t.optOutRate : t.interestRate);
   const allSpec: DrilldownSpec = {
@@ -72,18 +100,20 @@ export function KeywordCard({ k, rangeQuery, rangeLabel, className = "" }: { k: 
           <table className="stat-breakdown rep-table rep-table-tpl">
             <colgroup>
               <col className="col-tpl" />
-              <col className="col-sentby" />
+              <col className="col-wf" />
               <col className="col-num" />
               <col className="col-num" />
               <col className="col-num" />
+              <col className="col-level" />
             </colgroup>
             <thead>
               <tr>
                 <th>Template (best match)</th>
-                <th title={SENT_BY_TITLE}>Sent by</th>
+                <th title={WORKFLOW_TITLE}>Workflow</th>
                 <th className="num">Sends</th>
                 <th className="num combined">{k.kind === "optout" ? "Opt-outs" : "Interest"}</th>
                 <th className="num">Rate</th>
+                <th className="status">{k.kind === "optout" ? "Opt-out level" : "Interest level"}</th>
               </tr>
             </thead>
             <tbody>
@@ -99,19 +129,25 @@ export function KeywordCard({ k, rangeQuery, rangeLabel, className = "" }: { k: 
                   <td className="rep-name tpl-label" title={t.label}>
                     {t.label}
                   </td>
-                  <td className="note">{SENT_BY[t.sentBy]}</td>
+                  <WorkflowCell row={t} />
                   <td className="num">{n(t.sends)}</td>
                   <td className="num combined">{n(metric(t))}</td>
                   <td className="num">{pct(rate(t), 1)}</td>
+                  <td className="status">
+                    <LevelPill level={rateLevel(rate(t), levels)} goodIsHigh={k.kind === "interest"} title={`${pct(rate(t), 1)} · high ≥ ${(levels.high * 100).toFixed(1)}%, medium ≥ ${(levels.medium * 100).toFixed(1)}%`} />
+                  </td>
                 </RepDrilldownRow>
               ))}
               {k.rest ? (
                 <tr>
                   <td className="note">{k.rest.label}</td>
-                  <td className="note">{SENT_BY[k.rest.sentBy]}</td>
+                  <td className="note">{DASH}</td>
                   <td className="num">{n(k.rest.sends)}</td>
                   <td className="num combined">{n(metric(k.rest))}</td>
                   <td className="num">{pct(rate(k.rest), 1)}</td>
+                  <td className="status">
+                    <span className="note">{DASH}</span>
+                  </td>
                 </tr>
               ) : null}
               <RepDrilldownRow spec={allSpec}>
@@ -120,6 +156,9 @@ export function KeywordCard({ k, rangeQuery, rangeLabel, className = "" }: { k: 
                 <td className="num">{DASH}</td>
                 <td className="num combined">{n(k.contacts)}</td>
                 <td className="num">{DASH}</td>
+                <td className="status">
+                  <span className="note">{DASH}</span>
+                </td>
               </RepDrilldownRow>
             </tbody>
           </table>
@@ -163,7 +202,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
           <table className="stat-breakdown rep-table rep-table-tpl rep-table-tpl-wide">
             <colgroup>
               <col className="col-tpl" />
-              <col className="col-sentby" />
+              <col className="col-wf" />
               <col className="col-num" />
               <col className="col-num" />
               <col className="col-num" />
@@ -175,7 +214,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
             <thead>
               <tr>
                 <th>Template (best match)</th>
-                <th title={SENT_BY_TITLE}>Sent by</th>
+                <th title={WORKFLOW_TITLE}>Workflow</th>
                 <th className="num">Sends</th>
                 <th className="num">Replies</th>
                 <th className="num combined">Reply rate</th>
@@ -191,7 +230,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
                   <td className="rep-name tpl-label" title={row.label}>
                     {row.label}
                   </td>
-                  <td className="note">{SENT_BY[row.sentBy]}</td>
+                  <WorkflowCell row={row} />
                   <td className="num">{n(row.sends)}</td>
                   <td className="num">{n(row.replies)}</td>
                   <td className="num combined">{pct(row.replyRate, 1)}</td>
@@ -204,7 +243,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
               {r.rest ? (
                 <tr>
                   <td className="note">{r.rest.label}</td>
-                  <td className="note">{SENT_BY[r.rest.sentBy]}</td>
+                  <td className="note">{DASH}</td>
                   <td className="num">{n(r.rest.sends)}</td>
                   <td className="num">{n(r.rest.replies)}</td>
                   <td className="num combined">{pct(r.rest.replyRate, 1)}</td>

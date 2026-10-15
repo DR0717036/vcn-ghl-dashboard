@@ -9,5 +9,7 @@
   "withinMinutes": 60,
   "replyWindowDays": 7,
   "optOutKeywords": ["stop", "unsubscribe", "quit", "cancel", "end", "stopall", "opt out", "remove me"],
-  "interestKeywords": ["cyber", "IT", "cybersecurity", "cyber security"]
+  "interestKeywords": ["cyber", "IT", "cybersecurity", "cyber security"],
+  "optOutRateLevels": { "_note": "Opt-outs ÷ sends per template: at or above high = High (red), at or above medium = Medium (orange), below = Low (green).", "high": 0.025, "medium": 0.01 },
+  "interestRateLevels": { "_note": "Interest replies ÷ sends per template: at or above high = High (green), at or above medium = Medium (orange), below = Low (red).", "high": 0.02, "medium": 0.01 }
 }
