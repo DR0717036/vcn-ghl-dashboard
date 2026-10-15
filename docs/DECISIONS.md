@@ -526,3 +526,7 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     sends and attributed replies, with a blue (SMS) or purple (Email)
     top edge and a matching "SMS only" / "Email only" pill. Manual and
     media-only buckets are per channel.
+54. **Collapsible reply-rate tables (2026-10-15).** Both reply-rate
+    cards keep their table inside a 440px scroll area with a sticky
+    header; "Expand full list" shows every row, "Collapse list" returns
+    to the scroller. No numbers changed.

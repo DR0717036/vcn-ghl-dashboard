@@ -2612,3 +2612,37 @@ section > h2 {
 .band-light .pill-email {
   color: #5a4fc9;
 }
+
+
+/* collapsible long tables: fixed-height scroll with a sticky header until expanded */
+.tbl-collapsible-body .scroll {
+  max-height: var(--tbl-max, 440px);
+  overflow-y: auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.tbl-collapsible.is-expanded .tbl-collapsible-body .scroll {
+  max-height: none;
+  overflow-y: visible;
+  border-bottom: 0;
+}
+
+.tbl-collapsible-body .scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #0b1b31;
+}
+
+.band-light .tbl-collapsible-body .scroll thead th {
+  background: #ffffff;
+}
+
+.tbl-collapsible-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+  flex-wrap: wrap;
+}

@@ -6,6 +6,7 @@ import { fmtWait } from "@/lib/conversations";
 import { conversationsConfig } from "@/lib/conversations";
 import { rateLevel, TAG_CLASS_LABEL, type InboundChannelResult, type KeywordResult, type RateLevel, type ReplyRateResult, type TagClass, type TemplateRow } from "@/lib/messaging";
 import { KEYWORD_COLUMNS, RepDrilldownRow, type DrilldownSpec } from "./Drilldown";
+import CollapsibleTable from "./CollapsibleTable";
 import KpiShell from "./KpiShell";
 
 const n = (v: number) => v.toLocaleString("en-US");
@@ -198,6 +199,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
         </span>
       }
       body={
+        <CollapsibleTable rows={r.rows.length + (r.rest ? 1 : 0) + 1}>
         <div className="scroll kpi-body">
           <table className="stat-breakdown rep-table rep-table-tpl rep-table-tpl-wide">
             <colgroup>
@@ -267,6 +269,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
             </tbody>
           </table>
         </div>
+        </CollapsibleTable>
       }
       notes={r.notes}
     />
