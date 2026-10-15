@@ -16,6 +16,8 @@ import type { SubmissionRow, SubmissionsResult } from "@/lib/submissions";
 import { REP_COLUMNS, RepDrilldownRow, type DrilldownSpec } from "./Drilldown";
 import { GoalPill, GoalText, StatusPill } from "./GoalLine";
 import KpiShell, { Delta } from "./KpiShell";
+import StackedBarChart from "./charts/StackedBarChart";
+import { programColors } from "@/lib/design";
 
 const n = (v: number) => v.toLocaleString("en-US");
 const DASH = "—";
@@ -225,6 +227,26 @@ export default function SubmissionsCard({
       goalLine={<GoalText goal={g} value={s.value} />}
       badges={s.partialHistory ? <span className="pill pill-warn">partial history</span> : null}
       deltaLine={<Delta value={s.value} prev={s.prev} reason={s.prevUnavailableReason} />}
+      chart={
+        unavailable ? null : (
+          <StackedBarChart
+            height={220}
+            legend={[
+              { label: "CA 101 (Army CA)", value: 0, color: programColors.army },
+              { label: "IAU App FS2 (Veteran)", value: 0, color: programColors.veteran },
+            ]}
+            rows={s.rows.map((r) => ({
+              label: r.name,
+              segments: [
+                { label: "CA 101", value: r.ca101, color: programColors.army },
+                { label: "IAU App (FS2)", value: r.fs2, color: programColors.veteran },
+              ],
+              marker: repGoalCol && r.userId && g.perRep[r.userId] ? g.perRep[r.userId].scaled : null,
+              markerLabel: "goal by now",
+            }))}
+          />
+        )
+      }
       body={table}
       notes={notes}
     />

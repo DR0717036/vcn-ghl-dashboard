@@ -2646,3 +2646,130 @@ section > h2 {
   margin-top: var(--s-3);
   flex-wrap: wrap;
 }
+
+
+/* =====================================================================
+   Card charts: stacked bars, donut, horizontal bars (dark-card legible)
+   ===================================================================== */
+
+.chart-rel {
+  position: relative;
+}
+
+.chart-tip {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-body);
+  min-width: 150px;
+  max-width: 240px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.chart-tip-title {
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.chart-tip b {
+  color: var(--text-primary);
+}
+
+.chart-tip .legend-swatch {
+  vertical-align: -1px;
+  margin-right: 2px;
+}
+
+.legend-marker {
+  background: var(--accent-yellow) !important;
+  width: 3px !important;
+  height: 12px !important;
+  border-radius: 1px !important;
+}
+
+/* the donut sits top-left with its legend to the right */
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  height: 100%;
+}
+
+.donut {
+  position: relative;
+  flex: none;
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.donut-total {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+}
+
+.donut-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.donut-legend li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-body);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.donut-legend li.is-hover {
+  background: rgba(22, 119, 255, 0.12);
+}
+
+.donut-legend-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.donut-legend-count {
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.donut-legend-extra {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 44px;
+  text-align: right;
+}

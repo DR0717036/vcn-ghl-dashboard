@@ -7,6 +7,8 @@ import { conversationsConfig } from "@/lib/conversations";
 import { rateLevel, TAG_CLASS_LABEL, type InboundChannelResult, type KeywordResult, type RateLevel, type ReplyRateResult, type TagClass, type TemplateRow } from "@/lib/messaging";
 import { KEYWORD_COLUMNS, RepDrilldownRow, type DrilldownSpec } from "./Drilldown";
 import CollapsibleTable from "./CollapsibleTable";
+import DonutChart from "./charts/DonutChart";
+import { chartSeries } from "@/lib/design";
 import KpiShell from "./KpiShell";
 
 const n = (v: number) => v.toLocaleString("en-US");
@@ -66,6 +68,15 @@ export function KeywordCard({ k, rangeQuery, rangeLabel, className = "" }: { k: 
   const levels = k.kind === "optout" ? cfg.optOutRateLevels : cfg.interestRateLevels;
   const metric = (t: TemplateRow) => (k.kind === "optout" ? t.optOuts : t.interests);
   const rate = (t: TemplateRow) => (k.kind === "optout" ? t.optOutRate : t.interestRate);
+  // donut: top five templates by count, everything else (including the summed remainder) as Other
+  const ranked = [...k.rows].sort((x, y) => metric(y) - metric(x));
+  const top = ranked.slice(0, 5);
+  const otherCount = ranked.slice(5).reduce((s, t) => s + metric(t), 0) + (k.rest ? metric(k.rest) : 0);
+  const shortName = (t: TemplateRow) => (t.workflow ? t.workflow : t.label.replace(/^“|…”$/g, "").split(" ").slice(0, 4).join(" ") + (t.key.startsWith("w:") || t.key.startsWith("m:") ? "…" : ""));
+  const donut = [
+    ...top.map((t, i) => ({ label: shortName(t), value: metric(t), color: chartSeries[i % chartSeries.length] as string, extra: pct(rate(t), 1) })),
+    ...(otherCount > 0 ? [{ label: "Other templates", value: otherCount, color: "#8a98a9" }] : []),
+  ];
   const allSpec: DrilldownSpec = {
     query: `kind=keyword&which=${k.kind}&template=all&${rangeQuery}`,
     title: `${k.title} · ${n(k.contacts)} contacts`,
@@ -96,6 +107,7 @@ export function KeywordCard({ k, rangeQuery, rangeLabel, className = "" }: { k: 
       pill={<span className="pill pill-neutral">Best match</span>}
       goalLine={<span className="kpi-muted">Goal not set</span>}
       deltaLine={<span className="kpi-muted">{CLASSES.map((c) => `${TAG_CLASS_LABEL[c]} ${n(k.byClass[c])}`).join(" · ")}</span>}
+      chart={<DonutChart segments={donut} total={k.contacts} centerLabel={k.kind === "optout" ? "opt-outs" : "interest replies"} emptyText="No matches in this period." />}
       body={
         <div className="scroll kpi-body">
           <table className="stat-breakdown rep-table rep-table-tpl">

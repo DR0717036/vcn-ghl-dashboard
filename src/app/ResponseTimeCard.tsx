@@ -5,6 +5,7 @@
 import { fmtWait, type ResponseResult, type ResponseRow } from "@/lib/conversations";
 import { RepDrilldownRow, RESPONSE_COLUMNS, type DrilldownSpec } from "./Drilldown";
 import KpiShell from "./KpiShell";
+import HBarChart from "./charts/HBarChart";
 
 const n = (v: number) => v.toLocaleString("en-US");
 const DASH = "—";
@@ -110,6 +111,21 @@ export default function ResponseTimeCard({ r, rangeQuery, rangeLabel, className 
         <span className="kpi-muted">
           {n(r.total.episodes)} inbound episodes · {n(r.total.replied)} replied by a person
         </span>
+      }
+      chart={
+        <HBarChart
+          height={220}
+          line={r.withinMinutes}
+          lineLabel={`${r.withinMinutes} min`}
+          emptyText="No replied inbound episodes in this period."
+          rows={r.rows
+            .filter((row) => row.episodes > 0 && row.medianMinutes !== null)
+            .map((row) => {
+              const m = row.medianMinutes as number;
+              const color = m < r.responseLevels.greenUnderMinutes ? "var(--status-good)" : m < r.responseLevels.yellowUnderMinutes ? "var(--status-warn)" : "var(--status-bad)";
+              return { label: row.name, value: m, color, text: fmtWait(m), detail: `median of ${n(row.replied)} replied episodes · ${pct(row.withinPct)} within ${r.withinMinutes}m` };
+            })}
+        />
       }
       body={table}
       notes={r.notes}

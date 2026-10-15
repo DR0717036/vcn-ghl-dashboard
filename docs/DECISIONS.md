@@ -530,3 +530,16 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     cards keep their table inside a 440px scroll area with a sticky
     header; "Expand full list" shows every row, "Collapse list" returns
     to the scroller. No numbers changed.
+55. **Card charts (2026-10-15).** Program Submissions (combined): a
+    horizontal stacked bar per rep (CA 101 in Army blue, IAU App FS2 in
+    Veteran gold), sorted by Combined, with a thin yellow marker at the
+    rep's pro-rated goal and "name · total" at the end of the bar; the
+    team total is not charted. Opt-outs and Interest replies: a 160px
+    donut of the top five templates plus Other with the contact total in
+    the center and a legend with name (workflow name when mapped), count,
+    and rate. Response Time by Rep: horizontal bars of median business
+    minutes, fastest first, green under 15, yellow under 60, red at or
+    above (config/conversations.json responseLevels), a dashed line at
+    the 60-minute target, reps without a median omitted. All charts are
+    inline SVG at a fixed 220px, use the shared palette, and carry a
+    data-check attribute; reconciled against their tables.

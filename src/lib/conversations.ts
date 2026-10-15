@@ -18,6 +18,7 @@ export interface ConversationsConfig {
   staleAfterMinutes: number;
   businessHours: { days: number[]; startHour: number; endHour: number };
   withinMinutes: number;
+  responseLevels: { greenUnderMinutes: number; yellowUnderMinutes: number };
   replyWindowDays: number;
   optOutKeywords: string[];
   interestKeywords: string[];
@@ -33,6 +34,7 @@ export function conversationsConfig(): ConversationsConfig {
     staleAfterMinutes: int(c.staleAfterMinutes, 60),
     businessHours: { days: Array.isArray(bh.days) ? bh.days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6) : [1, 2, 3, 4, 5, 6], startHour: int(bh.startHour, 7), endHour: int(bh.endHour, 20) },
     withinMinutes: int(c.withinMinutes, 60),
+    responseLevels: { greenUnderMinutes: int(c.responseLevels?.greenUnderMinutes, 15), yellowUnderMinutes: int(c.responseLevels?.yellowUnderMinutes, 60) },
     replyWindowDays: int(c.replyWindowDays, 7),
     optOutKeywords: Array.isArray(c.optOutKeywords) ? c.optOutKeywords : ["stop"],
     interestKeywords: Array.isArray(c.interestKeywords) ? c.interestKeywords : ["cyber", "it"],
@@ -328,6 +330,7 @@ export interface ResponseResult {
   total: ResponseRow;
   windowLabel: string;
   withinMinutes: number;
+  responseLevels: { greenUnderMinutes: number; yellowUnderMinutes: number };
   replyWindowDays: number;
   notes: string[];
 }
@@ -376,6 +379,7 @@ export function computeResponseTimes(range: DateRange): ResponseResult {
     total: mk(null, "Team total", false, [...by.keys()]),
     windowLabel: businessWindowLabel(cfg),
     withinMinutes: cfg.withinMinutes,
+    responseLevels: cfg.responseLevels,
     replyWindowDays: cfg.replyWindowDays,
     notes: [
       "Inbound episode — a run of one or more inbound SMS or email messages in a conversation, from the first one until the next human outbound reply; each episode counts once, timed from its first inbound message.",

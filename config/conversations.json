@@ -7,6 +7,7 @@
     "endHour": 20
   },
   "withinMinutes": 60,
+  "responseLevels": { "_note": "Median response chart colors (business minutes): green under greenUnderMinutes, yellow under yellowUnderMinutes, red at or above.", "greenUnderMinutes": 15, "yellowUnderMinutes": 60 },
   "replyWindowDays": 7,
   "optOutKeywords": ["stop", "unsubscribe", "quit", "cancel", "end", "stopall", "opt out", "remove me"],
   "interestKeywords": ["cyber", "IT", "cybersecurity", "cyber security"],
