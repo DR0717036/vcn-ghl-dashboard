@@ -370,3 +370,22 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     series sums to the card for Today, Yesterday, and This Month; Today
     runs 12 AM to the current New York hour; First call (avg) values
     were never affected and are unchanged.
+43. **Call outcomes (2026-10-15).** Each outbound dial gets one outcome:
+    Conversation = GHL status completed with recorded duration ≥
+    callOutcomes.conversationMinSeconds in config/goals.json (default
+    60), estimated by duration because GHL marks human pickups and
+    undetected answering machines alike as completed; Short pickup /
+    likely machine = completed but shorter; Voicemail = status voicemail;
+    No answer = no-answer or ringing; Failed = failed or busy; anything
+    else (null, initiated, in-progress) is "Other / unknown status",
+    shown only when non-zero. When a call's legs disagree, a connected
+    leg wins (src/lib/callOutcomes.ts). The Rep Call Activity main column
+    is "Conversations / Dials · %"; the five-way split appears in each
+    rep's drilldown (header facts, an outcome filter with counts, an
+    Outcome column with the raw status, and in the CSV) and in the card's
+    Details. Talk time is unchanged. Reconciled: modal Conversation rows
+    = table figure and outcomes sum to dials for every row; team dials
+    and talk time still match the Calls Made and Talk Time cards. First
+    look at the data: outbound calls never carry a voicemail status in
+    this account, so machines show up as short completed calls (about
+    73% of dials this month at the 60s threshold; 11% are conversations).

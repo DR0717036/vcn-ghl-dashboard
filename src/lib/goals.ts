@@ -17,6 +17,7 @@ interface GoalsFile {
   teamPerWeek?: Record<string, number>;
   snapshotKpis?: string[];
   noGoal?: string[];
+  callOutcomes?: { conversationMinSeconds?: number };
 }
 
 const goals = raw as unknown as GoalsFile;
@@ -44,6 +45,12 @@ export interface Goal {
   partial: boolean;
   /** Snapshot KPIs compare the current value with the full weekly goal; nothing is scaled. */
   snapshot: boolean;
+}
+
+/** Seconds a completed outbound call must last to count as a Conversation (config/goals.json, default 60). */
+export function conversationMinSeconds(): number {
+  const v = goals.callOutcomes?.conversationMinSeconds;
+  return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : 60;
 }
 
 export type GoalStatus = "met" | "on_track" | "missed";

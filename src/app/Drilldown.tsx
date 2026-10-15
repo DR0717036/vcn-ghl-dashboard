@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { OUTCOME_SHORT, type CallOutcome } from "@/lib/callOutcomes";
 import type { DrillResult, DrillRow } from "@/lib/drilldown";
 import LineChart, { type LineSeries } from "./charts/LineChart";
 
@@ -33,7 +34,7 @@ export type ColumnKey =
   | "outcome"
   | "duration"
   | "calledOn"
-  | "answered"
+  | "callOutcome"
   | "recording";
 
 const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "date" }> = {
@@ -55,7 +56,7 @@ const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "dat
   outcome: { label: "Outcome", kind: "text" },
   duration: { label: "Duration", kind: "number" },
   calledOn: { label: "Time", kind: "date" },
-  answered: { label: "Answered", kind: "text" },
+  callOutcome: { label: "Outcome", kind: "text" },
   recording: { label: "Recording", kind: "text" },
 };
 
@@ -66,16 +67,17 @@ export const REP_COLUMNS: ColumnKey[] = ["name", "email", "phone", "source", "pi
 /** Won opportunities listed under a won-based rep. */
 export const WON_COLUMNS: ColumnKey[] = ["name", "pipeline", "stage", "value", "wonOn"];
 /** A rep's calls (Rep Call Activity drilldown). */
-export const CALL_COLUMNS: ColumnKey[] = ["name", "direction", "answered", "duration", "calledOn", "recording"];
+export const CALL_COLUMNS: ColumnKey[] = ["name", "direction", "callOutcome", "duration", "calledOn", "recording"];
 /** Columns that never go into a CSV (a recording is streamed on click, not a value). */
 const NO_CSV: ColumnKey[] = ["recording"];
 
-function answeredText(row: DrillRow): string {
+const OUTCOME_RANK: Record<CallOutcome | "inbound", string> = { conversation: "6", short: "5", voicemail: "4", noanswer: "3", failed: "2", other: "1", inbound: "0" };
+
+function outcomeText(row: DrillRow): string {
   const status = row.outcome ? row.outcome : "no status";
-  if (row.answered === "yes") return `Yes · ${status}`;
-  if (row.answered === "no") return `No · ${status}`;
-  if (row.answered === "na") return `n/a · ${status} (inbound)`;
-  return DASH;
+  if (!row.callOutcome) return DASH;
+  if (row.callOutcome === "inbound") return `n/a · ${status} (inbound)`;
+  return `${OUTCOME_SHORT[row.callOutcome]} · ${status}`;
 }
 
 function fmtDuration(sec: number): string {
@@ -116,8 +118,8 @@ function cell(row: DrillRow, key: ColumnKey): { text: string; sort: string | num
       return { text: row.durationSec === null || row.durationSec === undefined ? DASH : fmtDuration(row.durationSec), sort: row.durationSec ?? null };
     case "direction":
       return { text: row.direction ? row.direction : DASH, sort: row.direction ?? null };
-    case "answered":
-      return { text: answeredText(row), sort: row.answered === "yes" ? "2" : row.answered === "no" ? "1" : row.answered === "na" ? "0" : null };
+    case "callOutcome":
+      return { text: outcomeText(row), sort: row.callOutcome ? OUTCOME_RANK[row.callOutcome] : null };
     case "recording":
       return { text: row.recordingId ? "available" : DASH, sort: row.recordingId ? 1 : null };
     case "outcome":
@@ -373,10 +375,10 @@ export interface DrilldownSpec {
   wonTable?: { title: string; expected: number | null };
   /** Call drilldowns: show the per-day summary (dials, talk time, first outbound call). */
   perDayTable?: { title: string };
-  /** Call drilldowns: show the All / Answered / Not answered toggle. */
-  answeredFilter?: boolean;
-  /** The Answered figure on the table row; the modal confirms its Yes rows match it. */
-  expectedAnswered?: number | null;
+  /** Call drilldowns: show the outcome filter (All / Conversations / Short pickups / Voicemail / No answer / Failed). */
+  outcomeFilter?: boolean;
+  /** The Conversations figure on the table row; the modal confirms its Conversation rows match it. */
+  expectedConversations?: number | null;
   notes?: string[];
   csvName: string;
 }
@@ -384,11 +386,11 @@ export interface DrilldownSpec {
 export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose: () => void }) {
   const [data, setData] = useState<DrillResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [answerFilter, setAnswerFilter] = useState<"all" | "yes" | "no">("all");
+  const [outcomeFilter, setOutcomeFilter] = useState<"all" | CallOutcome>("all");
   const allRows = data?.rows ?? [];
-  const answeredCount = allRows.filter((r) => r.answered === "yes").length;
-  const shownRows = spec.answeredFilter && answerFilter !== "all" ? allRows.filter((r) => r.answered === answerFilter) : allRows;
-  const answeredMismatch = data && spec.expectedAnswered !== undefined && spec.expectedAnswered !== null && answeredCount !== spec.expectedAnswered;
+  const conversationCount = allRows.filter((r) => r.callOutcome === "conversation").length;
+  const shownRows = spec.outcomeFilter && outcomeFilter !== "all" ? allRows.filter((r) => r.callOutcome === outcomeFilter) : allRows;
+  const conversationMismatch = data && spec.expectedConversations !== undefined && spec.expectedConversations !== null && conversationCount !== spec.expectedConversations;
 
   useEffect(() => {
     let cancelled = false;
@@ -456,17 +458,21 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
           </div>
         ) : null}
 
-        {spec.answeredFilter ? (
-          <div className="answer-filter" role="group" aria-label="Answered filter">
+        {spec.outcomeFilter ? (
+          <div className="answer-filter" role="group" aria-label="Outcome filter">
             {(
               [
                 ["all", "All"],
-                ["yes", "Answered"],
-                ["no", "Not answered"],
+                ["conversation", "Conversations"],
+                ["short", "Short pickups"],
+                ["voicemail", "Voicemail"],
+                ["noanswer", "No answer"],
+                ["failed", "Failed"],
               ] as const
             ).map(([key, label]) => (
-              <button key={key} type="button" className={`seg-btn${answerFilter === key ? " active" : ""}`} onClick={() => setAnswerFilter(key)}>
+              <button key={key} type="button" className={`seg-btn${outcomeFilter === key ? " active" : ""}`} onClick={() => setOutcomeFilter(key)}>
                 {label}
+                {key !== "all" ? <span className="seg-count">{allRows.filter((r) => r.callOutcome === key).length.toLocaleString("en-US")}</span> : null}
               </button>
             ))}
           </div>
@@ -477,19 +483,19 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
           columns={spec.columns}
           loaded={Boolean(data)}
           error={error}
-          expected={spec.answeredFilter && answerFilter !== "all" ? undefined : spec.expected}
+          expected={spec.outcomeFilter && outcomeFilter !== "all" ? undefined : spec.expected}
           expectedLabel="the card"
           note={data?.detailsNote}
           csvName={spec.csvName}
           emptyText="No contacts in this period."
           defaultSort="reachedOn"
           extraToolbar={
-            spec.expectedAnswered !== undefined && spec.expectedAnswered !== null ? (
+            spec.expectedConversations !== undefined && spec.expectedConversations !== null ? (
               <>
                 <span className="modal-sep">·</span>
-                <b>{answeredCount.toLocaleString("en-US")}</b> answered
-                {answeredMismatch ? (
-                  <span className="pill pill-warn modal-pill">does not match the table ({spec.expectedAnswered.toLocaleString("en-US")})</span>
+                <b>{conversationCount.toLocaleString("en-US")}</b> conversations
+                {conversationMismatch ? (
+                  <span className="pill pill-warn modal-pill">does not match the table ({spec.expectedConversations.toLocaleString("en-US")})</span>
                 ) : (
                   <span className="pill pill-ok modal-pill">matches the table</span>
                 )}

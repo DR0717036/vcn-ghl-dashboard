@@ -14,6 +14,10 @@
     "leadsAssigned": 200,
     "newLeads": 200
   },
+  "callOutcomes": {
+    "_note": "Rep Call Activity: a completed outbound call counts as a Conversation only when its recorded duration is at least this many seconds; shorter completed calls are 'Short pickup / likely machine'. GHL cannot tell a human pickup from an answering machine, so this is an estimate by duration. Talk time is not affected.",
+    "conversationMinSeconds": 60
+  },
   "snapshotKpis": ["appointmentsConfirmed"],
   "noGoal": [
     "appointmentsCancelled",

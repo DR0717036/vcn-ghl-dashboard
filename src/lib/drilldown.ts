@@ -13,6 +13,7 @@
 // owner at the time of the event, so all rep rows add up to the team total.
 // A rep's won list uses the same wonEvents() query as the commission report.
 
+import type { CallOutcome } from "@/lib/callOutcomes";
 import { wonEvents } from "@/lib/commission";
 import { getDb } from "@/lib/db";
 import type { DateRange } from "@/lib/dates";
@@ -51,8 +52,8 @@ export interface DrillRow {
   direction?: string | null;
   outcome?: string | null;
   durationSec?: number | null;
-  /** yes = outbound, status completed/answered, duration > 0; no = other outbound; na = inbound. */
-  answered?: "yes" | "no" | "na";
+  /** Outbound calls: the outcome bucket (Conversation is estimated by duration); inbound calls: "inbound". */
+  callOutcome?: CallOutcome | "inbound";
   /** GHL message id to stream a recording for (connected calls only); null when none can exist. */
   recordingId?: string | null;
 }

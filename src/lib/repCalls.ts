@@ -15,10 +15,11 @@
 // calls with no user, and users who are not configured reps, roll into
 // "Other users, not sales reps" so the team total still matches the cards.
 
+import { classifyOutcome, emptyOutcomes, OUTCOME_LABEL, pickStatus, type CallOutcome } from "@/lib/callOutcomes";
 import { getDb } from "@/lib/db";
 import { nyDayKey, nyParts, type DateRange } from "@/lib/dates";
 import { contactUrl, type DrillResult, type DrillRow } from "@/lib/drilldown";
-import { goalFor, repGoalStatus, type Goal, type GoalStatus } from "@/lib/goals";
+import { conversationMinSeconds, goalFor, repGoalStatus, type Goal, type GoalStatus } from "@/lib/goals";
 import { fmtMinutes } from "@/lib/metrics";
 import { userNames } from "@/lib/milestones";
 import { repRoster, type Rep } from "@/lib/reps";
@@ -28,8 +29,9 @@ export interface RepCallRow {
   name: string;
   isRep: boolean;
   dials: number;
-  /** Outbound human calls with status completed/answered and duration > 0 (connected, not verified conversation). */
-  answered: number;
+  /** Outbound dials split by outcome; conversation = completed and at least the configured seconds (estimated). */
+  outcomes: Record<CallOutcome, number>;
+  conversations: number;
   callStatus: GoalStatus | null;
   callGoal: { full: number; scaled: number } | null;
   talkSeconds: number;
@@ -46,7 +48,8 @@ export interface RepCallRow {
 export interface RepCallsResult {
   rows: RepCallRow[];
   others: RepCallRow | null;
-  total: { dials: number; answered: number; talkSeconds: number; connected: number; avgSeconds: number | null };
+  total: { dials: number; outcomes: Record<CallOutcome, number>; conversations: number; talkSeconds: number; connected: number; avgSeconds: number | null };
+  conversationMinSeconds: number;
   callsGoal: Goal | null;
   talkGoal: Goal | null;
   unmatchedReps: Rep[];
@@ -57,6 +60,10 @@ interface DialKey {
   k: string;
   u: string | null;
   t: string;
+  /** Longest leg duration (seconds), or null. */
+  d: number | null;
+  /** Comma-joined distinct leg statuses; pickStatus() chooses the representative one. */
+  statuses: string | null;
 }
 interface TalkKey {
   k: string;
@@ -68,23 +75,12 @@ interface TalkKey {
 function dialKeys(start: string, end: string): DialKey[] {
   return getDb()
     .prepare(
-      `SELECT COALESCE(alt_id, id) AS k, MIN(NULLIF(user_id, '')) AS u, MIN(date_added) AS t
+      `SELECT COALESCE(alt_id, id) AS k, MIN(NULLIF(user_id, '')) AS u, MIN(date_added) AS t, MAX(duration) AS d,
+              GROUP_CONCAT(DISTINCT call_status) AS statuses
          FROM calls WHERE automated = 0 AND direction = 'outbound' AND date_added >= ? AND date_added < ?
         GROUP BY COALESCE(alt_id, id)`,
     )
     .all(start, end) as unknown as DialKey[];
-}
-
-/** One row per answered outbound human call id: status completed/answered and duration > 0. */
-function answeredKeys(start: string, end: string): { k: string; u: string | null }[] {
-  return getDb()
-    .prepare(
-      `SELECT COALESCE(alt_id, id) AS k, MIN(NULLIF(user_id, '')) AS u
-         FROM calls WHERE automated = 0 AND direction = 'outbound' AND call_status IN ('completed', 'answered') AND duration > 0
-          AND date_added >= ? AND date_added < ?
-        GROUP BY COALESCE(alt_id, id)`,
-    )
-    .all(start, end) as unknown as { k: string; u: string | null }[];
 }
 
 /** One row per connected human call id (either direction) with its recorded duration. */
@@ -135,6 +131,12 @@ function firstCallAverage(times: string[]): { avg: string | null; days: number }
   return { avg: fmtClock(sum / firstByDay.size), days: firstByDay.size };
 }
 
+/** Label/value rows for an outcome split, in display order, hiding "Other" when it is zero. */
+export function outcomeRows(o: Record<CallOutcome, number>): { label: string; value: string }[] {
+  const keys: CallOutcome[] = ["conversation", "short", "voicemail", "noanswer", "failed", "other"];
+  return keys.filter((k) => k !== "other" || o[k] > 0).map((k) => ({ label: OUTCOME_LABEL[k], value: o[k].toLocaleString("en-US") }));
+}
+
 export function computeRepCalls(range: DateRange): RepCallsResult {
   const start = range.start.toISOString();
   const end = range.end.toISOString();
@@ -143,16 +145,24 @@ export function computeRepCalls(range: DateRange): RepCallsResult {
   const callsGoal = goalFor("callsMade", range);
   const talkGoal = goalFor("talkTimeMinutes", range);
 
+  const threshold = conversationMinSeconds();
   const dials = dialKeys(start, end);
   const talks = talkKeys(start, end);
-  const answered = answeredKeys(start, end);
   const isRep = (u: string | null) => u !== null && roster.byUserId.has(u);
   const bucket = (u: string | null): string => (isRep(u) ? (u as string) : "__others");
 
   const dialsBy = new Map<string, string[]>();
   for (const d of dials) dialsBy.set(bucket(d.u), [...(dialsBy.get(bucket(d.u)) ?? []), d.t]);
-  const answeredBy = new Map<string, number>();
-  for (const a of answered) answeredBy.set(bucket(a.u), (answeredBy.get(bucket(a.u)) ?? 0) + 1);
+  const outcomesBy = new Map<string, Record<CallOutcome, number>>();
+  const totalOutcomes = emptyOutcomes();
+  for (const d of dials) {
+    const o = classifyOutcome(pickStatus(d.statuses), d.d, threshold);
+    const b = bucket(d.u);
+    const cur = outcomesBy.get(b) ?? emptyOutcomes();
+    cur[o] += 1;
+    outcomesBy.set(b, cur);
+    totalOutcomes[o] += 1;
+  }
   const talkBy = new Map<string, { sec: number; n: number }>();
   for (const t of talks) {
     const b = bucket(t.u);
@@ -172,7 +182,8 @@ export function computeRepCalls(range: DateRange): RepCallsResult {
       name,
       isRep: isConfigured,
       dials: times.length,
-      answered: answeredBy.get(key) ?? 0,
+      outcomes: outcomesBy.get(key) ?? emptyOutcomes(),
+      conversations: (outcomesBy.get(key) ?? emptyOutcomes()).conversation,
       callStatus: isConfigured && callsGoal && userId ? repGoalStatus(times.length, callsGoal, userId) : null,
       callGoal: cg ? { full: cg.full, scaled: cg.scaled } : null,
       talkSeconds: talk.sec,
@@ -197,13 +208,14 @@ export function computeRepCalls(range: DateRange): RepCallsResult {
   return {
     rows,
     others,
-    total: { dials: totalDials, answered: answered.length, talkSeconds: totalTalk, connected: talks.length, avgSeconds: talks.length > 0 ? totalTalk / talks.length : null },
+    total: { dials: totalDials, outcomes: totalOutcomes, conversations: totalOutcomes.conversation, talkSeconds: totalTalk, connected: talks.length, avgSeconds: talks.length > 0 ? totalTalk / talks.length : null },
+    conversationMinSeconds: threshold,
     callsGoal,
     talkGoal,
     unmatchedReps: roster.unmatched,
     notes: [
       "Dials are outbound human call attempts only, one per call id (linked legs and repeated updates deduplicated). Automated, campaign, and IVR calls are excluded. The team total equals the Outbound line of the Calls Made card.",
-      "Answered is an outbound human call with status completed or answered and a duration above zero (busy, no-answer, failed, and voicemail excluded). GHL cannot distinguish a human pickup from an answering machine, so answered means connected, not verified conversation.",
+      `Each dial has one outcome. Conversation (estimated by duration) = GHL status completed with a recorded duration of at least ${threshold} seconds; Short pickup / likely machine = completed but shorter than ${threshold} seconds; Voicemail = status voicemail; No answer = no-answer or ringing; Failed = failed or busy. GHL marks human pickups and undetected answering machines alike as completed, so Conversation is an estimate, not verified conversation. The threshold is callOutcomes.conversationMinSeconds in config/goals.json.`,
       "Talk time is the recorded GHL call duration of human calls with status completed or answered, in either direction. It is recorded duration, not verified conversation time; a completed status can include answering-machine pickups GHL did not detect. The team total equals the Talk Time card.",
       "Avg talk time per call is total talk time divided by the connected calls counted.",
       "First call (avg) uses the rep's first outbound attempt on each New York day they made any outbound call, averaged across those days only; days with no calls are excluded, not counted as zero.",
@@ -225,7 +237,7 @@ export function callsDrilldown(user: string, range: DateRange): DrillResult {
     getDb()
       .prepare(
         `SELECT COALESCE(alt_id, id) AS k, MIN(NULLIF(user_id, '')) AS u, MIN(date_added) AS t, MIN(direction) AS dir, MAX(duration) AS d,
-                MAX(call_status) AS st, MIN(contact_id) AS cid
+                GROUP_CONCAT(DISTINCT call_status) AS st, MIN(contact_id) AS cid
            FROM calls WHERE automated = 0 AND date_added >= ? AND date_added < ?
           GROUP BY COALESCE(alt_id, id)`,
       )
@@ -238,7 +250,12 @@ export function callsDrilldown(user: string, range: DateRange): DrillResult {
     const marks = contactIds.map(() => "?").join(",");
     for (const c of getDb().prepare(`SELECT id, name FROM contacts WHERE id IN (${marks})`).all(...contactIds) as unknown as { id: string; name: string | null }[]) contactName.set(c.id, c.name);
   }
-  const connected = (c: { st: string | null; d: number | null }) => (c.st === "completed" || c.st === "answered") && (c.d ?? 0) > 0;
+  const threshold = conversationMinSeconds();
+  const statusOf = (c: { st: string | null }) => pickStatus(c.st);
+  const connected = (c: { st: string | null; d: number | null }) => {
+    const s = statusOf(c);
+    return (s === "completed" || s === "answered") && (c.d ?? 0) > 0;
+  };
   // The message id of the connected leg carries the recording (verified: GHL serves recordings by message id, not altId).
   const recordingIdByKey = new Map<string, string>();
   for (const leg of getDb()
@@ -270,9 +287,9 @@ export function callsDrilldown(user: string, range: DateRange): DrillResult {
       createdOn: null,
       reachedOn: c.t,
       direction: c.dir,
-      outcome: c.st,
+      outcome: statusOf(c),
       durationSec: connected(c) ? c.d : c.d && c.d > 0 ? c.d : null,
-      answered: (c.dir === "outbound" ? (connected(c) ? "yes" : "no") : "na") as "yes" | "no" | "na",
+      callOutcome: (c.dir === "outbound" ? classifyOutcome(statusOf(c), c.d, threshold) : "inbound") as CallOutcome | "inbound",
       recordingId: connected(c) ? (recordingIdByKey.get(c.k) ?? null) : null,
     }))
     .sort((a, b) => (a.reachedOn < b.reachedOn ? 1 : -1));
