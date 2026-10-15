@@ -350,9 +350,10 @@ export function bodyKey(body: string | null | undefined, contactName: string | n
   const nameWords = new Set((contactName ?? "").toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 1));
   const words = body
     // some emails arrive with their HTML entity-escaped; decode first so the tags below can be removed
+    .replace(/&amp;/gi, "&")
+    .replace(/&amp;/gi, "&")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
-    .replace(/&amp;/gi, "&")
     .replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&[a-z#0-9]+;/gi, " ")

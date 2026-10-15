@@ -1,310 +1,78 @@
 {
-  "_comment": "Owner-maintained map from a message template to the workflow that sends it. GHL does not record the workflow on a message, so the dashboard cannot work this out by itself. templateStartsWith is the template's opening words exactly as the Conversations cards show them (lower case, no names, numbers, links, or punctuation); the cards match on 'starts with', longest match wins. Fill in workflow with the workflow's name as it appears in GHL (the 72 workflow names can be listed read-only). Leave workflow blank for templates you do not recognise; they show as 'not mapped'. The note is generated for reference and can be edited or removed. Re-run the generator (scratch script) or add entries by hand as new templates appear.",
+  "_comment": "Owner-maintained map from a message template to the workflow that sends it (owner list of 2026-10-15). GHL does not record the workflow on a message, so the dashboard cannot work this out by itself. templateStartsWith is the template's opening text as written in the workflow; merge fields are allowed: {{contact.first_name}} is treated as a removed name and {{user.first_name}} as any one word (the rep's name). The cards compare the opening words of each sent message with these entries; the longest matching entry wins. Leave workflow blank to hide an entry. Templates not listed here show as 'Not mapped yet'.",
   "mappings": [
     {
-      "workflow": "",
-      "templateStartsWith": "this message is for you asked us to give you",
-      "note": "4,397 sends (sms) 2026-02-14 to 2026-10-08 · opens: \"this message is for you asked us to give you a call because you…\""
+      "workflow": "Tier 1 *Army",
+      "templateStartsWith": "Hey {{contact.first_name}}, this is {{user.first_name}} at Veteran Careers Network. We saw you had requested more info regarding the $2k in Free Cybersecurity training offered by the Army."
     },
     {
-      "workflow": "",
-      "templateStartsWith": "from military experience to cybersecurity training cybersecurity training pathways military",
-      "note": "3,768 sends (email) 2026-07-07 to 2026-10-08 · opens: \"from military experience to cybersecurity training cybersecurity training pathways military education benefit options no…\""
+      "workflow": "Tier 1 *Army",
+      "templateStartsWith": "Hey {{contact.first_name}}, this is {{user.first_name}} with Veteran Careers Network. We saw you had requested more info regarding the $2k in Free Cybersecurity training offered by the Army.",
+      "note": "same template with 'with' instead of 'at' (seen in sent messages)"
     },
     {
-      "workflow": "",
-      "templateStartsWith": "your military experience could be worth six figures military education",
-      "note": "3,227 sends (email) 2026-07-06 to 2026-10-08 · opens: \"your military experience could be worth six figures military education benefit options cybersecurity training…\""
+      "workflow": "Tier 2 *Army",
+      "templateStartsWith": "Hey {{contact.first_name}}, heads up... The Army has set aside a $2,000 scholarship for you to use towards our cybersecurity training."
     },
     {
-      "workflow": "",
-      "templateStartsWith": "reply cyber for more information",
-      "note": "2,993 sends (sms) 2026-03-02 to 2026-03-27 · opens: \"reply cyber for more information…\""
+      "workflow": "Tier 3 *Army",
+      "templateStartsWith": "Hey {{contact.first_name}}, are you getting my messages? You requested more info regarding the free cybersecurity training offered by the Army."
     },
     {
-      "workflow": "",
-      "templateStartsWith": "hey it s been a couple of days since you",
-      "note": "2,975 sends (sms) 2026-02-18 to 2026-05-14 · opens: \"hey it s been a couple of days since you requested a call from…\""
+      "workflow": "Tier 4 *Army",
+      "templateStartsWith": "Hey {{contact.first_name}}, I'm really surprised.. 60% of soldiers have no idea there's $2,000 available to them to use for Cybersecurity training."
     },
     {
-      "workflow": "",
-      "templateStartsWith": "stop missing birthdays requested info career flexibility information could tech",
-      "note": "2,926 sends (email) 2026-07-13 to 2026-10-08 · opens: \"stop missing birthdays requested info career flexibility information could tech better fit life some…\""
+      "workflow": "Tier 5 *Army",
+      "templateStartsWith": "{{contact.first_name}}, did you hear what just happened?! The Army just dropped $2k in free cybersecurity training into your Army CA account!"
     },
     {
-      "workflow": "",
-      "templateStartsWith": "your interest in our cybersecurity program for military veterans cybersecurity",
-      "note": "2,612 sends (email) 2026-08-13 to 2026-10-15 · opens: \"your interest in our cybersecurity program for military veterans cybersecurity is growing through your…\""
+      "workflow": "Tier 6 *Army",
+      "templateStartsWith": "Hey {{contact.first_name}}. At one point, you requested a call from us because you were interested in cybersecurity."
     },
     {
-      "workflow": "",
-      "templateStartsWith": "how a i is changing cybersecurity career paths requested info",
-      "note": "2,544 sends (email) 2026-07-08 to 2026-10-08 · opens: \"how a i is changing cybersecurity career paths requested info cybersecurity career information a…\""
+      "workflow": "Appointment Confirmation + Reminder",
+      "templateStartsWith": "Hey {{contact.first_name}}, our appointment is in 24hrs! Question, Is there anything specific you want to hear more about on our call tomorrow?"
     },
     {
-      "workflow": "",
-      "templateStartsWith": "why your military experience is worth right now va approved",
-      "note": "2,489 sends (email) 2026-05-01 to 2026-07-06 · opens: \"why your military experience is worth right now va approved gi accepted vr e…\""
+      "workflow": "Appointment Confirmation + Reminder",
+      "templateStartsWith": "Hey {{contact.first_name}}, are we still good for our meeting coming up in 1hr? My main goal for our call is to identify:"
     },
     {
-      "workflow": "",
-      "templateStartsWith": "explore veteran focused cybersecurity and it training options requested info",
-      "note": "2,452 sends (email) 2026-07-10 to 2026-10-08 · opens: \"explore veteran focused cybersecurity and it training options requested info veteran focused training options…\""
+      "workflow": "Appointment Confirmation + Reminder",
+      "templateStartsWith": "Ok sounds good, I'll be sure to cover that in more detail on our call. I do have a busy schedule tomorrow, can you just confirm you'll be able to attend?"
     },
     {
-      "workflow": "",
-      "templateStartsWith": "which cybersecurity training path may be right for you cybersecurity",
-      "note": "2,451 sends (email) 2026-07-07 to 2026-10-08 · opens: \"which cybersecurity training path may be right for you cybersecurity training pathways military education…\""
+      "workflow": "Tier 1 *Veteran",
+      "templateStartsWith": "Hey {{contact.first_name}}, {{user.first_name}} here with Veteran Careers Network! I saw your request come in for more info about our cybersecurity training for Veterans."
     },
     {
-      "workflow": "",
-      "templateStartsWith": "the door stays open requested info hi this is the",
-      "note": "2,320 sends (email) 2026-07-09 to 2026-10-08 · opens: \"the door stays open requested info hi this is the last message in this…\""
+      "workflow": "Tier 2 *Veteran",
+      "templateStartsWith": "Hey {{contact.first_name}}, I tried giving you a call yesterday but I must have missed you. Did you still want to hear more about our Cybersecurity training course"
     },
     {
-      "workflow": "",
-      "templateStartsWith": "training is only part of the mission cybersecurity training pathways",
-      "note": "2,307 sends (email) 2026-07-08 to 2026-10-08 · opens: \"training is only part of the mission cybersecurity training pathways career support services military…\""
+      "workflow": "Tier 3 *Veteran",
+      "templateStartsWith": "Hey {{contact.first_name}}, are you getting my messages? If I could build you a Cybersecurity career roadmap & help determine if the VA can pay for your training"
     },
     {
-      "workflow": "",
-      "templateStartsWith": "hey are you still interested in cybersecurity the starting salary",
-      "note": "2,211 sends (sms) 2026-02-16 to 2026-05-14 · opens: \"hey are you still interested in cybersecurity the starting salary for someone who cisa…\""
+      "workflow": "Tier 4 *Veteran",
+      "templateStartsWith": "Hey {{contact.first_name}}, do you know how to use your VA benefits for school? Let's set up some time this week"
     },
     {
-      "workflow": "",
-      "templateStartsWith": "hey just circling back with you before we close your",
-      "note": "2,202 sends (sms) 2026-03-04 to 2026-04-30 · opens: \"hey just circling back with you before we close your file with us…\""
+      "workflow": "Tier 5 *Veteran",
+      "templateStartsWith": "Hey, did you hear what just happened?! We just partnered with the best training provider for Veterans looking to get into Cybersecurity"
     },
     {
-      "workflow": "",
-      "templateStartsWith": "a cybersecurity certification roadmap for veterans cybersecurity training pathways military",
-      "note": "2,160 sends (email) 2026-07-07 to 2026-10-08 · opens: \"a cybersecurity certification roadmap for veterans cybersecurity training pathways military education benefit options no…\""
+      "workflow": "Tier 6 *Veteran",
+      "templateStartsWith": "Hey {{contact.first_name}}, it's {{user.first_name}}. At one point, you were thinking about starting a career in Cybersecurity. What initially got you interested?"
     },
     {
-      "workflow": "",
-      "templateStartsWith": "important message for days left before enrollment in our cybersecurity",
-      "note": "2,131 sends (sms) 2026-03-30 to 2026-06-22 · opens: \"important message for days left before enrollment in our cybersecurity training ends you requested…\""
+      "workflow": "Tier 7 *Veteran",
+      "templateStartsWith": "Hey {{contact.first_name}}, I've been trying to reach you because you were interested in changing your work situation and getting into Cybersecurity."
     },
     {
-      "workflow": "",
-      "templateStartsWith": "from infantry to it how to make the jump no",
-      "note": "1,827 sends (email) 2026-05-01 to 2026-07-06 · opens: \"from infantry to it how to make the jump no tech experience required from…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "planning your next mission starts here cybersecurity training pathways military",
-      "note": "1,716 sends (email) 2026-07-07 to 2026-10-08 · opens: \"planning your next mission starts here cybersecurity training pathways military education benefit options upcoming…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey at one point you requested a call from us",
-      "note": "1,714 sends (sms) 2026-06-23 to 2026-10-15 · opens: \"hey at one point you requested a call from us because you were interested…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "which cybersecurity path is right for you choose your mission",
-      "note": "1,606 sends (email) 2026-05-01 to 2026-07-06 · opens: \"which cybersecurity path is right for you choose your mission which cybersecurity path is…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey did you hear what just happened we just partnered",
-      "note": "1,572 sends (sms) 2026-05-01 to 2026-10-15 · opens: \"hey did you hear what just happened we just partnered with the best training…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "your call starts in hour are you ready hour reminder",
-      "note": "1,482 sends (email) 2026-05-05 to 2026-09-09 · opens: \"your call starts in hour are you ready hour reminder your call starts in…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "we don t just train you we get you hired",
-      "note": "1,478 sends (email) 2026-05-01 to 2026-07-06 · opens: \"we don t just train you we get you hired career support system we…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "not sure how much g i bill you have left",
-      "note": "1,345 sends (email) 2026-07-15 to 2026-10-15 · opens: \"not sure how much g i bill you have left start here before choosing…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "are you still interested in using your post benefits to",
-      "note": "1,335 sends (sms) 2026-03-30 to 2026-04-30 · opens: \"are you still interested in using your post benefits to start a k career…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hi just a friendly reminder that our appointment is in",
-      "note": "1,154 sends (sms) 2026-03-04 to 2026-06-30 · opens: \"hi just a friendly reminder that our appointment is in one hour i m…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "the starting salary for someone who is cisa certified is",
-      "note": "1,125 sends (sms) 2026-03-02 to 2026-03-27 · opens: \"the starting salary for someone who is cisa certified is k and your gi…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey are you still interested in cybersecurity",
-      "note": "1,108 sends (sms) 2026-03-02 to 2026-03-27 · opens: \"hey are you still interested in cybersecurity…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "you left the military don t leave your future behind",
-      "note": "1,065 sends (email) 2026-06-23 to 2026-06-30 · opens: \"you left the military don t leave your future behind too re engagement day…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "built by veterans for veterans we know where you ve",
-      "note": "1,060 sends (email) 2026-05-01 to 2026-06-26 · opens: \"built by veterans for veterans we know where you ve been built by veterans…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey are you still interested in using your free post",
-      "note": "1,056 sends (sms) 2026-04-13 to 2026-06-24 · opens: \"hey are you still interested in using your free post gi bill to break…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "final notice semester deadline approaching time is running out the",
-      "note": "1,055 sends (email) 2026-05-02 to 2026-07-06 · opens: \"final notice semester deadline approaching time is running out the next semester is closing…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "are you still interested in our cyber and network engineering",
-      "note": "1,027 sends (sms) 2026-03-03 to 2026-03-27 · opens: \"are you still interested in our cyber and network engineering training for veterans…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey are you still thinking of getting into cybersecurity with",
-      "note": "1,020 sends (sms) 2026-05-14 to 2026-06-30 · opens: \"hey are you still thinking of getting into cybersecurity with our program you can…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "i don t think i have enough g i bill",
-      "note": "1,012 sends (email) 2026-06-29 to 2026-07-06 · opens: \"i don t think i have enough g i bill left read this re…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "army already took from you the annual army ca limit",
-      "note": "948 sends (email) 2026-09-28 to 2026-10-15 · opens: \"army already took from you the annual army ca limit dropped from to explore…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "your strategy call is confirmed read this before we talk",
-      "note": "939 sends (email) 2026-06-23 to 2026-09-08 · opens: \"your strategy call is confirmed read this before we talk appointment confirmed you re…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey this is anthony with veteran careers network you requested",
-      "note": "924 sends (sms) 2026-03-05 to 2026-05-13 · opens: \"hey this is anthony with veteran careers network you requested information about our cybersecurity…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "we have a few seats left since you expressed interest",
-      "note": "897 sends (sms) 2026-05-02 to 2026-06-22 · opens: \"we have a few seats left since you expressed interest you do have priority…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey this is alexy with cyber careers network you requested",
-      "note": "782 sends (sms) 2026-02-13 to 2026-02-26 · opens: \"hey this is alexy with cyber careers network you requested information about our cybersecurity…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "have you decided to give up on cyber",
-      "note": "781 sends (sms) 2026-03-04 to 2026-03-27 · opens: \"have you decided to give up on cyber…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "could your military experience lead to a six figure career",
-      "note": "759 sends (email) 2026-09-30 to 2026-10-15 · opens: \"could your military experience lead to a six figure career explore cybersecurity training army…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey it s been some time since you requested a",
-      "note": "755 sends (sms) 2026-05-14 to 2026-06-26 · opens: \"hey it s been some time since you requested a call from us but…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "appointment confirmed your strategy call with vcn mission confirmed your",
-      "note": "734 sends (email) 2026-05-04 to 2026-06-22 · opens: \"appointment confirmed your strategy call with vcn mission confirmed your strategy call is locked…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "are you still interested in usin your post benefits to",
-      "note": "714 sends (sms) 2026-03-06 to 2026-03-27 · opens: \"are you still interested in usin your post benefits to start a k career…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey we have a couple seats remaining for our upcoming",
-      "note": "703 sends (sms) 2026-03-06 to 2026-03-27 · opens: \"hey we have a couple seats remaining for our upcoming cybersecurity training…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "reminder your strategy call is tomorrow hour reminder your strategy",
-      "note": "695 sends (email) 2026-05-05 to 2026-09-08 · opens: \"reminder your strategy call is tomorrow hour reminder your strategy call is tomorrow we…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey heads up the army has set aside a scholarship",
-      "note": "653 sends (sms) 2026-10-01 to 2026-10-15 · opens: \"hey heads up the army has set aside a scholarship for you to use…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "are you still interested in learning more reply cyber for",
-      "note": "642 sends (sms) 2026-02-27 to 2026-03-16 · opens: \"are you still interested in learning more reply cyber for more info…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "you asked us to give you a call because you",
-      "note": "642 sends (sms) 2026-02-27 to 2026-03-16 · opens: \"you asked us to give you a call because you wanted more info about…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "this message is for",
-      "note": "623 sends (sms) 2026-02-27 to 2026-03-16 · opens: \"this message is for…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "great are you thinking of using your post gi bill",
-      "note": "615 sends (sms) 2026-02-27 to 2026-10-13 · opens: \"great are you thinking of using your post gi bill for cyber training…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey are you getting my messages a few days ago",
-      "note": "610 sends (sms) 2026-10-01 to 2026-10-08 · opens: \"hey are you getting my messages a few days ago you requested more info…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "are you thinking of using your post gi bill for",
-      "note": "593 sends (sms) 2026-02-26 to 2026-03-16 · opens: \"are you thinking of using your post gi bill for cyber training…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "i m interested in cyber but i m starting from",
-      "note": "578 sends (email) 2026-10-01 to 2026-10-15 · opens: \"i m interested in cyber but i m starting from zero no technical background…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "important please confirm your gi bill eligibility by visiting the",
-      "note": "560 sends (sms) 2026-03-17 to 2026-06-30 · opens: \"important please confirm your gi bill eligibility by visiting the va website here or…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "will a i replace cybersecurity jobs here s the real",
-      "note": "558 sends (email) 2026-07-06 to 2026-07-07 · opens: \"will a i replace cybersecurity jobs here s the real answer re engagement day…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey this is michael with veteran careers network you requested",
-      "note": "551 sends (sms) 2026-03-25 to 2026-05-13 · opens: \"hey this is michael with veteran careers network you requested more information on facebook…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "hey i m going to be honest cybersecurity is one",
-      "note": "537 sends (sms) 2026-06-26 to 2026-10-08 · opens: \"hey i m going to be honest cybersecurity is one of the only industries…\""
-    },
-    {
-      "workflow": "",
-      "templateStartsWith": "doctype html html lang en xmlns xmlns v urn schemas",
-      "note": "1,007 sends (email) 2026-10-14 to 2026-10-15 · opens: \"doctype html html lang en xmlns xmlns v urn schemas microsoft com vml xmlns…\""
+      "workflow": "Applied for GI Bill",
+      "templateStartsWith": "Hey {{contact.first_name}}, were you able to apply for your Post 9/11 GI Bill benefits? The enrollment deadline for our cyber program is coming up."
     }
   ]
 }

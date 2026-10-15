@@ -508,3 +508,15 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     Low red) against thresholds in config/conversations.json
     (optOutRateLevels 2.5% / 1%, interestRateLevels 2% / 1%). The
     Workflow column replaces Sent by on all three template cards.
+52. **Workflow map filled from the owner's template list (2026-10-15).**
+    config/workflow-templates.json now holds the owner's 18 templates
+    with their workflow names (Tier 1–6 *Army, Tier 1–7 *Veteran,
+    Appointment Confirmation + Reminder, Applied for GI Bill). Entries
+    are the template text as written in the workflow; the matcher
+    normalizes it like a sent message and treats {{contact.first_name}}
+    as a removed name and {{user.first_name}} as any one word, because
+    sent messages carry the rep's name. About 30% of this month's
+    workflow sends map to a name; the rest are email campaigns and SMS
+    templates not in the list, which show "Not mapped yet" until added.
+    The email normalizer now decodes a double-escaped "&amp;lt;" before
+    stripping tags.
