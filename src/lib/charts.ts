@@ -28,8 +28,14 @@ export interface ComparedSeries extends TimeSeries {
   priorTotal: number | null;
 }
 
-const shortDay = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" });
-const hourFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric" });
+// Bucket keys are already New York calendar values ("YYYY-MM-DD" or
+// "YYYY-MM-DDTHH"), so labels are built from the key's own numbers. (Until
+// 2026-10-15 the hour label re-formatted the hour as a UTC instant in New
+// York time, which printed every hourly label five hours early.)
+const shortDayUtc = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
+function hourLabel(h: number): string {
+  return `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? "AM" : "PM"}`;
+}
 
 interface Buckets {
   grouping: Grouping;
@@ -55,11 +61,8 @@ function buckets(start: Date, end: Date): Buckets {
   }
   const labels = keys.map((k) => {
     const [y, m, d] = k.slice(0, 10).split("-").map(Number);
-    if (grouping === "hourly") {
-      const h = Number(k.slice(11, 13));
-      return hourFmt.format(new Date(Date.UTC(2000, 0, 1, h))).replace(" ", " ");
-    }
-    const label = shortDay.format(new Date(Date.UTC(y, m - 1, d, 12)));
+    if (grouping === "hourly") return hourLabel(Number(k.slice(11, 13)));
+    const label = shortDayUtc.format(new Date(Date.UTC(y, m - 1, d)));
     return grouping === "weekly" ? `wk of ${label}` : label;
   });
   const bucketOf = (d: Date) => (grouping === "hourly" ? nyHourKey(d) : grouping === "daily" ? nyDayKey(d) : nyDayKey(startOfWeek(d)));

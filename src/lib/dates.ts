@@ -263,7 +263,9 @@ export function hourKeysBetween(start: Date, end: Date): string[] {
   const keys: string[] = [];
   let cur = new Date(start.getTime());
   while (cur.getTime() < end.getTime()) {
-    keys.push(nyHourKey(cur));
+    const k = nyHourKey(cur);
+    // On the daylight-saving fall-back night the 1 AM wall-clock hour happens twice; keep one bucket for it.
+    if (keys[keys.length - 1] !== k) keys.push(k);
     cur = new Date(cur.getTime() + 3_600_000);
   }
   return keys;

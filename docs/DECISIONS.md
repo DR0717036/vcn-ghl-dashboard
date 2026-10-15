@@ -355,3 +355,18 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     change was needed. Nothing loads until "Load recording" is clicked;
     the id must be a human call in the cache; the route is disabled in
     production until login exists; recordings are never put in the CSV.
+42. **Hourly chart labels (bug fix, 2026-10-15).** Investigation: hour
+    buckets were already grouped in America/New_York (raw timestamps
+    landed in the right New York hour key), and the cache was fresh (the
+    newest call was 4 minutes older than the last sync), but each hourly
+    label was produced by formatting the bucket's hour number as a UTC
+    instant in New York time, so every label printed five hours early
+    ("7 PM" for the midnight bucket, "1 PM" for 6 PM). Labels are now
+    built from the New York key itself (hour → "12 AM" … "11 PM"; day →
+    "Oct 15" via a UTC formatter), which fixes every hourly and daily
+    chart at once (Calls Made, Talk Time, the four submissions charts and
+    their modals, New Leads). Hour keys are de-duplicated across the
+    daylight-saving fall-back hour. Verified: the Calls Made per-hour
+    series sums to the card for Today, Yesterday, and This Month; Today
+    runs 12 AM to the current New York hour; First call (avg) values
+    were never affected and are unchanged.

@@ -131,8 +131,9 @@ export default function LineChart({
   const labelEvery = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(plotW / 70))));
   const showMarkers = n <= 40 && plotW / n >= 12;
 
+  const plottedTotal = primary ? primary.points.reduce((s, p) => s + p.value, 0) : 0;
   return (
-    <div className="chart-wrap" ref={wrapRef}>
+    <div className="chart-wrap" ref={wrapRef} data-total={plottedTotal} data-first={labels[0] ?? ""} data-last={labels[labels.length - 1] ?? ""}>
       <div className="chart-legend">
         {series.map((s) => (
           <span key={s.label} className="legend">
