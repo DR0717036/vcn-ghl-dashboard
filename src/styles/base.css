@@ -2408,17 +2408,7 @@ section > h2 {
   margin-top: var(--s-2);
 }
 
-/* term labels and the Limitations label in brand yellow (dark gold on light cards, via --accent-yellow-text) */
-.notes-list b,
-.notes-limits b {
-  color: var(--accent-yellow-text);
-}
-
-.modal .notes-list b,
-.modal .notes-limits b {
-  color: var(--accent-yellow);
-}
-
+/* term labels and the Limitations label: the surface primary color (white on dark, near-black on light); the label is upright */
 .notes-limits b {
   font-style: normal;
 }

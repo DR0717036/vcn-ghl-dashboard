@@ -431,3 +431,8 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     label, use the brand yellow on dark surfaces (#ffd51f) and the dark
     gold step (#7a6200) on light cards via --accent-yellow-text; the
     limitation text itself stays italic gray.
+48. **Note labels back to white (2026-10-15).** Decision 47 reversed at
+    the owner's request: term labels and the "Limitations" label use the
+    surface primary color again (white on dark surfaces, near-black on
+    light cards); the Limitations label stays upright while its text is
+    italic gray.
