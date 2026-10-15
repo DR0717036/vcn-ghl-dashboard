@@ -349,6 +349,9 @@ export function bodyKey(body: string | null | undefined, contactName: string | n
   if (!body) return null;
   const nameWords = new Set((contactName ?? "").toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 1));
   const words = body
+    .replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&[a-z#0-9]+;/gi, " ")
     .toLowerCase()
     .replace(/https?:\/\/\S+|www\.\S+/g, " ")
     .replace(/[0-9]+/g, " ")

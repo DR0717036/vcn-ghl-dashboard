@@ -2440,3 +2440,79 @@ section > h2 {
 .modal .drill-table td.drill-preview {
   color: #c6cfda;
 }
+
+
+/* template tables (opt-outs, interest, reply rate) */
+.rep-table-tpl {
+  min-width: 620px;
+}
+
+.rep-table-tpl .col-tpl {
+  width: 320px;
+}
+
+.rep-table-tpl .col-sentby {
+  width: 150px;
+}
+
+.rep-table-tpl .col-num {
+  width: 96px;
+}
+
+.rep-table-tpl-wide {
+  min-width: 1180px;
+}
+
+.rep-table-tpl-wide .col-tpl {
+  width: 300px;
+}
+
+.rep-table-tpl-wide .col-split {
+  width: 150px;
+}
+
+.rep-table td.tpl-label {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.rep-table td.note {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* keyword tables sit two-up, so they must fit a half-width card */
+.rep-table-tpl {
+  min-width: 540px;
+}
+
+.rep-table-tpl .col-tpl {
+  width: 215px;
+}
+
+.rep-table-tpl .col-sentby {
+  width: 112px;
+}
+
+.rep-table-tpl .col-num {
+  width: 70px;
+}
+
+.rep-table-tpl-wide {
+  min-width: 1180px;
+}
+
+.rep-table-tpl-wide .col-tpl {
+  width: 300px;
+}
+
+.rep-table-tpl-wide .col-sentby {
+  width: 130px;
+}
+
+.rep-table-tpl-wide .col-num {
+  width: 96px;
+}

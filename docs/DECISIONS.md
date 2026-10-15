@@ -465,3 +465,32 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     local cache and appear only inside drilldowns. Reconciled: stale rows
     sum to the team total and match the cache; every stale and response
     drilldown equals its table row.
+50. **Conversations section, stage 2 (2026-10-15).** Four more cards in
+    the Conversations band, all on the selected range and all read-only
+    from the local message cache. Attribution is BEST MATCH: a template
+    is the first ten words of an outbound message after lower-casing and
+    removing URLs, numbers, punctuation, HTML, and the contact's name;
+    one-off texts typed by a rep (fewer than 3 sends of the same
+    opening) are grouped as "Manual messages"; media-only sends as "No
+    text". A reply is attributed to the most recent outbound in the same
+    conversation within replyWindowDays. "Sent by" comes from GHL's
+    message source (workflow vs app); GHL does not expose which workflow
+    sent a message, so workflow names are not shown. Opt-outs and
+    Interest replies: whole-word keyword matches on inbound SMS/email
+    (config/conversations.json; a keyword written in capitals such as IT
+    is case-sensitive, because the bare word "it" matched 166 ordinary
+    replies), one per contact, split Army/Veteran/Both/No tag, ranked
+    by template with sends and rate, drilldown to contacts and their
+    message. Reply rate by template: sends, replies (first inbound after
+    the send within the window and before the next outbound), reply,
+    opt-out, and interest rates, Army and Veteran splits; the 25 largest
+    templates are listed and the rest summed into one row. Inbound by
+    channel: SMS, email, inbound human calls, other, with shares,
+    after-hours share, and median time to first reply in business and
+    clock time. Template labels are built only from the normalized text
+    (never a raw message), duplicates are numbered "(variant n)", and
+    message text appears only in drilldowns. Reconciled: opt-out and
+    interest contacts in the drilldowns equal the card counts, template
+    rows (plus the summed remainder) equal the card totals, every
+    template drilldown equals its row, reply-rate totals equal the row
+    sums, and channel rows add up.

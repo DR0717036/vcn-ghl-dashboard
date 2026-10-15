@@ -45,7 +45,11 @@ export type ColumnKey =
   | "inboundAt"
   | "repliedAt"
   | "responseTime"
-  | "withinTarget";
+  | "withinTarget"
+  | "template"
+  | "sentBy"
+  | "tagClass"
+  | "sentAt";
 
 const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "date" }> = {
   name: { label: "Contact name", kind: "text" },
@@ -76,6 +80,10 @@ const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "dat
   repliedAt: { label: "Replied at", kind: "date" },
   responseTime: { label: "Response (business time)", kind: "number" },
   withinTarget: { label: "Within target", kind: "text" },
+  template: { label: "Template (best match)", kind: "text" },
+  sentBy: { label: "Sent by", kind: "text" },
+  tagClass: { label: "Tag", kind: "text" },
+  sentAt: { label: "Template sent at", kind: "date" },
 };
 
 /** KPI card drilldown columns, in the owner's order. */
@@ -84,6 +92,9 @@ export const KPI_COLUMNS: ColumnKey[] = ["name", "source", "assignedUser", "pipe
 export const REP_COLUMNS: ColumnKey[] = ["name", "email", "phone", "source", "pipeline", "stageReached", "tags", "reachedOn"];
 /** Won opportunities listed under a won-based rep. */
 export const WON_COLUMNS: ColumnKey[] = ["name", "pipeline", "stage", "value", "wonOn"];
+/** Contacts behind an opt-out / interest / reply row. */
+export const KEYWORD_COLUMNS: ColumnKey[] = ["name", "tagClass", "channel", "preview", "inboundAt", "template", "sentBy", "sentAt"];
+
 /** Stale conversations for one rep. */
 export const STALE_COLUMNS: ColumnKey[] = ["name", "channel", "preview", "unread", "waiting", "inboundAt"];
 /** Inbound episodes for one rep (response time drilldown). */
@@ -165,6 +176,14 @@ function cell(row: DrillRow, key: ColumnKey): { text: string; sort: string | num
       return { text: row.repliedAt ? fmtDate(row.repliedAt) : "no reply", sort: row.repliedAt ?? null };
     case "responseTime":
       return { text: row.responseMinutes === null || row.responseMinutes === undefined ? DASH : fmtWait(row.responseMinutes), sort: row.responseMinutes ?? null };
+    case "template":
+      return { text: row.template ? row.template : DASH, sort: row.template ?? null };
+    case "sentBy":
+      return { text: row.sentBy ? row.sentBy : DASH, sort: row.sentBy ?? null };
+    case "tagClass":
+      return { text: row.tagClass ? row.tagClass : DASH, sort: row.tagClass ?? null };
+    case "sentAt":
+      return { text: row.repliedAt ? fmtDate(row.repliedAt) : DASH, sort: row.repliedAt ?? null };
     case "withinTarget":
       return { text: row.withinTarget === null || row.withinTarget === undefined ? DASH : row.withinTarget ? "Yes" : "No", sort: row.withinTarget === null || row.withinTarget === undefined ? null : row.withinTarget ? "1" : "0" };
     case "recording":

@@ -1,5 +1,5 @@
 {
-  "_comment": "Conversations section settings (owner decision 2026-10-15). staleAfterMinutes: an unread, inbound-last conversation counts as stale once its last message is older than this. businessHours: the window used for response times, in America/New_York; days use 0 = Sunday … 6 = Saturday; endHour is exclusive (7 and 20 = 7:00 AM to 8:00 PM). optOutKeywords and interestKeywords are matched case-insensitively as whole words in inbound message text. replyWindowDays: how long after an inbound message a human reply still counts as a reply to it. withinMinutes: the 'replied within' target shown on the response-time card.",
+  "_comment": "Conversations section settings (owner decision 2026-10-15). staleAfterMinutes: an unread, inbound-last conversation counts as stale once its last message is older than this. businessHours: the window used for response times, in America/New_York; days use 0 = Sunday … 6 = Saturday; endHour is exclusive (7 and 20 = 7:00 AM to 8:00 PM). optOutKeywords and interestKeywords are matched as whole words in inbound message text; a keyword written in capitals (IT) must match in capitals, every other keyword ignores case. replyWindowDays: how long after an inbound message a human reply still counts as a reply to it. withinMinutes: the 'replied within' target shown on the response-time card.",
   "staleAfterMinutes": 60,
   "businessHours": {
     "days": [1, 2, 3, 4, 5, 6],
@@ -9,5 +9,5 @@
   "withinMinutes": 60,
   "replyWindowDays": 7,
   "optOutKeywords": ["stop", "unsubscribe", "quit", "cancel", "end", "stopall", "opt out", "remove me"],
-  "interestKeywords": ["cyber", "it", "cybersecurity", "cyber security"]
+  "interestKeywords": ["cyber", "IT", "cybersecurity", "cyber security"]
 }

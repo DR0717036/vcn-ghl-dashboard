@@ -16,6 +16,7 @@ import { computePrimaryKpis, coverage, kpiAppointmentsCancelled, kpiAppointments
 import { computeMilestoneByKey, computeMilestones } from "@/lib/milestones";
 import { computeCommission } from "@/lib/commission";
 import { computeResponseTimes, computeStale } from "@/lib/conversations";
+import { analyzeMessaging, inboundChannelCard, keywordCard, replyRateCard } from "@/lib/messaging";
 import { computeRepCalls } from "@/lib/repCalls";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
@@ -31,6 +32,7 @@ import RangePicker from "./RangePicker";
 import RepCallsCard from "./RepCallsCard";
 import ResponseTimeCard from "./ResponseTimeCard";
 import StaleCard from "./StaleCard";
+import { InboundChannelCard, KeywordCard, ReplyRateCard } from "./MessagingCards";
 import Reveal from "./Reveal";
 import SubmissionsCard from "./SubmissionsCard";
 import WonSection from "./WonSection";
@@ -80,6 +82,11 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const repCalls = computeRepCalls(range);
   const stale = computeStale(now);
   const responseTimes = computeResponseTimes(range);
+  const messaging = analyzeMessaging(range);
+  const optOuts = keywordCard(messaging, "optout");
+  const interest = keywordCard(messaging, "interest");
+  const replyRate = replyRateCard(messaging);
+  const inboundChannel = inboundChannelCard(messaging);
   // Commission on the events inside the selected range (quota and Won (MTD) stay month-to-date).
   const commission = computeCommission(range, now);
   const milestones = computeMilestones(range);
@@ -208,6 +215,16 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="kpi-row cols-1">
             <ResponseTimeCard r={responseTimes} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-2">
+            <KeywordCard k={optOuts} rangeQuery={rangeQuery} rangeLabel={range.label} />
+            <KeywordCard k={interest} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-1">
+            <ReplyRateCard r={replyRate} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-1">
+            <InboundChannelCard c={inboundChannel} rangeLabel={range.label} />
           </div>
         </div>
       </section>

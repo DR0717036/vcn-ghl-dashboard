@@ -64,6 +64,10 @@ export interface DrillRow {
   withinTarget?: boolean | null;
   /** Unread messages (stale) or inbound messages in the episode (response). */
   unread?: number | null;
+  /** Keyword / reply drilldowns: best-match template label, who sent it, and the contact's tag class. */
+  template?: string | null;
+  sentBy?: string | null;
+  tagClass?: string | null;
   /** GHL message id to stream a recording for (connected calls only); null when none can exist. */
   recordingId?: string | null;
 }
