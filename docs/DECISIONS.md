@@ -426,3 +426,8 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     navy modal, about 8:1) and #46566a on white cards (about 7.5:1),
     with terms in the surface's primary color. The long "GHL cannot
     distinguish…" caveats now appear once, in Limitations.
+47. **Note labels in yellow (2026-10-15).** The bold term at the start of
+    each "How this is counted" / Details bullet, and the "Limitations"
+    label, use the brand yellow on dark surfaces (#ffd51f) and the dark
+    gold step (#7a6200) on light cards via --accent-yellow-text; the
+    limitation text itself stays italic gray.

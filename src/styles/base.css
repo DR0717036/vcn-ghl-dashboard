@@ -2407,3 +2407,18 @@ section > h2 {
 .stat-notes .notes {
   margin-top: var(--s-2);
 }
+
+/* term labels and the Limitations label in brand yellow (dark gold on light cards, via --accent-yellow-text) */
+.notes-list b,
+.notes-limits b {
+  color: var(--accent-yellow-text);
+}
+
+.modal .notes-list b,
+.modal .notes-limits b {
+  color: var(--accent-yellow);
+}
+
+.notes-limits b {
+  font-style: normal;
+}
