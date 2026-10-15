@@ -20,6 +20,7 @@ export interface ConversationsConfig {
   withinMinutes: number;
   responseLevels: { greenUnderMinutes: number; yellowUnderMinutes: number };
   replyWindowDays: number;
+  emailStatus: { lookbackDays: number; refreshHours: number; maxPerRun: number };
   optOutKeywords: string[];
   interestKeywords: string[];
   optOutRateLevels: { high: number; medium: number };
@@ -36,6 +37,7 @@ export function conversationsConfig(): ConversationsConfig {
     withinMinutes: int(c.withinMinutes, 60),
     responseLevels: { greenUnderMinutes: int(c.responseLevels?.greenUnderMinutes, 15), yellowUnderMinutes: int(c.responseLevels?.yellowUnderMinutes, 60) },
     replyWindowDays: int(c.replyWindowDays, 7),
+    emailStatus: { lookbackDays: int(c.emailStatus?.lookbackDays, 14), refreshHours: int(c.emailStatus?.refreshHours, 6), maxPerRun: int(c.emailStatus?.maxPerRun, 2500) },
     optOutKeywords: Array.isArray(c.optOutKeywords) ? c.optOutKeywords : ["stop"],
     interestKeywords: Array.isArray(c.interestKeywords) ? c.interestKeywords : ["cyber", "it"],
     optOutRateLevels: { high: int(c.optOutRateLevels?.high, 0.025), medium: int(c.optOutRateLevels?.medium, 0.01) },

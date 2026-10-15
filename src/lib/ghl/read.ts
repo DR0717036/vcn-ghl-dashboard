@@ -211,6 +211,18 @@ export function searchConversations(p: ConversationSearchParams): Promise<GhlRes
   });
 }
 
+export interface GhlWorkflow {
+  id: string;
+  name: string;
+  status?: string;
+}
+
+/** Workflow list (GET, read-only): id, name, status only; GHL exposes no steps or templates. */
+export function listWorkflows(): Promise<GhlResult<{ workflows: GhlWorkflow[] }>> {
+  const { locationId } = getEnv();
+  return ghlGet("/workflows/", "2021-07-28", { locationId });
+}
+
 export interface GhlEmailBuilderItem {
   id: string;
   name: string;
@@ -340,6 +352,25 @@ export function exportMessages(p: MessageExportParams): Promise<GhlResult<GhlMes
 export function getCallRecording(messageId: string) {
   const { locationId } = getEnv();
   return ghlGetStream(`/conversations/messages/${encodeURIComponent(messageId)}/locations/${encodeURIComponent(locationId)}/recording`, "2021-04-15");
+}
+
+export interface GhlEmailMessage {
+  id: string;
+  status?: string;
+  error?: string;
+  dateAdded?: string;
+  dateUpdated?: string;
+  provider?: string;
+  subject?: string;
+}
+
+/**
+ * One email message by id (GET, read-only). Verified 2026-10-15: unlike the
+ * export, this carries the live engagement status (delivered / opened /
+ * clicked / failed with the provider's error text).
+ */
+export function getEmailMessage(id: string): Promise<GhlResult<GhlEmailMessage | { emailMessage: GhlEmailMessage }>> {
+  return ghlGet(`/conversations/messages/email/${encodeURIComponent(id)}`, "2021-04-15");
 }
 
 /** One contact by id, read-only. Used by drilldowns for email and phone, one call per listed contact. */

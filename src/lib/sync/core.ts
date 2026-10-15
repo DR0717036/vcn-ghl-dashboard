@@ -12,7 +12,9 @@
 //   (is_baseline = 1). Their event_time still comes from GHL, never from the
 //   connection date.
 
+import { conversationsConfig } from "@/lib/conversations";
 import { finishSyncRun, getDb, getState, setState, startSyncRun } from "@/lib/db";
+import { bounceKind } from "@/lib/emailStatus";
 import * as ghl from "@/lib/ghl/read";
 import { mappingConfig, type MilestoneMapping , trackedMilestones } from "@/lib/mapping-config";
 
@@ -94,7 +96,7 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
   const firstSyncDone = Boolean(getState("first_core_sync_at"));
   const phases: PhaseResult[] = [];
 
-  const PHASES = 8;
+  const PHASES = 10;
   try {
     // One log line per phase so a stalled run can be located from the server log.
     const run = async (fn: () => Promise<PhaseResult>) => {
@@ -110,7 +112,9 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
     await run(() => syncAppointments(runStart));
     await run(() => syncMessages(runStart));
     await run(() => syncConversations(runStart));
+    await run(() => syncWorkflows(runStart));
     await run(() => syncEmailTemplates(runStart));
+    await run(() => syncEmailStatus(runStart));
   } finally {
     const okCount = phases.filter((p) => p.ok).length;
     const ok = phases.length === PHASES && okCount === PHASES;
@@ -468,6 +472,34 @@ async function syncConversations(now: string): Promise<PhaseResult> {
   return res;
 }
 
+// ---- workflows: names only (read-only) ----
+
+async function syncWorkflows(now: string): Promise<PhaseResult> {
+  const db = getDb();
+  const res: PhaseResult = { phase: "workflows", ok: false, count: 0, warnings: [] };
+  try {
+    const r = await ghl.listWorkflows();
+    if (!r.ok) throw new Error(`${r.kind}: ${r.error}`);
+    const up = db.prepare(`INSERT INTO workflows (id, name, status, seen_at) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, status = excluded.status, seen_at = excluded.seen_at`);
+    db.exec("BEGIN");
+    try {
+      for (const w of r.data.workflows ?? []) {
+        up.run(w.id, w.name, w.status ?? null, now);
+        res.count += 1;
+      }
+      db.prepare(`DELETE FROM workflows WHERE seen_at <> ?`).run(now);
+      db.exec("COMMIT");
+    } catch (e) {
+      db.exec("ROLLBACK");
+      throw e;
+    }
+    res.ok = true;
+  } catch (e) {
+    res.error = (e as Error).message;
+  }
+  return res;
+}
+
 // ---- email builder templates: names, folder path, and rendered preview HTML (read-only) ----
 
 async function syncEmailTemplates(now: string): Promise<PhaseResult> {
@@ -511,6 +543,112 @@ async function syncEmailTemplates(now: string): Promise<PhaseResult> {
     }
     const ids = new Set(items.map((t) => t.id));
     for (const id of existing.keys()) if (!ids.has(id)) db.prepare(`DELETE FROM email_templates WHERE id = ?`).run(id);
+    res.ok = true;
+  } catch (e) {
+    res.error = (e as Error).message;
+  }
+  return res;
+}
+
+// ---- email engagement status (read-only, one GET per email) --------------------------
+//
+// Two cursors, both resumable across sync runs:
+//   recent pass  — every outbound email sent within lookbackDays, re-read once
+//                  per refreshHours (cursor: email_status_recent_cursor, ascending
+//                  by date_added; done time: email_status_recent_done_at);
+//   backfill     — older emails never read yet, read once and marked final
+//                  (cursor: email_status_backfill_cursor, descending by date_added).
+// Each run does at most maxPerRun reads so a 15-minute sync stays short.
+
+const CONCURRENCY = 4;
+
+async function syncEmailStatus(now: string): Promise<PhaseResult> {
+  const db = getDb();
+  const res: PhaseResult = { phase: "emailStatus", ok: false, count: 0, warnings: [] };
+  const cfg = conversationsConfig().emailStatus;
+  const lookbackIso = new Date(Date.parse(now) - cfg.lookbackDays * 86400000).toISOString();
+  const up = db.prepare(`INSERT INTO email_status (id, date_added, status, error, bounce_kind, checked_at, final) VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET status = excluded.status, error = excluded.error, bounce_kind = excluded.bounce_kind, checked_at = excluded.checked_at, final = excluded.final`);
+  let budget = cfg.maxPerRun;
+  let failures = 0;
+
+  const readOne = async (id: string, dateAdded: string, final: boolean): Promise<boolean> => {
+    const r = await ghl.getEmailMessage(id);
+    if (!r.ok) {
+      failures += 1;
+      if (failures <= 3) res.warnings.push(`${id}: ${r.kind}: ${r.error}`);
+      if (r.kind === "permission") throw new Error(`permission: ${r.error}`);
+      return false;
+    }
+    const e = "emailMessage" in r.data ? r.data.emailMessage : r.data;
+    const status = e.status ?? null;
+    const error = e.error ?? null;
+    up.run(id, dateAdded, status, error, bounceKind(status, error), now, final ? 1 : 0);
+    res.count += 1;
+    return true;
+  };
+
+  try {
+    // 1. freeze anything that has aged out of the lookback window
+    db.prepare(`UPDATE email_status SET final = 1 WHERE final = 0 AND date_added < ?`).run(lookbackIso);
+
+    // 2. recent pass
+    let cursor = getState("email_status_recent_cursor");
+    const doneAt = getState("email_status_recent_done_at");
+    const due = !doneAt || Date.parse(now) - Date.parse(doneAt) >= cfg.refreshHours * 3600000;
+    if (cursor === undefined && due) cursor = lookbackIso;
+    if (cursor !== undefined) {
+      const sel = db.prepare(`SELECT id, date_added FROM messages WHERE channel = 'email' AND direction = 'outbound' AND date_added >= ? AND date_added > ? ORDER BY date_added ASC LIMIT 200`);
+      let processed = 0;
+      while (budget > 0) {
+        const rows = sel.all(lookbackIso, cursor) as { id: string; date_added: string }[];
+        if (rows.length === 0) {
+          setState("email_status_recent_done_at", now);
+          db.prepare(`DELETE FROM sync_state WHERE key = 'email_status_recent_cursor'`).run();
+          cursor = undefined;
+          break;
+        }
+        // GHL answers each single-email read in roughly half a second, so a few run side by side (the HTTP wrapper still paces them)
+        for (let b = 0; b < rows.length && budget > 0; b += CONCURRENCY) {
+          const batch = rows.slice(b, Math.min(rows.length, b + CONCURRENCY, b + budget));
+          await Promise.all(batch.map((row) => readOne(row.id, row.date_added, false)));
+          budget -= batch.length;
+          processed += batch.length;
+          cursor = batch[batch.length - 1].date_added;
+        }
+        setState("email_status_recent_cursor", cursor);
+        if (processed % 1000 === 0) console.log(`[sync] email status recent pass: ${processed} read this run, through ${cursor}`);
+      }
+      console.log(`[sync] email status recent pass: ${processed} read this run${cursor === undefined ? " (pass complete)" : `, resumes at ${cursor}`}`);
+    }
+
+    // 3. backfill older emails once (newest first), marking them final
+    if (budget > 0) {
+      let back = getState("email_status_backfill_cursor") ?? lookbackIso;
+      if (back !== "done") {
+        const sel = db.prepare(`SELECT m.id, m.date_added FROM messages m LEFT JOIN email_status s ON s.id = m.id
+          WHERE m.channel = 'email' AND m.direction = 'outbound' AND m.date_added < ? AND s.id IS NULL ORDER BY m.date_added DESC LIMIT 200`);
+        let processed = 0;
+        while (budget > 0) {
+          const rows = sel.all(back) as { id: string; date_added: string }[];
+          if (rows.length === 0) {
+            setState("email_status_backfill_cursor", "done");
+            back = "done";
+            break;
+          }
+          for (let b = 0; b < rows.length && budget > 0; b += CONCURRENCY) {
+            const batch = rows.slice(b, Math.min(rows.length, b + CONCURRENCY, b + budget));
+            await Promise.all(batch.map((row) => readOne(row.id, row.date_added, true)));
+            budget -= batch.length;
+            processed += batch.length;
+            back = batch[batch.length - 1].date_added;
+          }
+          setState("email_status_backfill_cursor", back);
+        }
+        console.log(`[sync] email status backfill: ${processed} read this run${back === "done" ? " (backfill complete)" : `, resumes before ${back}`}`);
+      }
+    }
+    if (failures > 0) res.warnings.push(`${failures} emails could not be read this run`);
     res.ok = true;
   } catch (e) {
     res.error = (e as Error).message;

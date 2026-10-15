@@ -104,6 +104,28 @@ export function getDb(): DatabaseSync {
 
     -- Email builder templates (read-only list + rendered preview HTML),
     -- refreshed by the sync when GHL reports a newer lastUpdated.
+    -- Engagement status per outbound email, read one email at a time from
+    -- GHL's single-email endpoint (the export never updates it). Recent emails
+    -- are re-read every few hours; older ones are frozen as final.
+    CREATE TABLE IF NOT EXISTS email_status (
+      id          TEXT PRIMARY KEY,
+      date_added  TEXT NOT NULL,
+      status      TEXT,
+      error       TEXT,
+      bounce_kind TEXT,          -- hard | soft | unknown | null
+      checked_at  TEXT NOT NULL,
+      final       INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS email_status_date ON email_status(date_added);
+
+    -- Workflow names (read-only list), used to match email templates to workflows by name.
+    CREATE TABLE IF NOT EXISTS workflows (
+      id        TEXT PRIMARY KEY,
+      name      TEXT NOT NULL,
+      status    TEXT,
+      seen_at   TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS email_templates (
       id            TEXT PRIMARY KEY,
       name          TEXT NOT NULL,

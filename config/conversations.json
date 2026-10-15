@@ -9,6 +9,7 @@
   "withinMinutes": 60,
   "responseLevels": { "_note": "Median response chart colors (business minutes): green under greenUnderMinutes, yellow under yellowUnderMinutes, red at or above.", "greenUnderMinutes": 15, "yellowUnderMinutes": 60 },
   "replyWindowDays": 7,
+  "emailStatus": { "_note": "Email engagement statuses are read one email at a time from GHL (GET /conversations/messages/email/{id}). Emails sent within lookbackDays are re-read every refreshHours; older ones are read once and frozen as final. maxPerRun caps the reads done in one 15-minute sync so a pass resumes across runs.", "lookbackDays": 14, "refreshHours": 6, "maxPerRun": 1200 },
   "optOutKeywords": ["stop", "unsubscribe", "quit", "cancel", "end", "stopall", "opt out", "remove me"],
   "interestKeywords": ["cyber", "IT", "cybersecurity", "cyber security"],
   "optOutRateLevels": { "_note": "Opt-outs ÷ sends per template: at or above high = High (red), at or above medium = Medium (orange), below = Low (green).", "high": 0.025, "medium": 0.01 },
