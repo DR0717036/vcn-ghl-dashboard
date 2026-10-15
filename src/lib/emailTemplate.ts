@@ -22,20 +22,26 @@ import { getDb } from "@/lib/db";
 import { dayKeysBetween, nyDayKey, type DateRange } from "@/lib/dates";
 import { getEnv } from "@/lib/env";
 import { exportMessages } from "@/lib/ghl/read";
-import { analyzeMessaging, dedupeByContact, templateStats, type TemplateRow } from "@/lib/messaging";
+import { matchBuilderTemplate } from "@/lib/emailTemplateMatch";
+import { analyzeMessaging, dedupeByContact, emptyEngagement, templateStats, type EmailEngagement, type TemplateRow } from "@/lib/messaging";
 
 export interface EmailStat {
-  key: "delivered" | "opened" | "clicked" | "softBounced" | "hardBounced" | "unsubscribed" | "spam" | "replied";
+  key: "delivered" | "opened" | "clicked" | "bounced" | "pending" | "unsubscribed" | "spam" | "replied";
   label: string;
   /** null = unavailable in API */
   count: number | null;
   pct: number | null;
   reason?: string;
+  /** Second caption line, e.g. the hard/soft split. */
+  detail?: string;
+  /** What the percentage is a share of. */
+  of: "sends" | "delivered" | "none";
 }
 
 export interface EmailTemplateDrill {
   ok: true;
   row: TemplateRow;
+  engagement: EmailEngagement;
   title: string;
   workflow: string | null;
   sends: number;
@@ -51,48 +57,6 @@ export interface EmailTemplateDrill {
 }
 
 const shortDay = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" });
-
-interface CachedTemplate {
-  id: string;
-  name: string;
-  path: string | null;
-  html: string | null;
-  body_key: string | null;
-}
-
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-
-/** How many of the cluster's opening words appear, in order, near the start of the template's text. */
-function openingOverlap(templateKey: string | null, words: string[]): number {
-  if (!templateKey) return 0;
-  const kw = templateKey.split(" ").slice(0, 80);
-  let i = 0;
-  for (const w of kw) if (w === words[i]) i += 1;
-  return i;
-}
-
-/**
- * Best cached builder template for a cluster (no network): a template whose
- * rendered text opens like the cluster's messages; among several, prefer the
- * one whose name matches the mapped workflow. Needs at least six opening words
- * in order so an unrelated template is never shown.
- */
-function matchBuilderTemplate(workflow: string | null, clusterKey: string): { item: CachedTemplate; html: string } | null {
-  const templates = getDb().prepare(`SELECT id, name, path, html, body_key FROM email_templates WHERE html IS NOT NULL`).all() as unknown as CachedTemplate[];
-  const words = clusterKey.replace(/^[wm]:/, "").split(" ").filter(Boolean).slice(0, 10);
-  const need = Math.min(6, words.length);
-  const w = workflow ? norm(workflow.replace(/\*/g, " ")) : null;
-  let best: { item: CachedTemplate; score: number } | null = null;
-  for (const t of templates) {
-    const overlap = openingOverlap(t.body_key, words);
-    if (overlap < need) continue;
-    const tn = norm(t.name);
-    const nameBonus = w && (tn === w || tn.includes(w) || w.includes(tn)) ? 100 : 0;
-    const score = overlap + nameBonus;
-    if (!best || score > best.score) best = { item: t, score };
-  }
-  return best && best.item.html ? { item: best.item, html: best.item.html } : null;
-}
 
 /** Subject of one sent email, via a narrow read-only export around its send time. */
 async function subjectOf(messageId: string, sentAt: string): Promise<string | null> {
@@ -126,17 +90,18 @@ export async function emailTemplateDrilldown(templateKey: string, range: DateRan
     return { day: d, label: shortDay.format(new Date(Date.UTC(y, m - 1, dd, 12))), ...byDay.get(d)! };
   });
 
-  const unavailable = "unavailable in API";
-  const reason = "GHL does not report this for workflow emails through the API (message status stays \"sent\"; no campaign statistics exist for workflow sends).";
+  const e: EmailEngagement = row.engagement ?? emptyEngagement();
+  const naReason = "GHL's API exposes no unsubscribe or spam-complaint figures for workflow emails.";
+  const share = (c: number, base: number) => (base > 0 ? c / base : null);
   const statList: EmailStat[] = [
-    { key: "delivered", label: "Delivered", count: null, pct: null, reason },
-    { key: "opened", label: "Opened", count: null, pct: null, reason },
-    { key: "clicked", label: "Clicked", count: null, pct: null, reason },
-    { key: "softBounced", label: "Soft bounced", count: null, pct: null, reason },
-    { key: "hardBounced", label: "Hard bounced", count: null, pct: null, reason },
-    { key: "unsubscribed", label: "Unsubscribed", count: null, pct: null, reason },
-    { key: "spam", label: "Spam", count: null, pct: null, reason },
-    { key: "replied", label: "Replied", count: row.replies, pct: row.sends ? row.replies / row.sends : null },
+    { key: "delivered", label: "Delivered", count: e.delivered, pct: share(e.delivered, e.sends), of: "sends" },
+    { key: "opened", label: "Opened", count: e.opened, pct: share(e.opened, e.delivered), of: "delivered" },
+    { key: "clicked", label: "Clicked", count: e.clicked, pct: share(e.clicked, e.delivered), of: "delivered" },
+    { key: "bounced", label: "Bounced", count: e.bounced, pct: share(e.bounced, e.sends), of: "sends", detail: e.bounced ? `hard ${e.hard} · soft ${e.soft}${e.unknownBounce ? ` · unclassified ${e.unknownBounce}` : ""}` : undefined },
+    { key: "pending", label: "Pending", count: e.pending, pct: share(e.pending, e.sends), of: "sends", detail: e.checked < e.sends ? `${e.sends - e.checked} not read yet` : undefined },
+    { key: "unsubscribed", label: "Unsubscribed", count: null, pct: null, reason: naReason, of: "none" },
+    { key: "spam", label: "Spam", count: null, pct: null, reason: naReason, of: "none" },
+    { key: "replied", label: "Replied", count: row.replies, pct: share(row.replies, row.sends), of: "sends" },
   ];
 
   // preview
@@ -161,6 +126,7 @@ export async function emailTemplateDrilldown(templateKey: string, range: DateRan
   return {
     ok: true,
     row,
+    engagement: e,
     title: row.label,
     workflow: row.workflow,
     sends: row.sends,
@@ -173,10 +139,13 @@ export async function emailTemplateDrilldown(templateKey: string, range: DateRan
     notes: [
       "Sends — outbound emails in this cluster during the selected range (best match: emails whose first ten normalized words match).",
       "Replied — the first inbound message from the contact after the send, within the reply window and before the next outbound; rate = replies ÷ sends.",
-      `${unavailable} — GHL's API does not expose delivery, open, click, bounce, unsubscribe, or spam figures for workflow-sent emails: the message export keeps them at status "sent" (${Object.entries(statusCounts).map(([k, v]) => `${k} ${v}`).join(", ")} in this range) and the email campaign statistics endpoint only covers campaigns, of which this account has none. Use "View in GHL" for GHL's own reporting.`,
+      "Delivered / Opened / Clicked / Bounced — GHL's status for each email, read one email at a time from the single-email endpoint by the sync (the export never updates it); delivered counts delivered, opened, clicked, and read; opened and clicked are shares of delivered; bounced is failed or undelivered as a share of sends, split hard (address does not exist) vs soft (temporary) from the provider's error text.",
+      "Pending — sends GHL has not yet reported as delivered or bounced, or that the sync has not read yet; delivered + bounced + pending = sends.",
+      `As of — the latest status check among these sends; emails sent in the last ${a.cfg.emailStatus.lookbackDays} days are re-read every ${a.cfg.emailStatus.refreshHours} hours, older ones are frozen as final.`,
+      "Unavailable in API — GHL exposes no unsubscribe or spam-complaint figures for workflow emails (the per-contact unsubscription endpoint needs a scope this token lacks and is per contact, not per email). Use \"View in GHL\" for GHL's own reporting.",
       "Preview — the email builder template when one matches the workflow name or the opening text; otherwise the body of the most recent send. Rendered in a sandbox: no scripts, no forms, images only.",
       "Daily chart — sends per New York day in the range, with replies to those sends.",
-      "Limitation: template matching is best match (opening words), and GHL does not record which workflow sent a message; the workflow name comes from config/workflow-templates.json.",
+      "Limitation: template matching is best match (opening words), and GHL does not record which workflow sent a message; the workflow name comes from config/workflow-templates.json or a best match by template name.",
     ],
     fetchedAt: new Date().toISOString(),
   };

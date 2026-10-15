@@ -586,3 +586,28 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     "preview from last send"; the subject of the latest send read with a
     narrow export; and How this is counted. Message content is served by
     GET /api/email-template, disabled in production until login exists.
+59. **Email engagement from the single-email endpoint (2026-10-15).** The
+    second verification showed GET /conversations/messages/email/{id}
+    carries live engagement (delivered, opened, clicked, failed with the
+    provider's error text) while the export stays at "sent"; GET
+    /emails/schedule stats cover only email campaigns (none here); the
+    Workflows API has no steps; the LCEmailStats webhook is limited to
+    marketplace apps; the per-contact unsubscription endpoint needs a
+    scope this token lacks; the sender is GHL's built-in LC Email
+    (Mailgun under GHL's account), so there is no third-party key to
+    add. A new emailStatus sync phase reads emails one at a time, four in
+    flight, at most 1,200 per run, re-reading the last 14 days every 6
+    hours and freezing older ones as final; a workflows phase caches
+    workflow names. The Email Reply Rate table gained Delivered (of
+    sends), Opened (of delivered), and Bounced (of sends) columns; the
+    template modal shows Delivered, Opened, Clicked, Bounced (hard / soft
+    / unclassified from the error text), Pending (not yet reported or
+    not yet read), Unsubscribed and Spam as "unavailable in API" with
+    View in GHL, and Replied, with an "as of" time and the share of
+    emails checked. Workflow names: config/workflow-templates.json first,
+    else the email builder template whose text opens like the cluster is
+    matched to the workflow with the same normalized name (punctuation,
+    case, and spacing ignored), shown with a dotted underline as "best
+    match by template name"; "Not mapped" only when nothing matches.
+    Reconciled on 20 templates: delivered + bounced + pending = sends in
+    every modal, and the table columns equal the modal figures.

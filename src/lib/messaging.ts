@@ -21,6 +21,8 @@ import { contactUrl, type DrillResult, type DrillRow } from "@/lib/drilldown";
 import { mappingConfig } from "@/lib/mapping-config";
 import { userNames } from "@/lib/milestones";
 import { businessMinutesBetween, businessWindowLabel, conversationsConfig, type ConversationsConfig } from "@/lib/conversations";
+import { BOUNCED_STATUSES, DELIVERED_STATUSES, OPENED_STATUSES } from "@/lib/emailStatus";
+import { matchBuilderTemplate, workflowByTemplateName } from "@/lib/emailTemplateMatch";
 import { mappingCount, workflowFor } from "@/lib/workflowMap";
 
 export type TagClass = "army" | "veteran" | "both" | "untagged";
@@ -253,9 +255,14 @@ export interface TemplateRow {
   key: string;
   label: string;
   sentBy: "workflow" | "rep" | "mixed" | "none";
-  /** Workflow name from config/workflow-templates.json, or null when not mapped. */
+  /** Workflow name from config/workflow-templates.json, or matched by template name, or null. */
   workflow: string | null;
+  workflowSource: "config" | "template-name" | null;
+  /** Email builder template matched by opening text (email clusters only). */
+  builderTemplate: string | null;
   sends: number;
+  /** Email engagement from GHL's single-email endpoint (email clusters only). */
+  engagement?: EmailEngagement;
   sendsBy: Record<TagClass, number>;
   replies: number;
   repliesBy: Record<TagClass, number>;
@@ -270,8 +277,13 @@ export interface TemplateRow {
 export function capRows(rows: TemplateRow[], max: number): { rows: TemplateRow[]; rest: TemplateRow | null } {
   if (rows.length <= max) return { rows, rest: null };
   const tail = rows.slice(max);
-  const rest: TemplateRow = { key: "__rest", label: `Other templates (${tail.length} more, each with fewer sends)`, sentBy: "mixed", workflow: null, sends: 0, sendsBy: emptyBy(), replies: 0, repliesBy: emptyBy(), optOuts: 0, interests: 0, replyRate: null, optOutRate: null, interestRate: null };
+  const rest: TemplateRow = { key: "__rest", label: `Other templates (${tail.length} more, each with fewer sends)`, sentBy: "mixed", workflow: null, workflowSource: null, builderTemplate: null, sends: 0, sendsBy: emptyBy(), replies: 0, repliesBy: emptyBy(), optOuts: 0, interests: 0, replyRate: null, optOutRate: null, interestRate: null };
   for (const t of tail) {
+    if (t.engagement) {
+      const e = (rest.engagement ??= emptyEngagement());
+      for (const k of ["sends", "checked", "delivered", "opened", "clicked", "bounced", "hard", "soft", "unknownBounce", "pending"] as const) e[k] += t.engagement[k];
+      if (t.engagement.asOf && (!e.asOf || t.engagement.asOf > e.asOf)) e.asOf = t.engagement.asOf;
+    }
     rest.sends += t.sends;
     rest.replies += t.replies;
     rest.optOuts += t.optOuts;
@@ -320,7 +332,7 @@ export function templateStats(a: MessagingAnalysis, dedupedOptOuts: Reply[], ded
   const get = (key: string): TemplateRow => {
     let r = rows.get(key);
     if (!r) {
-      r = { key, label: templateLabel(key, a.sample.get(key) ?? null), sentBy: "none", workflow: key.startsWith("w:") || key.startsWith("m:") ? workflowFor(key) : null, sends: 0, sendsBy: emptyBy(), replies: 0, repliesBy: emptyBy(), optOuts: 0, interests: 0, replyRate: null, optOutRate: null, interestRate: null };
+      r = { key, label: templateLabel(key, a.sample.get(key) ?? null), sentBy: "none", workflow: key.startsWith("w:") || key.startsWith("m:") ? workflowFor(key) : null, workflowSource: null, builderTemplate: null, sends: 0, sendsBy: emptyBy(), replies: 0, repliesBy: emptyBy(), optOuts: 0, interests: 0, replyRate: null, optOutRate: null, interestRate: null };
       rows.set(key, r);
     }
     return r;
@@ -337,6 +349,33 @@ export function templateStats(a: MessagingAnalysis, dedupedOptOuts: Reply[], ded
     const set = sentByOf.get(s.templateKey) ?? new Set<string>();
     set.add(s.source === "workflow" || s.source === "campaign" || s.source === "bulk_actions" ? "workflow" : "rep");
     sentByOf.set(s.templateKey, set);
+  }
+  // email clusters: engagement from the status table, builder template by opening text, workflow by template name
+  if (channel === "email") {
+    const statusRows = emailStatusMap(sendsIn.map((s) => s.id));
+    for (const s of sendsIn) {
+      const r = get(s.templateKey);
+      if (!r.engagement) r.engagement = emptyEngagement();
+      addEngagement(r.engagement, statusRows.get(s.id));
+    }
+    for (const r of rows.values()) {
+      if (r.workflow) r.workflowSource = "config";
+      if (r.key.startsWith("w:") || r.key.startsWith("m:")) {
+        const m = matchBuilderTemplate(r.workflow, r.key);
+        if (m) {
+          r.builderTemplate = m.item.name;
+          if (!r.workflow) {
+            const byName = workflowByTemplateName(m.item.name);
+            if (byName) {
+              r.workflow = byName;
+              r.workflowSource = "template-name";
+            }
+          }
+        }
+      }
+    }
+  } else {
+    for (const r of rows.values()) if (r.workflow) r.workflowSource = "config";
   }
   for (const r of optOutsIn) get(r.templateKey).optOuts += 1;
   for (const r of interestsIn) get(r.templateKey).interests += 1;
@@ -405,19 +444,74 @@ export function keywordCard(a: MessagingAnalysis, kind: "optout" | "interest"): 
   };
 }
 
-/** Delivery-type figures GHL reports for emails in the range, with what is and is not available. */
-export interface EmailStats {
-  sent: number;
-  /** Status counts as GHL exported them (sent / delivered / failed / none). */
-  statusCounts: Record<string, number>;
-  failed: number;
+/** Engagement counts over a set of sends, from the email_status table. */
+export interface EmailEngagement {
+  sends: number;
+  /** Sends with a status row at all. */
+  checked: number;
   delivered: number;
+  opened: number;
+  clicked: number;
+  bounced: number;
+  hard: number;
+  soft: number;
+  unknownBounce: number;
+  /** Not yet delivered or bounced per GHL (pending / scheduled / sent), or never read. */
+  pending: number;
+  /** Latest check time among these sends (ISO), or null. */
+  asOf: string | null;
+  oldestCheck: string | null;
+}
+
+export function emptyEngagement(): EmailEngagement {
+  return { sends: 0, checked: 0, delivered: 0, opened: 0, clicked: 0, bounced: 0, hard: 0, soft: 0, unknownBounce: 0, pending: 0, asOf: null, oldestCheck: null };
+}
+
+interface StatusRow {
+  id: string;
+  status: string | null;
+  bounce_kind: string | null;
+  checked_at: string;
+}
+
+/** email_status rows for the given message ids (chunked IN query). */
+export function emailStatusMap(ids: string[]): Map<string, StatusRow> {
+  const out = new Map<string, StatusRow>();
+  const db = getDb();
+  for (let i = 0; i < ids.length; i += 500) {
+    const chunk = ids.slice(i, i + 500);
+    for (const r of db.prepare(`SELECT id, status, bounce_kind, checked_at FROM email_status WHERE id IN (${chunk.map(() => "?").join(",")})`).all(...chunk) as unknown as StatusRow[]) out.set(r.id, r);
+  }
+  return out;
+}
+
+export function addEngagement(e: EmailEngagement, row: StatusRow | undefined): void {
+  e.sends += 1;
+  if (!row) {
+    e.pending += 1;
+    return;
+  }
+  e.checked += 1;
+  if (!e.asOf || row.checked_at > e.asOf) e.asOf = row.checked_at;
+  if (!e.oldestCheck || row.checked_at < e.oldestCheck) e.oldestCheck = row.checked_at;
+  const s = (row.status ?? "").toLowerCase();
+  if (DELIVERED_STATUSES.has(s)) {
+    e.delivered += 1;
+    if (OPENED_STATUSES.has(s)) e.opened += 1;
+    if (s === "clicked") e.clicked += 1;
+  } else if (BOUNCED_STATUSES.has(s)) {
+    e.bounced += 1;
+    if (row.bounce_kind === "hard") e.hard += 1;
+    else if (row.bounce_kind === "soft") e.soft += 1;
+    else e.unknownBounce += 1;
+  } else e.pending += 1;
 }
 
 export interface ReplyRateResult {
   channel: Channel;
   channelLabel: string;
-  emailStats?: EmailStats;
+  /** Email card: engagement over every send in the range. */
+  engagement?: EmailEngagement;
   rows: TemplateRow[];
   rest: TemplateRow | null;
   templateCount: number;
@@ -437,16 +531,19 @@ export function replyRateCard(a: MessagingAnalysis, channel: Channel): ReplyRate
   const ranked = [...stats.values()].filter((t) => t.sends > 0).sort((x, y) => y.sends - x.sends);
   const { rows, rest } = capRows(ranked, REPLY_ROWS_MAX);
   const totals = ranked.reduce((t, r) => ({ sends: t.sends + r.sends, replies: t.replies + r.replies, optOuts: t.optOuts + r.optOuts, interests: t.interests + r.interests }), { sends: 0, replies: 0, optOuts: 0, interests: 0 });
-  let emailStats: EmailStats | undefined;
+  let engagement: EmailEngagement | undefined;
   if (channel === "email") {
-    const statusCounts: Record<string, number> = {};
-    for (const s of a.sends) if (s.channel === "email") statusCounts[s.status ?? "none"] = (statusCounts[s.status ?? "none"] ?? 0) + 1;
-    emailStats = { sent: totals.sends, statusCounts, failed: statusCounts.failed ?? 0, delivered: statusCounts.delivered ?? 0 };
+    engagement = emptyEngagement();
+    for (const t of ranked) {
+      if (!t.engagement) continue;
+      for (const k of ["sends", "checked", "delivered", "opened", "clicked", "bounced", "hard", "soft", "unknownBounce", "pending"] as const) engagement[k] += t.engagement[k];
+      if (t.engagement.asOf && (!engagement.asOf || t.engagement.asOf > engagement.asOf)) engagement.asOf = t.engagement.asOf;
+    }
   }
   return {
     channel,
     channelLabel: channel === "email" ? "Email" : "SMS",
-    emailStats,
+    engagement,
     rows,
     rest,
     templateCount: ranked.length,
@@ -455,8 +552,12 @@ export function replyRateCard(a: MessagingAnalysis, channel: Channel): ReplyRate
       `Channel — this card covers outbound ${channel === "email" ? "emails" : "SMS messages"} only; the other channel has its own card.`,
       ...(channel === "email"
         ? [
-            "Drilldown — click a template row for its engagement stats (what the API supports), a sandboxed preview of the email with its subject, and daily sends.",
-            "Limitation: GHL's API exposes no delivery, open, click, bounce, unsubscribe, or spam figures for workflow-sent emails; those read \"unavailable in API\" in the drilldown, with a link to GHL's own reporting.",
+            "Delivered — emails whose GHL status is delivered, opened, clicked, or read, as a share of sends. Statuses are read one email at a time from GHL's single-email endpoint by the sync (the export never updates them); recent emails are re-read every few hours, older ones frozen.",
+            "Opened — emails with status opened, clicked, or read, as a share of delivered. Clicked is shown in the drilldown.",
+            "Bounced — emails with status failed or undelivered, as a share of sends; the drilldown splits hard (address does not exist) from soft (temporary) using the provider's error text.",
+            "Pending — sends GHL has not yet reported as delivered or bounced, or not yet read by the sync; delivered + bounced + pending = sends.",
+            "Drilldown — click a template row for the full engagement row with an as-of time, a sandboxed preview of the email with its subject, and daily sends.",
+            "Limitation: GHL's API exposes no unsubscribe or spam-complaint figures for workflow emails; those read \"unavailable in API\" in the drilldown, with a link to GHL's own reporting.",
           ]
         : []),
       `Rows — the ${REPLY_ROWS_MAX} templates with the most sends; the rest are summed into one row.`,
@@ -607,5 +708,5 @@ export function rateLevel(rate: number | null, levels: { high: number; medium: n
 /** One sentence for How this is counted about the workflow mapping's coverage. */
 export function workflowMappingNote(): string {
   const m = mappingCount();
-  return `Workflow — from config/workflow-templates.json, where each template's opening words are paired with the workflow that sends it (${m.named} of ${m.total} entries have a name so far); GHL does not record the workflow on a message, so unmapped templates say "not mapped" until the file is filled in.`;
+  return `Workflow — from config/workflow-templates.json (${m.named} entries), or, for emails, a best match by template name: the email builder template whose text opens like the cluster, matched to the workflow with the same name after ignoring punctuation and case (shown with a dotted underline). GHL does not record the workflow on a message, so templates with no match say "not mapped".`;
 }

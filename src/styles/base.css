@@ -2974,3 +2974,35 @@ section > h2 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+
+/* best-match workflow names and the stat detail line */
+.rep-table td.wf-bestmatch {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.email-stat-detail {
+  margin-top: 2px;
+  color: #aab6c4;
+}
+
+/* the email table carries three extra columns: give its number columns room so headers never clip */
+.rep-table-tpl-wide.rep-table {
+  min-width: 1400px;
+}
+
+.rep-table-tpl-wide .col-num {
+  width: 100px;
+}
+
+.rep-table-tpl-wide .col-tpl {
+  width: 270px;
+}
+
+.rep-table-tpl-wide th {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding-left: 8px;
+  padding-right: 8px;
+}

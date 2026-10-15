@@ -74,7 +74,8 @@ export function EmailTemplateModal({ spec, onClose }: { spec: EmailTemplateSpec;
           <div className="note modal-sub">
             {data ? (
               <>
-                Workflow: <b>{data.workflow ?? "not mapped yet"}</b>
+                Workflow: <b>{data.workflow ?? "not mapped"}</b>
+                {data.row.workflowSource === "template-name" ? <span className="note"> (best match by template name)</span> : null}
                 {data.preview.templateName ? (
                   <>
                     {" "}· Email builder template: <b>{data.preview.templateName}</b>
@@ -92,18 +93,25 @@ export function EmailTemplateModal({ spec, onClose }: { spec: EmailTemplateSpec;
 
         {data ? (
           <>
-            <div className="email-stats" data-check={JSON.stringify({ sends: data.sends, replied: data.stats.find((s) => s.key === "replied")?.count ?? null })}>
+            <div className="email-stats" data-check={JSON.stringify({ sends: data.sends, delivered: data.engagement.delivered, bounced: data.engagement.bounced, pending: data.engagement.pending, replied: data.stats.find((s) => s.key === "replied")?.count ?? null })}>
               {data.stats.map((s) => (
-                <div key={s.key} className={`email-stat${s.count === null ? " is-unavailable" : ""}`} title={s.reason}>
+                <div key={s.key} className={`email-stat${s.count === null ? " is-unavailable" : ""}`} title={s.reason ?? (s.of === "delivered" ? "share of delivered" : s.of === "sends" ? "share of sends" : undefined)}>
                   <div className="email-stat-label">{s.label}</div>
-                  <div className="email-stat-pct">{s.count === null ? "unavailable in API" : pct(s.pct)}</div>
-                  <div className="email-stat-count">{s.count === null ? "—" : `${n(s.count)} of ${n(data.sends)}`}</div>
+                  <div className="email-stat-pct">{s.count === null ? "unavailable in API" : s.pct === null ? "—" : pct(s.pct)}</div>
+                  <div className="email-stat-count">
+                    {s.count === null ? "—" : `${n(s.count)} of ${n(s.of === "delivered" ? data.engagement.delivered : data.sends)}${s.of === "delivered" ? " delivered" : ""}`}
+                    {s.detail ? <div className="email-stat-detail">{s.detail}</div> : null}
+                  </div>
                 </div>
               ))}
             </div>
             {data.ghlUrl ? (
               <div className="email-stats-foot">
-                <span className="note">Delivery and engagement figures are not exposed by GHL's API for workflow emails.</span>
+                <span className="note">
+                  {data.engagement.checked > 0
+                    ? `Engagement as of ${data.engagement.asOf ? new Date(data.engagement.asOf).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"} · ${n(data.engagement.checked)} of ${n(data.sends)} emails checked · unsubscribes and spam are not exposed by GHL's API.`
+                    : "Engagement not read yet for these sends (the sync reads statuses one email at a time); unsubscribes and spam are not exposed by GHL's API."}
+                </span>
                 <a className="btn btn-secondary modal-csv" href={data.ghlUrl} target="_blank" rel="noopener noreferrer">
                   View in GHL
                 </a>

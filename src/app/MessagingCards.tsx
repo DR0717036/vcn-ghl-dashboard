@@ -4,7 +4,7 @@
 
 import { fmtWait } from "@/lib/conversations";
 import { conversationsConfig } from "@/lib/conversations";
-import { rateLevel, TAG_CLASS_LABEL, type InboundChannelResult, type KeywordResult, type RateLevel, type ReplyRateResult, type TagClass, type TemplateRow } from "@/lib/messaging";
+import { rateLevel, TAG_CLASS_LABEL, type EmailEngagement, type InboundChannelResult, type KeywordResult, type RateLevel, type ReplyRateResult, type TagClass, type TemplateRow } from "@/lib/messaging";
 import { KEYWORD_COLUMNS, RepDrilldownRow, type DrilldownSpec } from "./Drilldown";
 import CollapsibleTable from "./CollapsibleTable";
 import DonutChart from "./charts/DonutChart";
@@ -22,11 +22,17 @@ const WORKFLOW_TITLE = "The workflow that sends this template, from config/workf
 /** Workflow cell: the mapped name, or what we do know (manual / not mapped). */
 function WorkflowCell({ row }: { row: TemplateRow }) {
   if (row.key === "__rest" || row.key === "__none") return <td className="note">{DASH}</td>;
+  if (row.workflow && row.workflowSource === "template-name")
+    return (
+      <td className="wf-name wf-bestmatch" title={`Best match by template name: email builder template "${row.builderTemplate ?? ""}" ↔ workflow "${row.workflow}". Add an entry to config/workflow-templates.json to override.`}>
+        {row.workflow}
+      </td>
+    );
   if (row.workflow) return <td className="wf-name">{row.workflow}</td>;
   if (row.sentBy === "rep") return <td className="note">Manual (rep), no workflow</td>;
   return (
     <td className="note wf-unmapped" title={WORKFLOW_TITLE}>
-      Not mapped yet
+      Not mapped
     </td>
   );
 }
@@ -184,6 +190,25 @@ export function KeywordCard({ k, rangeQuery, rangeLabel, className = "" }: { k: 
   );
 }
 
+/** Delivered % of sends, Opened % of delivered, Bounced % of sends; a dash while nothing has been checked. */
+function EngagementCells({ e }: { e?: EmailEngagement }) {
+  if (!e || e.checked === 0)
+    return (
+      <>
+        <td className="num dash" title="No engagement read yet for these sends">{DASH}</td>
+        <td className="num dash">{DASH}</td>
+        <td className="num dash">{DASH}</td>
+      </>
+    );
+  return (
+    <>
+      <td className="num" title={`${n(e.delivered)} of ${n(e.sends)} sends delivered · ${n(e.pending)} pending`}>{pct(e.delivered / e.sends)}</td>
+      <td className="num" title={`${n(e.opened)} of ${n(e.delivered)} delivered opened · ${n(e.clicked)} clicked`}>{e.delivered ? pct(e.opened / e.delivered) : DASH}</td>
+      <td className="num" title={`${n(e.bounced)} of ${n(e.sends)} sends bounced · hard ${n(e.hard)} · soft ${n(e.soft)} · unclassified ${n(e.unknownBounce)}`}>{pct(e.bounced / e.sends, 1)}</td>
+    </>
+  );
+}
+
 export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r: ReplyRateResult; rangeQuery: string; rangeLabel: string; className?: string }) {
   const t = r.totals;
   return (
@@ -208,6 +233,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
       goalLine={<span className="kpi-muted">Goal not set</span>}
       deltaLine={
         <span className="kpi-muted">
+          {r.engagement && r.engagement.checked > 0 ? `${pct(r.engagement.delivered / r.engagement.sends)} delivered · ${r.engagement.delivered ? pct(r.engagement.opened / r.engagement.delivered) : DASH} opened · ${pct(r.engagement.bounced / r.engagement.sends, 1)} bounced · ` : ""}
           {n(t.replies)} replies · {n(t.optOuts)} opt-outs ({pct(t.sends ? t.optOuts / t.sends : null, 1)}) · {n(t.interests)} interest replies ({pct(t.sends ? t.interests / t.sends : null, 1)})
         </span>
       }
@@ -220,6 +246,9 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
               <col className="col-tpl" />
               <col className="col-wf" />
               <col className="col-num" />
+              {r.channel === "email" ? <col className="col-num" /> : null}
+              {r.channel === "email" ? <col className="col-num" /> : null}
+              {r.channel === "email" ? <col className="col-num" /> : null}
               <col className="col-num" />
               <col className="col-num" />
               <col className="col-num" />
@@ -232,6 +261,9 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
                 <th>Template (best match)</th>
                 <th title={WORKFLOW_TITLE}>Workflow</th>
                 <th className="num">Sends</th>
+                {r.channel === "email" ? <th className="num" title="Delivered, opened, clicked, or read ÷ sends">Delivered</th> : null}
+                {r.channel === "email" ? <th className="num" title="Opened, clicked, or read ÷ delivered">Opened</th> : null}
+                {r.channel === "email" ? <th className="num" title="Failed or undelivered ÷ sends">Bounced</th> : null}
                 <th className="num">Replies</th>
                 <th className="num combined">Reply rate</th>
                 <th className="num">Opt-out rate</th>
@@ -249,6 +281,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
                     </td>
                     <WorkflowCell row={row} />
                     <td className="num">{n(row.sends)}</td>
+                    <EngagementCells e={row.engagement} />
                     <td className="num">{n(row.replies)}</td>
                     <td className="num combined">{pct(row.replyRate, 1)}</td>
                     <td className="num">{pct(row.optOutRate, 1)}</td>
@@ -277,6 +310,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
                   <td className="note">{r.rest.label}</td>
                   <td className="note">{DASH}</td>
                   <td className="num">{n(r.rest.sends)}</td>
+                  {r.channel === "email" ? <EngagementCells e={r.rest.engagement} /> : null}
                   <td className="num">{n(r.rest.replies)}</td>
                   <td className="num combined">{pct(r.rest.replyRate, 1)}</td>
                   <td className="num">{pct(r.rest.optOutRate, 1)}</td>
@@ -289,6 +323,7 @@ export function ReplyRateCard({ r, rangeQuery, rangeLabel, className = "" }: { r
                 <td className="rep-name">All {r.channelLabel} templates ({n(r.templateCount)})</td>
                 <td />
                 <td className="num">{n(t.sends)}</td>
+                {r.channel === "email" ? <EngagementCells e={r.engagement} /> : null}
                 <td className="num">{n(t.replies)}</td>
                 <td className="num combined">{pct(t.sends ? t.replies / t.sends : null, 1)}</td>
                 <td className="num">{pct(t.sends ? t.optOuts / t.sends : null, 1)}</td>
