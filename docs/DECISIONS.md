@@ -389,3 +389,10 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     look at the data: outbound calls never carry a voicemail status in
     this account, so machines show up as short completed calls (about
     73% of dials this month at the 60s threshold; 11% are conversations).
+44. **"Conversations / Connected / Dials" (2026-10-15).** The Rep Call
+    Activity main column shows three figures ("70 / 954 / 1,123") with
+    both rates beneath: conversation rate = conversations ÷ dials, answer
+    rate = connected ÷ dials, where connected = conversations + short
+    pickups (every completed call, machines included). The rep drilldown
+    header shows the same three figures and both rates. Reconciled
+    against the modals for every row.

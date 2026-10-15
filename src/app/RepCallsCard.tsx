@@ -12,6 +12,17 @@ import KpiShell from "./KpiShell";
 
 const n = (v: number) => v.toLocaleString("en-US");
 const DASH = "—";
+const pct = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : DASH);
+
+/** "70 / 954 / 1,123" with "6% conversations · 85% connected" beneath. Connected = conversations + short pickups. */
+function TripleCell({ conversations, connected, dials, title, className = "" }: { conversations: number; connected: number; dials: number; title: string; className?: string }) {
+  return (
+    <td className={`num dials ${className}`.trim()} title={title}>
+      {`${n(conversations)} / ${n(connected)} / ${n(dials)}`}
+      <span className="plan-label">{`${pct(conversations, dials)} conversations · ${pct(connected, dials)} connected`}</span>
+    </td>
+  );
+}
 const mins = (sec: number) => fmtMinutes(Math.round(sec / 60));
 
 export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = "" }: { r: RepCallsResult; rangeQuery: string; rangeLabel: string; className?: string }) {
@@ -23,7 +34,9 @@ export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = ""
     title: `${row.name} · ${n(row.dials)} ${row.dials === 1 ? "dial" : "dials"}`,
     subtitle: `Calls in the selected range · ${rangeLabel}`,
     facts: [
-      { label: "Conversations / dials", value: `${n(row.conversations)} / ${n(row.dials)}`, title: `Conversation = completed and at least ${r.conversationMinSeconds}s (estimated by duration).` },
+      { label: "Conversations / connected / dials", value: `${n(row.conversations)} / ${n(row.outcomes.conversation + row.outcomes.short)} / ${n(row.dials)}`, title: `Conversation = completed and at least ${r.conversationMinSeconds}s (estimated by duration); connected = every completed call.` },
+      { label: "Conversation rate", value: pct(row.conversations, row.dials), title: "Conversations ÷ dials." },
+      { label: "Answer rate", value: pct(row.outcomes.conversation + row.outcomes.short, row.dials), title: "Connected (conversations + short pickups) ÷ dials." },
       ...outcomeRows(row.outcomes).map((o) => ({ label: o.label, value: o.value })),
       { label: "Total talk time", value: mins(row.talkSeconds), title: "Recorded duration of connected calls in the range." },
       { label: "Avg talk time per call", value: row.avgSeconds === null ? DASH : fmtDuration(row.avgSeconds), title: `${n(row.connected)} connected calls counted.` },
@@ -39,14 +52,14 @@ export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = ""
 
   const cells = (row: RepCallRow) => (
     <>
-      <td
-        className="num dials"
-        title={`Conversations / outbound dials. Conversation = GHL status completed with a duration of at least ${r.conversationMinSeconds}s (estimated by duration). ${outcomeRows(row.outcomes)
+      <TripleCell
+        conversations={row.conversations}
+        connected={row.outcomes.conversation + row.outcomes.short}
+        dials={row.dials}
+        title={`Conversations / connected / outbound dials. Conversation = GHL status completed with a duration of at least ${r.conversationMinSeconds}s (estimated by duration); connected = every completed call, including short pickups. ${outcomeRows(row.outcomes)
           .map((o) => `${o.label}: ${o.value}`)
           .join(" · ")}`}
-      >
-        {`${n(row.conversations)} / ${n(row.dials)} · ${row.dials > 0 ? `${Math.round((row.conversations / row.dials) * 100)}%` : DASH}`}
-      </td>
+      />
       <td className="status">
         {row.callStatus ? (
           <StatusPill status={row.callStatus} title={row.callGoal ? `Own goal ${Math.round(row.callGoal.full)} dials${row.callGoal.scaled !== row.callGoal.full ? ` (${Math.round(row.callGoal.scaled)} by now)` : ""}` : undefined} />
@@ -87,7 +100,7 @@ export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = ""
           <tr>
             <th>Sales rep</th>
             <th className="num" title={`Conversation = completed and at least ${r.conversationMinSeconds}s, estimated by duration.`}>
-              Conversations / Dials
+              Conversations / Connected / Dials
             </th>
             <th className="status">Call goal</th>
             <th className="num">Total talk time</th>
@@ -111,7 +124,12 @@ export default function RepCallsCard({ r, rangeQuery, rangeLabel, className = ""
           ) : null}
           <tr className="rep-total">
             <td className="rep-name">Team total</td>
-            <td className="num dials">{`${n(r.total.conversations)} / ${n(r.total.dials)} · ${r.total.dials > 0 ? `${Math.round((r.total.conversations / r.total.dials) * 100)}%` : DASH}`}</td>
+            <TripleCell
+              conversations={r.total.conversations}
+              connected={r.total.outcomes.conversation + r.total.outcomes.short}
+              dials={r.total.dials}
+              title="Team conversations / connected / outbound dials."
+            />
             <td className="status">
               <GoalPill goal={r.callsGoal} value={r.total.dials} />
             </td>

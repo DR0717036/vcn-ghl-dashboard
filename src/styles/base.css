@@ -2074,3 +2074,19 @@ section > h2 {
   font-weight: 700;
   opacity: 0.75;
 }
+
+
+/* Conversations / Connected / Dials: three figures on one line, both rates beneath */
+.rep-table-calls .col-num {
+  width: 230px;
+}
+
+.rep-table-calls td.dials {
+  line-height: 1.15;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.rep-table-calls td.dials .plan-label {
+  font-variant-numeric: tabular-nums;
+}
