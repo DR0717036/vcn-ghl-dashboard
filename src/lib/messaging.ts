@@ -79,6 +79,7 @@ interface Msg {
   contact_id: string | null;
   direction: string;
   channel: string;
+  status: string | null;
   date_added: string;
   user_id: string | null;
   source: string | null;
@@ -91,6 +92,7 @@ export interface Send {
   conversationId: string;
   contactId: string | null;
   channel: string;
+  status: string | null;
   at: string;
   userId: string | null;
   source: string | null;
@@ -149,7 +151,7 @@ export function analyzeMessaging(range: DateRange): MessagingAnalysis {
 
   // contact classes for everyone involved
   const contactIds = new Set<string>();
-  const sel = db.prepare(`SELECT id, conversation_id, contact_id, direction, channel, date_added, user_id, source, body, body_key FROM messages WHERE conversation_id = ? AND date_added >= ? AND date_added < ? ORDER BY date_added ASC, id ASC`);
+  const sel = db.prepare(`SELECT id, conversation_id, contact_id, direction, channel, status, date_added, user_id, source, body, body_key FROM messages WHERE conversation_id = ? AND date_added >= ? AND date_added < ? ORDER BY date_added ASC, id ASC`);
   const perConv = new Map<string, Msg[]>();
   for (const cid of convIds) {
     const msgs = sel.all(cid, lookback, horizon) as unknown as Msg[];
@@ -205,7 +207,7 @@ export function analyzeMessaging(range: DateRange): MessagingAnalysis {
           pendingReplies.length = 0;
         }
         if (m.date_added >= start && m.date_added < end) {
-          openSend = { id: m.id, conversationId: cid, contactId: m.contact_id, channel: m.channel, at: m.date_added, userId: m.user_id, source: m.source, templateKey: key, cls: classOf(m.contact_id), repliedAt: null };
+          openSend = { id: m.id, conversationId: cid, contactId: m.contact_id, channel: m.channel, status: m.status, at: m.date_added, userId: m.user_id, source: m.source, templateKey: key, cls: classOf(m.contact_id), repliedAt: null };
           sends.push(openSend);
         } else openSend = null;
       } else {
@@ -403,9 +405,19 @@ export function keywordCard(a: MessagingAnalysis, kind: "optout" | "interest"): 
   };
 }
 
+/** Delivery-type figures GHL reports for emails in the range, with what is and is not available. */
+export interface EmailStats {
+  sent: number;
+  /** Status counts as GHL exported them (sent / delivered / failed / none). */
+  statusCounts: Record<string, number>;
+  failed: number;
+  delivered: number;
+}
+
 export interface ReplyRateResult {
   channel: Channel;
   channelLabel: string;
+  emailStats?: EmailStats;
   rows: TemplateRow[];
   rest: TemplateRow | null;
   templateCount: number;
@@ -425,15 +437,31 @@ export function replyRateCard(a: MessagingAnalysis, channel: Channel): ReplyRate
   const ranked = [...stats.values()].filter((t) => t.sends > 0).sort((x, y) => y.sends - x.sends);
   const { rows, rest } = capRows(ranked, REPLY_ROWS_MAX);
   const totals = ranked.reduce((t, r) => ({ sends: t.sends + r.sends, replies: t.replies + r.replies, optOuts: t.optOuts + r.optOuts, interests: t.interests + r.interests }), { sends: 0, replies: 0, optOuts: 0, interests: 0 });
+  let emailStats: EmailStats | undefined;
+  if (channel === "email") {
+    const statusCounts: Record<string, number> = {};
+    for (const s of a.sends) if (s.channel === "email") statusCounts[s.status ?? "none"] = (statusCounts[s.status ?? "none"] ?? 0) + 1;
+    emailStats = { sent: totals.sends, statusCounts, failed: statusCounts.failed ?? 0, delivered: statusCounts.delivered ?? 0 };
+  }
   return {
     channel,
     channelLabel: channel === "email" ? "Email" : "SMS",
+    emailStats,
     rows,
     rest,
     templateCount: ranked.length,
     totals,
     notes: [
       `Channel — this card covers outbound ${channel === "email" ? "emails" : "SMS messages"} only; the other channel has its own card.`,
+      ...(channel === "email"
+        ? [
+            "Emails sent — outbound emails in the selected range; equals the sends total of the table.",
+            "Bounced — unavailable: GHL's message export never reports a bounce status for this account's emails (the only statuses seen are sent, delivered, failed, and none); failed means GHL could not send, which is not a bounce.",
+            "Delivery rate — unavailable: GHL leaves almost every email at status sent and marks only a handful delivered, so delivered ÷ sent would be meaningless.",
+            "Opt-out rate — unavailable: GHL exposes no email unsubscribe event or dated opt-out (no opt_out message status in the export, and contacts' DND settings carry neither an email entry nor a date).",
+            "Limitation: the figures above are read from GHL's message status field; GHL's own email reporting may hold delivery and bounce data that is not available through the API this dashboard uses.",
+          ]
+        : []),
       `Rows — the ${REPLY_ROWS_MAX} templates with the most sends; the rest are summed into one row.`,
       "Sends — outbound SMS and email messages in the selected range, grouped into templates by their opening words (best match); one-off messages typed by a rep are grouped as manual messages; messages with no text as media only.",
       `Reply — the first inbound message from the contact after the send, within ${a.cfg.replyWindowDays} days and before the next outbound; reply rate = replies ÷ sends.`,

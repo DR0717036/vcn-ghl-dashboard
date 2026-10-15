@@ -2773,3 +2773,66 @@ section > h2 {
   min-width: 44px;
   text-align: right;
 }
+
+
+/* stat tiles inside a card (email delivery figures) */
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-4);
+  margin-top: var(--s-4);
+}
+
+.stat-tile {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-card);
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  min-width: 0;
+}
+
+.stat-tile .label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+.stat-tile .stat-value {
+  font-size: 30px;
+  margin-top: 6px;
+}
+
+.stat-tile .stat-value.unavailable {
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.stat-tile-caption {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.stat-tile.is-unavailable {
+  border-style: dashed;
+}
+
+.legend-tick {
+  background: var(--accent-yellow) !important;
+  width: 14px !important;
+  height: 3px !important;
+  border-radius: 1px !important;
+}
+
+/* value labels above bars read on dark cards */
+.chart-value {
+  fill: var(--text-primary);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .stat-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

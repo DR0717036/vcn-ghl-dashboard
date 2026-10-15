@@ -543,3 +543,18 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     the 60-minute target, reps without a median omitted. All charts are
     inline SVG at a fixed 220px, use the shared palette, and carry a
     data-check attribute; reconciled against their tables.
+56. **Chart fixes and email tiles (2026-10-15).** Program Submissions now
+    uses a vertical grouped bar chart (CA 101 Army blue, IAU App FS2
+    Veteran gold per rep, sorted by Combined) with value labels above,
+    names below (abbreviated when narrow), a short yellow tick per group
+    at the pro-rated goal, a 0-based integer y axis, and a tooltip kept
+    inside the card. Response Time bars scale so the longest reaches
+    about 85% of the width; the 60-minute line is drawn where it falls or
+    pinned at the right edge with an arrow when every median is under it.
+    Email Reply Rate gained four stat tiles for the selected range:
+    Emails sent (equals the table total); Bounced, Delivery rate, and
+    Opt-out rate are "unavailable" with the reason, verified against the
+    docs and the data: GHL's export leaves 99.9% of this account's
+    emails at status "sent" (31 delivered and 24 failed out of 54,000
+    all-time, never "bounced" or "opt_out"), and contacts carry no email
+    DND entry or opt-out date. Nothing is estimated.

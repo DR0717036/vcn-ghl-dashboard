@@ -16,7 +16,7 @@ import type { SubmissionRow, SubmissionsResult } from "@/lib/submissions";
 import { REP_COLUMNS, RepDrilldownRow, type DrilldownSpec } from "./Drilldown";
 import { GoalPill, GoalText, StatusPill } from "./GoalLine";
 import KpiShell, { Delta } from "./KpiShell";
-import StackedBarChart from "./charts/StackedBarChart";
+import GroupedBarChart from "./charts/GroupedBarChart";
 import { programColors } from "@/lib/design";
 
 const n = (v: number) => v.toLocaleString("en-US");
@@ -229,20 +229,20 @@ export default function SubmissionsCard({
       deltaLine={<Delta value={s.value} prev={s.prev} reason={s.prevUnavailableReason} />}
       chart={
         unavailable ? null : (
-          <StackedBarChart
+          <GroupedBarChart
             height={220}
             legend={[
-              { label: "CA 101 (Army CA)", value: 0, color: programColors.army },
-              { label: "IAU App FS2 (Veteran)", value: 0, color: programColors.veteran },
+              { label: "CA 101 (Army CA)", color: programColors.army },
+              { label: "IAU App FS2 (Veteran)", color: programColors.veteran },
             ]}
-            rows={s.rows.map((r) => ({
+            groups={s.rows.map((r) => ({
               label: r.name,
-              segments: [
+              bars: [
                 { label: "CA 101", value: r.ca101, color: programColors.army },
                 { label: "IAU App (FS2)", value: r.fs2, color: programColors.veteran },
               ],
-              marker: repGoalCol && r.userId && g.perRep[r.userId] ? g.perRep[r.userId].scaled : null,
-              markerLabel: "goal by now",
+              tick: repGoalCol && r.userId && g.perRep[r.userId] ? g.perRep[r.userId].scaled : null,
+              tickLabel: "goal by now",
             }))}
           />
         )
