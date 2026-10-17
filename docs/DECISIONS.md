@@ -705,3 +705,33 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     every drilldown equal New Leads Created; outcome rows equal their
     drilldown segments and never exceed the cohort; stale ⊆ still New
     Lead.
+63. **Won Opportunities row rebuilt (2026-10-17, owner request).** Won =
+    opportunity status = won, once per opportunity id; every dollar is
+    Opportunity Value, never cash. Two modes behind a client toggle,
+    default Currently Won (snapshot: status won now, current value and
+    stage) and Became Won During Period (first won event per
+    opportunity in the range, value and stage at the event, reversals
+    listed never subtracted). Headline: every pipeline in the connected
+    sub-account with Army CA, Veteran G.I. Bill, and Partner Inquiry
+    side by side and a donut. Current Programs: Won/Submitted (Fy 27) +
+    Enrolled Won (FS2), with a discrepancy pill for opportunities in
+    those stages whose status is not won, and a list of other won stages
+    so the card plus past semesters equals the program pipelines. Past
+    Semesters: FS1, Summer Session 1, Summer Session 2 with the contacts
+    assumed to have reached the application stage (current stage in the
+    semester's path or lost from it; SS1 and SS2 share one application
+    stage, shown on both rows and counted once). Won by Campaign uses
+    the leads campaign list, Army / Veteran by pipeline, a contact with
+    two tags under each but once in the total. Application → Close Rate:
+    FS2 tracked (milestone events plus current stage), FS1 and SS assumed
+    from current stage (application / accepted / signed stages, the
+    Enrolled/Won stage, and lost opportunities whose last stage was one
+    of those); Lost reads zero because GHL moves lost opportunities to
+    Not Interested / DND / Unqualified, which is stated on the card. Won $
+    by month for 12 months from the first won event per opportunity. The
+    old four-card Won section and src/lib/won.ts were removed; stage ids
+    live in config/won.json. Verified this month in both modes: headline
+    = sum of pipelines (count and $), programs + past semesters = Army +
+    Veteran pipelines, every drilldown equals its card, the campaign
+    total equals the headline, and each close-rate cohort equals won +
+    lost + still + other and its drilldown segments.

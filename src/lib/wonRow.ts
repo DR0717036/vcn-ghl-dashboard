@@ -473,6 +473,7 @@ export function computeCloseRates(): CloseRateResult {
       "FS1 / SS (assumed path) — no stage history exists for these semesters, so the cohort is built from current stages: opportunities now in the group's application, accepted, or signed stage, plus those in its Enrolled/Won stage (the pipeline requires an application first), plus lost opportunities whose last stage was one of those.",
       "Won — status won and sitting in the group's Enrolled/Won stage. Lost — status lost. Still in application — status open and currently in the application, accepted, or signed stage. Other — open but moved to a stage outside the path.",
       "Close rate — Won ÷ cohort. All — every cohort opportunity once, whatever its group.",
+      "Lost reads low or zero — when an opportunity is marked lost, GHL moves it to Not Interested, DND, Unqualified, or Wrong Number, which takes it off the application path; the assumed-path cohorts cannot see those, and the tracked FS2 cohort only sees losses after the first sync.",
       "Limitation: for FS1 and SS a contact who applied and was then moved to an unrelated stage, or reopened, is not in the cohort; for FS2 applications before the first sync are known only if the opportunity still sits in an FS2 stage.",
     ],
   };

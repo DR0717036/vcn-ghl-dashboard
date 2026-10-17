@@ -46,9 +46,11 @@ export default function StackedBarChart({ rows, height = 220, legend, emptyText 
             <span className="legend-swatch" style={{ background: s.color }} /> {s.label}
           </span>
         ))}
-        <span className="legend">
-          <span className="legend-swatch legend-marker" /> goal by now (pro-rated)
-        </span>
+        {rows.some((r) => r.marker !== null && r.marker !== undefined) ? (
+          <span className="legend">
+            <span className="legend-swatch legend-marker" /> goal by now (pro-rated)
+          </span>
+        ) : null}
       </div>
       {rows.length === 0 ? (
         <p className="note">{emptyText}</p>
