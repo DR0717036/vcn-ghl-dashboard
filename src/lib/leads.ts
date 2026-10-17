@@ -39,6 +39,8 @@ import { HISTORY_START } from "@/lib/sync/core";
 export interface LeadsConfig {
   campaignTags: string[];
   deadEndStages: string[];
+  /** Stage names shown as outcome rows (snapshot or stage-history event). */
+  outcomeStages: string[];
   newLeadStageName: string;
   touchWindowDays: number;
   staleAfterDays: number;
@@ -52,6 +54,7 @@ export function leadsConfig(): LeadsConfig {
   return {
     campaignTags: list(c.campaignTags, ["vcn26", "missioncyber", "ccnusa", "ccusa", "ccn26", "vcn26 referral"]),
     deadEndStages: list(c.deadEndStages, ["DND", "Not interested", "Unqualified", "Wrong number", "Flagged"]),
+    outcomeStages: list(c.outcomeStages, ["Applied for GI Bill", "Pending Eligibility", "Appointment NGT (VR&E)", "Appointment NGT (80%< or 6month <))"]),
     newLeadStageName: typeof c.newLeadStageName === "string" && c.newLeadStageName.trim() ? c.newLeadStageName.trim() : "New Lead",
     touchWindowDays: int(c.touchWindowDays, 7),
     staleAfterDays: int(c.staleAfterDays, 2),
@@ -109,6 +112,8 @@ export interface Lead {
   daysInNewLead: number | null;
   /** True when the New Lead time comes from the contact's creation time, not GHL's stage-entry time. */
   daysEstimated: boolean;
+  /** Configured outcome stages this lead has reached, keyed by normalized stage name: in it now (snapshot) and/or recorded there by the stage history (event). */
+  stageHits: Record<string, { snapshot: boolean; event: boolean }>;
 }
 
 export interface Split {
@@ -213,6 +218,24 @@ export function buildLeads(range: DateRange): Lead[] {
     if (!cur || r.t < cur.at) sub.set(r.contact_id, { label: labels.get(r.milestone_key) ?? r.milestone_key, at: r.t });
   }
 
+  // configured outcome stages: ids by normalized name, and stage-history hits per contact (any of the contact's opportunities)
+  const outcomeStageIds = new Map<string, string>(); // stage id → normalized name
+  for (const [id, s] of stages) if (cfg.outcomeStages.some((o) => norm(o) === norm(s.name))) outcomeStageIds.set(id, norm(s.name));
+  const stageEvents = new Map<string, Set<string>>(); // contact id → normalized stage names seen in history
+  if (outcomeStageIds.size > 0) {
+    const ids = [...outcomeStageIds.keys()];
+    for (const r of db
+      .prepare(
+        `SELECT DISTINCT o.contact_id, h.stage_id FROM opportunity_history h JOIN opportunities o ON o.id = h.opportunity_id JOIN contacts c ON c.id = o.contact_id
+          WHERE h.stage_id IN (${ids.map(() => "?").join(",")}) AND c.date_added >= ? AND c.date_added < ?`,
+      )
+      .all(...ids, start, end) as unknown as { contact_id: string; stage_id: string }[]) {
+      const set = stageEvents.get(r.contact_id) ?? new Set<string>();
+      set.add(outcomeStageIds.get(r.stage_id) as string);
+      stageEvents.set(r.contact_id, set);
+    }
+  }
+
   const windowStart = new Date(now.getTime() - cfg.touchWindowDays * 86400000).toISOString();
   return contacts.map((c) => {
     let tags: string[] = [];
@@ -232,6 +255,13 @@ export function buildLeads(range: DateRange): Lead[] {
     const since = stillNewLead ? (stageTime ?? c.date_added) : null;
     const daysInNewLead = since ? (now.getTime() - Date.parse(since)) / 86400000 : null;
     const historyAvailable = Boolean(historyStart) && c.date_added >= (historyStart as string);
+    const stageHits: Record<string, { snapshot: boolean; event: boolean }> = {};
+    for (const name of cfg.outcomeStages) {
+      const key = norm(name);
+      const snapshot = Boolean(opp && outcomeStageIds.get(opp.stageId) === key);
+      const event = Boolean(stageEvents.get(c.id)?.has(key));
+      if (snapshot || event) stageHits[key] = { snapshot, event };
+    }
     return {
       id: c.id,
       name: c.name,
@@ -258,6 +288,7 @@ export function buildLeads(range: DateRange): Lead[] {
       stale: stillNewLead && daysInNewLead !== null && daysInNewLead > cfg.staleAfterDays,
       daysInNewLead,
       daysEstimated: stillNewLead && stageTime === null,
+      stageHits,
     };
   });
 }
@@ -364,6 +395,10 @@ export interface OutcomeRow {
   detail?: string;
   /** "history unavailable" rows: the count covers only leads with history. */
   historyBasis?: number;
+  /** Stage rows: how many are in the stage now and how many the stage history recorded there. */
+  stageBasis?: { snapshot: number; event: number };
+  /** Lost / still-New-Lead rows: a lower share is the better campaign. */
+  lowerIsBetter?: boolean;
 }
 
 export interface OutcomesResult {
@@ -391,6 +426,13 @@ export function computeOutcomes(leads: Lead[]): OutcomesResult {
     return out;
   };
   const row = (key: string, label: string, f: (l: Lead) => boolean, detail?: string, historyBasis?: number): OutcomeRow => ({ key, label, count: leads.filter(f).length, byCampaign: byCampaign(f), detail, historyBasis });
+  const stageRows: OutcomeRow[] = cfg.outcomeStages.map((name) => {
+    const key = norm(name);
+    const hit = (l: Lead) => Boolean(l.stageHits[key]);
+    const snapshot = leads.filter((l) => l.stageHits[key]?.snapshot).length;
+    const event = leads.filter((l) => l.stageHits[key]?.event).length;
+    return { ...row(`stage:${key}`, name, hit), detail: `${n(snapshot)} in stage now · ${n(event)} recorded there since tracking began`, stageBasis: { snapshot, event } };
+  });
   const withHistory = leads.filter((l) => l.historyAvailable).length;
   const humanTouched = leads.filter((l) => l.touchedHuman).length;
   const noOpp = leads.filter((l) => !l.opp).length;
@@ -404,10 +446,11 @@ export function computeOutcomes(leads: Lead[]): OutcomesResult {
       row("working", "In a working stage", (l) => l.working, `${n(deadEnd)} in a dead-end stage · ${n(noOpp)} with no opportunity`),
       row("touched", `Touched in last ${cfg.touchWindowDays} days`, (l) => l.touched, `${n(humanTouched)} by a person (call or manually sent message)`),
       row("appointment", "Appointment booked", (l) => l.appointmentAt !== null),
+      ...stageRows,
       row("submitted", "Submitted (CA 101 or IAU App FS2)", (l) => l.submitted !== null, withHistory < leads.length ? `history unavailable for ${n(leads.length - withHistory)}` : undefined, withHistory),
       row("won", "Won", (l) => l.won),
-      row("lost", "Lost", (l) => l.lost),
-      row("newLead", "Still in New Lead stage", (l) => l.stillNewLead),
+      { ...row("lost", "Lost", (l) => l.lost), lowerIsBetter: true },
+      { ...row("newLead", "Still in New Lead stage", (l) => l.stillNewLead), lowerIsBetter: true },
     ],
     withHistory,
     historyUnavailable: leads.length - withHistory,
@@ -419,9 +462,10 @@ export function computeOutcomes(leads: Lead[]): OutcomesResult {
       `In a working stage — the contact's live opportunity is open and its stage is neither ${cfg.newLeadStageName} nor a dead-end stage (${cfg.deadEndStages.join(", ")}); program pipelines are preferred when a contact has several opportunities.`,
       `Touched — any outbound human call, SMS, or email to the contact in the ${cfg.touchWindowDays} days before now (workflow sends included; the detail shows how many were touched by a person).`,
       "Appointment booked — any non-deleted appointment for the contact, whatever its status.",
+      `Stage rows (${cfg.outcomeStages.join(", ")}) — the lead's current opportunity sits in the stage now (snapshot), or the stage history recorded any of its opportunities there since tracking began (event); one count per lead, with the two bases in the row's tooltip.`,
       "Submitted — the first CA 101 submitted or IAU App Submitted (FS2) milestone event for the contact; the % uses only leads created after milestone tracking began.",
       "Won / Lost — the live opportunity's status. Still in New Lead — its stage is New Lead.",
-      "By campaign — each row split by the contact's campaign tags (a lead with several counts under each) and No campaign tag.",
+      "Campaign columns — each row split by the contact's campaign tags: the count and its share of that campaign's own cohort (its Total created). A lead with two campaign tags appears in both columns but once in All. The best and worst campaign on each row are tinted (lower is better for Lost and Still in New Lead); columns with no leads are skipped.",
       `Limitation: milestone events exist only since the first sync (${coverage().firstCoreSyncAt ? fmtDay(new Date(coverage().firstCoreSyncAt as string)) : "not yet"}), so leads created before that show history unavailable on the Submitted step.`,
     ],
   };
@@ -651,6 +695,7 @@ export function leadsDrilldown(which: string, arg: string, range: DateRange): Dr
     ...(l.won ? ["won"] : []),
     ...(l.lost ? ["lost"] : []),
     ...(l.stillNewLead ? ["newLead"] : []),
+    ...Object.keys(l.stageHits).map((k) => `stage:${k}`),
     ...(l.stale ? ["stale"] : []),
     ...(l.historyAvailable ? [] : ["historyUnavailable"]),
   ];

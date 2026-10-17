@@ -156,6 +156,7 @@ export function LeadMatrixCard({ m, rangeQuery, rangeLabel, className = "" }: { 
 
 // ---- 3. outcomes ---------------------------------------------------------------------------------------
 
+const STAGE_COLOR = "#5b6b7f";
 const OUTCOME_COLORS: Record<string, string> = {
   created: chartSeries[0],
   working: chartSeries[3],
@@ -176,51 +177,76 @@ export function LeadOutcomesCard({ o, rangeQuery, rangeLabel, className = "" }: 
       { key: "historyUnavailable", label: "History unavailable", expected: o.historyUnavailable },
     ],
   });
+  const shortLabel = (r: { key: string; label: string }) =>
+    ({ created: "Created", working: "Working stage", touched: `Touched (${o.touchWindowDays}d)`, appointment: "Appt booked", submitted: "Submitted", won: "Won", lost: "Lost", newLead: "Still New Lead" } as Record<string, string>)[r.key] ??
+    r.label.replace("Appointment NGT (80%< or 6month <))", "NGT (80% / 6mo)").replace("Appointment NGT (VR&E)", "NGT (VR&E)");
   const chartRows = o.rows.map((r) => ({
-    label: ({ created: "Created", working: "Working stage", touched: `Touched (${o.touchWindowDays}d)`, appointment: "Appt booked", submitted: "Submitted", won: "Won", lost: "Lost", newLead: "Still New Lead" } as Record<string, string>)[r.key] ?? r.label,
+    label: shortLabel(r),
     value: r.count,
-    color: OUTCOME_COLORS[r.key] ?? chartSeries[0],
+    color: OUTCOME_COLORS[r.key] ?? STAGE_COLOR,
     text: `${n(r.count)} · ${pct(r.count, basis(r))}`,
-    detail: r.key === "submitted" && r.historyBasis !== undefined && r.historyBasis < o.cohort ? `of ${n(r.historyBasis)} with history` : `of ${n(o.cohort)} created`,
+    detail: r.key === "submitted" && r.historyBasis !== undefined && r.historyBasis < o.cohort ? `of ${n(r.historyBasis)} with history` : r.stageBasis ? `${r.detail} · of ${n(o.cohort)} created` : `of ${n(o.cohort)} created`,
   }));
+  // campaign cohorts = the "Total created" row per campaign column; best / worst per row among campaign columns with leads
+  const createdRow = o.rows[0];
+  const campaignCols = o.columns.slice(0, -1);
+  const rank = (r: { key: string; byCampaign: number[]; lowerIsBetter?: boolean }): { best: number | null; worst: number | null } => {
+    if (r.key === "created") return { best: null, worst: null };
+    const shares = campaignCols.map((_, i) => (createdRow.byCampaign[i] > 0 ? r.byCampaign[i] / createdRow.byCampaign[i] : null));
+    const live = shares.map((s, i) => ({ s, i })).filter((x): x is { s: number; i: number } => x.s !== null);
+    if (live.length < 2) return { best: null, worst: null };
+    const hi = Math.max(...live.map((x) => x.s));
+    const lo = Math.min(...live.map((x) => x.s));
+    if (hi === lo) return { best: null, worst: null };
+    const hiI = live.find((x) => x.s === hi)!.i;
+    const loI = live.find((x) => x.s === lo)!.i;
+    return r.lowerIsBetter ? { best: loI, worst: hiI } : { best: hiI, worst: loI };
+  };
+  const cell = (count: number, den: number, basisTitle: string, cls = "", key?: string) => (
+    <td key={key} className={`num outcome-cell ${cls}`.trim()} title={`${n(count)} of ${n(den)} ${basisTitle}`}>
+      {n(count)}
+      <span className="outcome-pct">{den > 0 ? pct(count, den) : DASH}</span>
+    </td>
+  );
   const table = (
     <div className="scroll kpi-body">
       <table className="stat-breakdown rep-table rep-table-outcomes">
         <thead>
           <tr>
             <th>Outcome (as of last sync)</th>
-            <th className="num combined">Leads</th>
-            <th className="num">% of cohort</th>
-            <th className="campaigns">By campaign tag</th>
+            <th className="num combined" title="Every cohort lead once">
+              All
+            </th>
+            {o.columns.map((c, i) => (
+              <th key={c} className="num" title={c === NO_CAMPAIGN ? `Leads with none of the campaign tags (${n(createdRow.byCampaign[i])})` : `Leads tagged ${c} (${n(createdRow.byCampaign[i])}); % of this campaign's own cohort`}>
+                {c}
+                <span className="plan-label">{n(createdRow.byCampaign[i])} leads</span>
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {o.rows.map((r) => (
-            <tr key={r.key}>
-              <td className="rep-name">
-                <span className="stat-split-dot" style={{ background: OUTCOME_COLORS[r.key] ?? chartSeries[0], marginRight: 6 }} />
-                {r.label}
-                {r.detail ? <span className="plan-label">{r.detail}</span> : null}
-              </td>
-              <td className="num combined">{n(r.count)}</td>
-              <td className="num" title={r.key === "submitted" && r.historyBasis !== undefined && r.historyBasis < o.cohort ? `Of the ${n(r.historyBasis)} leads created after milestone tracking began` : `Of ${n(o.cohort)} leads created`}>
-                {r.key === "submitted" && r.historyBasis === 0 && o.cohort > 0 ? "history unavailable" : pct(r.count, basis(r))}
-                {r.key === "submitted" && r.historyBasis !== undefined && r.historyBasis > 0 && r.historyBasis < o.cohort ? <span className="plan-label">of {n(r.historyBasis)} with history</span> : null}
-              </td>
-              <td className="campaigns">
-                <span className="chips">
-                  {r.byCampaign.map((v, i) =>
-                    v > 0 ? (
-                      <span key={o.columns[i]} className="chip" title={`${o.columns[i]}: ${n(v)}`}>
-                        {o.columns[i]} <b>{n(v)}</b>
-                      </span>
-                    ) : null,
-                  )}
-                  {r.byCampaign.every((v) => v === 0) ? <span className="note">{DASH}</span> : null}
-                </span>
-              </td>
-            </tr>
-          ))}
+          {o.rows.map((r) => {
+            const { best, worst } = rank(r);
+            const allDen = basis(r);
+            return (
+              <tr key={r.key}>
+                <td className="rep-name">
+                  <span className="stat-split-dot" style={{ background: OUTCOME_COLORS[r.key] ?? STAGE_COLOR, marginRight: 6 }} />
+                  {r.label}
+                  {r.detail ? <span className="plan-label">{r.detail}</span> : null}
+                </td>
+                {r.key === "submitted" && r.historyBasis === 0 && o.cohort > 0 ? (
+                  <td className="num combined note" title="No lead in the cohort was created after milestone tracking began">
+                    history unavailable
+                  </td>
+                ) : (
+                  cell(r.count, allDen, r.key === "submitted" && r.historyBasis !== undefined && r.historyBasis < o.cohort ? "leads with milestone history" : "leads created", "combined")
+                )}
+                {o.columns.map((c, i) => cell(r.byCampaign[i], createdRow.byCampaign[i], c === NO_CAMPAIGN ? "leads with no campaign tag" : `leads tagged ${c}`, i === best ? "outcome-best" : i === worst ? "outcome-worst" : "", c))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -231,7 +257,7 @@ export function LeadOutcomesCard({ o, rangeQuery, rangeLabel, className = "" }: 
   return (
     <KpiShell
       id="leadOutcomes"
-      className={`kpi-title-xl ${className}`.trim()}
+      className={`kpi-title-xl kpi-chart-auto ${className}`.trim()}
       title="New Lead Outcomes"
       subtitle={`Cohort: contacts created in period · outcomes as of the last sync · ${rangeLabel}`}
       value={
@@ -253,13 +279,12 @@ export function LeadOutcomesCard({ o, rangeQuery, rangeLabel, className = "" }: 
       pill={<span className="pill pill-neutral">Goal not set</span>}
       goalLine={<span className="kpi-muted">Each row counts cohort contacts on its own; rows overlap.</span>}
       deltaLine={
-        o.historyUnavailable > 0 ? (
-          <span className="kpi-muted">Submitted uses the {n(o.withHistory)} leads created after milestone tracking began; history unavailable for {n(o.historyUnavailable)}.</span>
-        ) : (
-          <span className="kpi-muted">Milestone history covers the whole cohort.</span>
-        )
+        <span className="kpi-muted">
+          Campaign columns show the count and its share of that campaign&apos;s own cohort; a lead with two campaign tags appears in both but once in All.
+          {o.historyUnavailable > 0 ? ` Submitted uses the ${n(o.withHistory)} leads created after milestone tracking began; history unavailable for ${n(o.historyUnavailable)}.` : ""}
+        </span>
       }
-      chart={<HBarChart rows={chartRows} height={250} emptyText="No new leads in this period." />}
+      chart={<HBarChart rows={chartRows} height={Math.max(250, 28 * chartRows.length + 20)} emptyText="No new leads in this period." />}
       body={table}
       footer={<DrilldownButton spec={spec} label="View cohort" />}
       notes={o.notes}
@@ -464,13 +489,22 @@ function SourceTable({ r, rangeQuery, rangeLabel }: { r: SourceReport; rangeQuer
       <td className="num" title={`Both ${n(row.split.both)} · No tag ${n(row.split.untagged)}`}>
         {n(row.split.both + row.split.untagged)}
       </td>
-      <td className="num">{n(row.appointment)}</td>
-      <td className="num" title={row.withHistory < row.leads ? `Of ${n(row.withHistory)} with milestone history` : undefined}>
-        {n(row.submitted)}
-        {row.withHistory < row.leads ? <span className="plan-label">of {n(row.withHistory)} w/ history</span> : null}
+      <td className="num outcome-cell" title={`${n(row.appointment)} of ${n(row.leads)} leads`}>
+        {n(row.appointment)}
+        <span className="outcome-pct">{pct(row.appointment, row.leads)}</span>
       </td>
-      <td className="num">{n(row.won)}</td>
-      <td className="num">{n(row.lost)}</td>
+      <td className="num outcome-cell" title={row.withHistory < row.leads ? `${n(row.submitted)} of ${n(row.withHistory)} leads with milestone history` : `${n(row.submitted)} of ${n(row.leads)} leads`}>
+        {n(row.submitted)}
+        <span className="outcome-pct">{row.withHistory > 0 ? pct(row.submitted, row.withHistory) : DASH}{row.withHistory < row.leads ? ` of ${n(row.withHistory)}` : ""}</span>
+      </td>
+      <td className="num outcome-cell" title={`${n(row.won)} of ${n(row.leads)} leads`}>
+        {n(row.won)}
+        <span className="outcome-pct">{pct(row.won, row.leads)}</span>
+      </td>
+      <td className="num outcome-cell" title={`${n(row.lost)} of ${n(row.leads)} leads`}>
+        {n(row.lost)}
+        <span className="outcome-pct">{pct(row.lost, row.leads)}</span>
+      </td>
       <td className="num combined">{row.conversion === null ? DASH : `${Math.round(row.conversion * 100)}%`}</td>
     </>
   );
@@ -481,7 +515,9 @@ function SourceTable({ r, rangeQuery, rangeLabel }: { r: SourceReport; rangeQuer
           <tr>
             <th>{r.by === "source" ? "Source" : "Campaign tag"}</th>
             <th className="num combined">Leads</th>
-            <th className="num">% of total</th>
+            <th className="num" title="Share of all new leads in the period">
+              Share
+            </th>
             <th className="num">Army</th>
             <th className="num">Veteran</th>
             <th className="num">None / Both</th>
@@ -528,7 +564,7 @@ export function LeadSourceCard({ bySource, byCampaign, rangeQuery, rangeLabel, c
   return (
     <KpiShell
       id="leadSources"
-      className={`kpi-title-xl ${className}`.trim()}
+      className={`kpi-title-xl kpi-chart-auto ${className}`.trim()}
       title="Lead Source Report"
       subtitle={`New leads in period by GHL contact source, then by campaign tag · outcomes as of the last sync · ${rangeLabel}`}
       value={
