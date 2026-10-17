@@ -18,7 +18,7 @@ import { computeCommission } from "@/lib/commission";
 import { computeResponseTimes, computeStale } from "@/lib/conversations";
 import { analyzeMessaging, inboundChannelCard, keywordCard, replyRateCard } from "@/lib/messaging";
 import { computeRepCalls } from "@/lib/repCalls";
-import { computeRates, computeRepAppointments, computeStatusCards } from "@/lib/appointments";
+import { bookedShowedSeries, computeRates, computeRepAppointments, computeStatusCards } from "@/lib/appointments";
 import { computeComparison, computeLosses, computeOutcome } from "@/lib/appointmentOutcomes";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
@@ -32,7 +32,7 @@ import MilestoneCard from "./MilestoneCard";
 import MilestoneKpiCard from "./MilestoneKpiCard";
 import RangePicker from "./RangePicker";
 import RepCallsCard from "./RepCallsCard";
-import { AppointmentRatesCard, AppointmentStatusCard, RepAppointmentsCard } from "./AppointmentCards";
+import { AppointmentRatesCard, AppointmentStatusCard, BookedVsShowedCard, RepAppointmentsCard } from "./AppointmentCards";
 import { AppointmentOutcomeCard, ArmyVsVeteranCard, PostAppointmentLossesCard } from "./AppointmentOutcomeCards";
 import ResponseTimeCard from "./ResponseTimeCard";
 import StaleCard from "./StaleCard";
@@ -72,6 +72,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const apptOutcome = computeOutcome(range);
   const apptLosses = computeLosses(range, apptOutcome);
   const apptCompare = computeComparison(range, apptRates, apptOutcome);
+  const apptSeries = bookedShowedSeries(range);
   // KPI-row milestone cards, in the owner's order: CA 101, Supervisor Approval, then IAU App Submitted (FS2), the
   // current semester. FS1 stays tracked in config (kpiMilestones) as a historical group but has no card (round 3).
   const kpiMilestoneRows = [
@@ -262,6 +263,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="kpi-row cols-2">
             <ArmyVsVeteranCard c={apptCompare} rangeLabel={range.label} />
+            <BookedVsShowedCard s={apptSeries} rangeLabel={range.label} />
           </div>
         </div>
       </section>

@@ -14,6 +14,7 @@
 // appointments are never counted.
 
 import raw from "../../config/appointments.json";
+import { buckets, fill, type Grouping, type TimePoint } from "@/lib/charts";
 import { getDb, readSnapshots } from "@/lib/db";
 import { fmtDay, type DateRange } from "@/lib/dates";
 import { contactUrl, type DrillResult, type DrillRow } from "@/lib/drilldown";
@@ -703,6 +704,32 @@ export function computeRepAppointments(range: DateRange): RepApptsResult {
       ...(bookedGoal ? [`Booking goal — ${bookedGoal.basis}; each rep is judged against their own goal.`] : []),
       "Credit — the appointment's assigned user; appointments with no host, or hosted by users who are not sales reps, are grouped as other users and still count in the team total.",
     ],
+  };
+}
+
+// ---- chart: booked vs showed over time ------------------------------------------------------------------
+
+export interface BookedShowedSeries {
+  grouping: Grouping;
+  /** Bookings created per bucket (booking creation time). */
+  booked: TimePoint[];
+  /** Appointments marked Showed per bucket (scheduled start time). */
+  showed: TimePoint[];
+  bookedTotal: number;
+  showedTotal: number;
+}
+
+/** Booked (by booking time) and Showed (by scheduled time) per day — hourly for one day, weekly beyond 92 days. */
+export function bookedShowedSeries(range: DateRange): BookedShowedSeries {
+  const b = buckets(range.start, range.end);
+  const booked = bookedIn(iso(range.start), iso(range.end)).filter((a) => a.bookedAt);
+  const showed = scheduledIn(iso(range.start), iso(range.end)).filter((a) => a.status === "showed" && a.startTime);
+  return {
+    grouping: b.grouping,
+    booked: fill(b, booked.map((a) => ({ t: a.bookedAt as string, c: 1 }))),
+    showed: fill(b, showed.map((a) => ({ t: a.startTime as string, c: 1 }))),
+    bookedTotal: booked.length,
+    showedTotal: showed.length,
   };
 }
 

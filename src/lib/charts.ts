@@ -37,7 +37,7 @@ function hourLabel(h: number): string {
   return `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? "AM" : "PM"}`;
 }
 
-interface Buckets {
+export interface Buckets {
   grouping: Grouping;
   keys: string[];
   labels: string[];
@@ -45,7 +45,7 @@ interface Buckets {
 }
 
 /** Hourly for a single day, daily up to 92 days, weekly (Monday start) beyond. */
-function buckets(start: Date, end: Date): Buckets {
+export function buckets(start: Date, end: Date): Buckets {
   const days = dayKeysBetween(start, end);
   const grouping: Grouping = days.length <= 1 ? "hourly" : days.length > 92 ? "weekly" : "daily";
   let keys: string[];
@@ -69,7 +69,7 @@ function buckets(start: Date, end: Date): Buckets {
   return { grouping, keys, labels, bucketOf };
 }
 
-function fill(b: Buckets, rows: { t: string; c: number; v?: number }[]): TimePoint[] {
+export function fill(b: Buckets, rows: { t: string; c: number; v?: number }[]): TimePoint[] {
   const counts = new Map<string, { c: number; v: number }>();
   for (const k of b.keys) counts.set(k, { c: 0, v: 0 });
   for (const r of rows) {

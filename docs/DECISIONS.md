@@ -640,3 +640,35 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     counts reconcile with each column. Verified: card totals equal the
     rep-table totals, every drilldown row count equals its headline, and
     every rep segment equals its column (this month).
+61. **Appointment → outcome cohorts and charts (2026-10-17, owner
+    request, stages 2–3).** Cohort = distinct contacts with an appointment
+    scheduled in the range, anchored to their earliest one, judged as of
+    the last sync. Outcomes since the appointment: CA 101 submitted and
+    IAU App Submitted (FS2) from milestone events (GHL stage-entry
+    times); Appointment Booked (NGT) from the stage history the sync
+    observes (time = when seen, within 15 minutes) plus GHL's stage-entry
+    time for opportunities already in the stage at the first sync and
+    still there (config/appointments.json names the stage); Won / Lost
+    from opportunity status with GHL's status-change time. Converted =
+    any of the three, first achievement per contact. Contacts whose
+    appointment was before the first core sync (2026-10-11) are "history
+    unavailable" for the conversion step and excluded from its %, but
+    still counted for Showed, Won, and Lost. The funnel steps (Booked →
+    Showed → Converted → Won, Lost as a side branch) each count cohort
+    contacts on their own, so a no-show can still convert. Post-
+    Appointment Losses: contacts lost after a Showed appointment, listed
+    with the stage they were lost from (the opportunity's current stage,
+    which GHL keeps on a lost opportunity), plus NGT entries in the range
+    and what they became (FS2 / won / lost / still open; a contact can
+    appear under more than one). Army vs Veteran compares show rate,
+    cancel rate, calls per booking, conversion, and won; lower is better
+    for cancel rate and calls per booking; within 0.05 points is a tie.
+    Charts: grouped bars of Booked / Showed / No-show / Cancelled per rep
+    (status colors from the shared palette, dashed tick = booking goal
+    pro-rated), a paired horizontal funnel with Army blue and Veteran
+    gold, and a Booked vs Showed line (booked by booking time, showed by
+    scheduled time). Verified this month: every cohort table figure
+    equals its drilldown segment (Army, Veteran, and total), no outcome
+    or loss is dated before its appointment, the comparison card equals
+    the rates and outcome cards, and every chart equals the table beside
+    it.

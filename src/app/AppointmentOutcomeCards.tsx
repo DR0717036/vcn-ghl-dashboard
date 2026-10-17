@@ -10,6 +10,7 @@ import { fmtDateTime } from "@/lib/dates";
 import { DrilldownButton, LOST_COLUMNS, NGT_COLUMNS, OUTCOME_COLUMNS, type DrilldownSpec } from "./Drilldown";
 import KpiShell from "./KpiShell";
 import { ProgramSplit } from "./AppointmentCards";
+import PairedHBarChart from "./charts/PairedHBarChart";
 
 const n = (v: number) => v.toLocaleString("en-US");
 const DASH = "—";
@@ -154,6 +155,20 @@ export function AppointmentOutcomeCard({ o, rangeQuery, rangeLabel, className = 
         </span>
       }
       deltaLine={<span className="kpi-muted">Cohort of {n(o.cohort.total)} contacts · first achievement per contact · outcomes judged as of the last sync</span>}
+      chart={
+        <PairedHBarChart
+          height={230}
+          seriesA={{ label: "Army", color: programColors.army }}
+          seriesB={{ label: "Veteran", color: programColors.veteran }}
+          rows={[
+            { label: "Booked (cohort)", a: o.cohort.army, b: o.cohort.veteran, aDetail: "100%", bDetail: "100%" },
+            { label: "Showed", a: o.showed.army, b: o.showed.veteran, aDetail: `${pct(o.showed.army, o.cohort.army)} of cohort`, bDetail: `${pct(o.showed.veteran, o.cohort.veteran)} of cohort` },
+            { label: "Converted", a: o.converted.army, b: o.converted.veteran, aDetail: `${pct(o.converted.army, o.withHistory.army)} of ${n(o.withHistory.army)} with history`, bDetail: `${pct(o.converted.veteran, o.withHistory.veteran)} of ${n(o.withHistory.veteran)} with history` },
+            { label: "Won", a: o.won.army, b: o.won.veteran, aDetail: `${pct(o.won.army, o.cohort.army)} of cohort`, bDetail: `${pct(o.won.veteran, o.cohort.veteran)} of cohort` },
+            { label: "Lost (side branch)", a: o.lost.army, b: o.lost.veteran, aDetail: `${pct(o.lost.army, o.cohort.army)} of cohort`, bDetail: `${pct(o.lost.veteran, o.cohort.veteran)} of cohort`, muted: true },
+          ]}
+        />
+      }
       body={body}
       footer={<DrilldownButton spec={spec} label="View cohort" />}
       notes={o.notes}

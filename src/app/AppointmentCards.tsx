@@ -2,8 +2,10 @@
 // by program, the rates card, and the rep appointments table. Same card
 // anatomy, drilldown modal, and CSV pattern as the Submissions row.
 
-import { programColors } from "@/lib/design";
-import { pct, TAG_CLASS_LABEL, type RateLine, type RatesResult, type RepApptRow, type RepApptsResult, type StatusCardResult } from "@/lib/appointments";
+import { chartSeries, programColors } from "@/lib/design";
+import { pct, TAG_CLASS_LABEL, type BookedShowedSeries, type RateLine, type RatesResult, type RepApptRow, type RepApptsResult, type StatusCardResult } from "@/lib/appointments";
+import GroupedBarChart from "./charts/GroupedBarChart";
+import LineChart from "./charts/LineChart";
 import { APPT_COLUMNS, CONFIRMED_COLUMNS, MilestoneDrilldown, RepDrilldownRow, type DrilldownSpec } from "./Drilldown";
 import { GoalPill, GoalText, StatusPill } from "./GoalLine";
 import KpiShell, { Delta } from "./KpiShell";
@@ -183,6 +185,50 @@ export function AppointmentRatesCard({ r, rangeLabel, className = "" }: { r: Rat
   );
 }
 
+// ---- 7c. booked vs showed over time ------------------------------------------------------------------
+
+export function BookedVsShowedCard({ s, rangeLabel, className = "" }: { s: BookedShowedSeries; rangeLabel: string; className?: string }) {
+  const per = s.grouping === "hourly" ? "per hour" : s.grouping === "daily" ? "per day" : "per week";
+  return (
+    <KpiShell
+      id="bookedVsShowed"
+      className={`kpi-title-xl ${className}`.trim()}
+      title="Booked vs Showed"
+      subtitle={`Bookings created and appointments showed ${per} · ${rangeLabel}`}
+      value={
+        <div className="stat-pair">
+          <div>
+            <div className="stat-value">{n(s.bookedTotal)}</div>
+            <div className="note">Booked</div>
+          </div>
+          <div>
+            <div className="stat-value">{n(s.showedTotal)}</div>
+            <div className="note">Showed</div>
+          </div>
+        </div>
+      }
+      pill={<span className="pill pill-neutral">Goal not set</span>}
+      goalLine={<span className="kpi-muted">Booked by booking time · Showed by scheduled time</span>}
+      deltaLine={<span className="kpi-muted">Totals equal the Appointments Booked and Appointments Completed cards.</span>}
+      chart={
+        <LineChart
+          height={260}
+          leftLabel="Appointments"
+          series={[
+            { label: `Booked ${per}`, color: APPT_STATUS_COLORS.booked, points: s.booked.map((p) => ({ label: p.label, value: p.count })), format: "count" },
+            { label: `Showed ${per}`, color: APPT_STATUS_COLORS.showed, points: s.showed.map((p) => ({ label: p.label, value: p.count })), format: "count" },
+          ]}
+        />
+      }
+      notes={[
+        "Booked — bookings created in each bucket (booking creation time), the same count as the Appointments Booked card.",
+        "Showed — appointments scheduled to start in each bucket and marked Showed, the same count as the Appointments Completed card; a booking made on one day usually shows on a later day, so the two lines are not the same appointments.",
+        "Buckets — hourly for a single day, daily up to 92 days, weekly beyond; America/New_York.",
+      ]}
+    />
+  );
+}
+
 // ---- 3. rep appointments ---------------------------------------------------------------------------
 
 function Leader({ what }: { what: string }) {
@@ -193,8 +239,11 @@ function Leader({ what }: { what: string }) {
   );
 }
 
+/** Status colors for the by-rep chart: fixed order from the shared palette, never the program hues. */
+export const APPT_STATUS_COLORS = { booked: chartSeries[0], showed: chartSeries[3], noshow: chartSeries[4], cancelled: chartSeries[2] } as const;
+
 export function RepAppointmentsCard({ r, rangeQuery, rangeLabel, className = "" }: { r: RepApptsResult; rangeQuery: string; rangeLabel: string; className?: string }) {
-  const notes = [...r.notes];
+  const notes = [...r.notes, "Chart — Booked (as host), Showed, No-show, and Cancelled per rep, the same figures as the table; the dashed tick is the rep's booking goal pro-rated to now."];
   if (r.unmatchedReps.length > 0) notes.push(`Unmatched reps — not found among GHL users (check the userId in config/sales-reps.json): ${r.unmatchedReps.map((x) => x.name).join(", ")}.`);
 
   const spec = (row: RepApptRow, user: string): DrilldownSpec => ({
@@ -336,6 +385,28 @@ export function RepAppointmentsCard({ r, rangeQuery, rangeLabel, className = "" 
         </span>
       }
       deltaLine={<span className="kpi-muted">Team calls per booking = all host dials in the window ÷ all bookings, not an average of rep averages.</span>}
+      chart={
+        <GroupedBarChart
+          height={240}
+          legend={[
+            { label: "Booked (as host)", color: APPT_STATUS_COLORS.booked },
+            { label: "Showed", color: APPT_STATUS_COLORS.showed },
+            { label: "No-show", color: APPT_STATUS_COLORS.noshow },
+            { label: "Cancelled", color: APPT_STATUS_COLORS.cancelled },
+          ]}
+          groups={r.rows.map((row) => ({
+            label: row.name,
+            bars: [
+              { label: "Booked", value: row.booked, color: APPT_STATUS_COLORS.booked },
+              { label: "Showed", value: row.showed, color: APPT_STATUS_COLORS.showed },
+              { label: "No-show", value: row.noshow, color: APPT_STATUS_COLORS.noshow },
+              { label: "Cancelled", value: row.cancelled, color: APPT_STATUS_COLORS.cancelled },
+            ],
+            tick: row.bookedGoal ? row.bookedGoal.scaled : null,
+            tickLabel: "booking goal by now",
+          }))}
+        />
+      }
       body={table}
       notes={notes}
     />
