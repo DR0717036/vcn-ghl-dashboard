@@ -672,3 +672,36 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     or loss is dated before its appointment, the comparison card equals
     the rates and outcome cards, and every chart equals the table beside
     it.
+62. **Leads row rebuilt (2026-10-17, owner request).** New leads = contacts
+    created in the selected range (GHL dateAdded), one per contact id;
+    the row now follows the selected range rather than defaulting the
+    New Leads card to Today. Program = current tags (Army / Veteran /
+    Both / No tag). Campaign = current tags matching config/leads.json
+    (vcn26, missioncyber, ccnusa, ccusa, ccusa26, ccn26, vcn26 referral;
+    ccusa26 added because it is the tag actually on contacts); a lead
+    with several campaign tags counts in each column but once in any
+    total. Source = GHL's contact source, trimmed and case-insensitive,
+    blank = Unknown (73% of this month's leads). Outcomes are judged as
+    of the last sync: working stage = live opportunity open and not in
+    New Lead or a dead-end stage (DND, Not interested, Unqualified,
+    Wrong number, Flagged; program pipelines preferred when a contact
+    has several opportunities); touched = any outbound human call, SMS,
+    or email in the last 7 days (workflow sends included, person-only
+    count shown); appointment booked = any non-deleted appointment;
+    submitted = first CA 101 / FS2 milestone, with leads created before
+    the first sync marked history unavailable and excluded from that %;
+    won / lost = opportunity status; stale = still in New Lead for more
+    than 2 days, timed from GHL's stage-entry time, else from creation
+    and marked estimated. Headline cards keep their goals and gain a
+    daily line with the prior period muted. Cards: program × campaign
+    matrix with a donut; outcomes with a horizontal bar chart, campaign
+    chips, and a segmented drilldown; new leads by current assigned user
+    (reps, other users, Unassigned) with a grouped bar chart; stale new
+    leads by user with a drilldown; a source report (leads, share,
+    program split, appointment, submitted, won, lost, conversion =
+    submitted ÷ leads with history) with a donut of the top 6 sources and
+    a conversion bar chart, plus the same table by campaign tag. Verified
+    this month: matrix Total, assigned-by-user total, source total, and
+    every drilldown equal New Leads Created; outcome rows equal their
+    drilldown segments and never exceed the cohort; stale ⊆ still New
+    Lead.

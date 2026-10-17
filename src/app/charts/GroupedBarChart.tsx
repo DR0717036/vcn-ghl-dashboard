@@ -77,9 +77,11 @@ export default function GroupedBarChart({ groups, legend, height = 220, emptyTex
             <span className="legend-swatch" style={{ background: s.color }} /> {s.label}
           </span>
         ))}
-        <span className="legend">
-          <span className="legend-swatch legend-goal" /> goal by now (pro-rated)
-        </span>
+        {groups.some((g) => g.tick !== null && g.tick !== undefined) ? (
+          <span className="legend">
+            <span className="legend-swatch legend-goal" /> goal by now (pro-rated)
+          </span>
+        ) : null}
       </div>
       {groups.length === 0 ? (
         <p className="note">{emptyText}</p>

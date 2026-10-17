@@ -20,7 +20,7 @@ import { analyzeMessaging, inboundChannelCard, keywordCard, replyRateCard } from
 import { computeRepCalls } from "@/lib/repCalls";
 import { bookedShowedSeries, computeRates, computeRepAppointments, computeStatusCards } from "@/lib/appointments";
 import { computeComparison, computeLosses, computeOutcome } from "@/lib/appointmentOutcomes";
-import { buildLeads, computeLeadHeadlines, computeMatrix, computeOutcomes } from "@/lib/leads";
+import { buildLeads, computeAssignedByUser, computeLeadHeadlines, computeMatrix, computeOutcomes, computeSourceReport, computeStaleLeads } from "@/lib/leads";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { computeWon } from "@/lib/won";
@@ -35,7 +35,7 @@ import RangePicker from "./RangePicker";
 import RepCallsCard from "./RepCallsCard";
 import { AppointmentRatesCard, AppointmentStatusCard, BookedVsShowedCard, RepAppointmentsCard } from "./AppointmentCards";
 import { AppointmentOutcomeCard, ArmyVsVeteranCard, PostAppointmentLossesCard } from "./AppointmentOutcomeCards";
-import { LeadHeadlineCard, LeadMatrixCard, LeadOutcomesCard } from "./LeadsCards";
+import { LeadHeadlineCard, LeadMatrixCard, LeadOutcomesCard, LeadsByUserCard, LeadSourceCard, StaleLeadsCard } from "./LeadsCards";
 import ResponseTimeCard from "./ResponseTimeCard";
 import StaleCard from "./StaleCard";
 import { InboundChannelCard, KeywordCard, ReplyRateCard } from "./MessagingCards";
@@ -79,6 +79,10 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const leadHeadlines = computeLeadHeadlines(range);
   const leadMatrix = computeMatrix(leads);
   const leadOutcomes = computeOutcomes(leads);
+  const leadsByUser = computeAssignedByUser(leads);
+  const staleLeads = computeStaleLeads(leads);
+  const leadsBySource = computeSourceReport(leads, "source");
+  const leadsByCampaign = computeSourceReport(leads, "campaign");
   // KPI-row milestone cards, in the owner's order: CA 101, Supervisor Approval, then IAU App Submitted (FS2), the
   // current semester. FS1 stays tracked in config (kpiMilestones) as a historical group but has no card (round 3).
   const kpiMilestoneRows = [
@@ -286,6 +290,15 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="kpi-row cols-1">
             <LeadOutcomesCard o={leadOutcomes} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-1">
+            <LeadsByUserCard a={leadsByUser} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-1">
+            <StaleLeadsCard s={staleLeads} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-1">
+            <LeadSourceCard bySource={leadsBySource} byCampaign={leadsByCampaign} rangeQuery={rangeQuery} rangeLabel={range.label} />
           </div>
         </div>
       </section>
