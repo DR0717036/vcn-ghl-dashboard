@@ -70,6 +70,20 @@ export interface DrillRow {
   tagClass?: string | null;
   /** GHL message id to stream a recording for (connected calls only); null when none can exist. */
   recordingId?: string | null;
+  /** Appointment rows: calendar name, calendar status, scheduled start, who created the booking, GHL reschedule stamp. */
+  calendar?: string | null;
+  apptStatus?: string | null;
+  scheduledFor?: string | null;
+  createdBy?: string | null;
+  rescheduledAt?: string | null;
+  /** Host dials to the contact in the configured window before the booking (booked rows only). */
+  callsBefore?: number | null;
+  /** Outcome rows: the first milestone reached after the appointment and when; lost rows: when the opportunity was lost. */
+  outcomeStage?: string | null;
+  outcomeOn?: string | null;
+  lostOn?: string | null;
+  /** Which counted sets this row belongs to (the modal's segment filter reconciles each with its column). */
+  segments?: string[];
 }
 
 export interface DrillResult {

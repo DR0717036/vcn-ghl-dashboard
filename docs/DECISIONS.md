@@ -611,3 +611,32 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     match by template name"; "Not mapped" only when nothing matches.
     Reconciled on 20 templates: delivered + bounced + pending = sends in
     every modal, and the table columns equal the modal figures.
+60. **Appointments row rebuilt (2026-10-17, owner request).** Four status
+    cards (Booked, Completed, Confirmed snapshot, Cancelled) show the total
+    with Army and Veteran side by side; Army / Veteran come from the
+    contact's tags, except on the Confirmed snapshot where they are the
+    program pipeline whose stage the contact sits in (the tag split is in
+    Details). Goals apply to the total. Each card opens the appointments
+    it counted. A Rates card shows show, no-show, cancel, confirm, and
+    reschedule rates plus "attendance not yet marked" for Army, Veteran,
+    and total. Definitions: show rate = Showed ÷ (Showed + No-show) among
+    appointments scheduled in the period; cancel rate = of bookings
+    created in the period, the share now cancelled (one cohort, so it
+    cannot exceed 100%; the Cancelled card counts by cancellation time, so
+    the two numbers can differ); confirm rate = contacts with an
+    appointment scheduled in the period whose opportunity sits in
+    Appointment Confirmed (VCN) now ÷ such contacts. Rescheduled uses
+    GHL's rescheduledAt stamp, present on 404 of 2,503 cached
+    appointments (the owner expected none); masterEventId is empty on
+    every event, so a reschedule cannot be linked to the slot it
+    replaced and is counted once per appointment. Rep Appointments table:
+    Booked (as host = assigned user), Booked by them (GHL createdBy;
+    booking-widget bookings have no creator), Showed, No-show, Cancelled,
+    show rate, calls per booking (the host's outbound dials to the contact
+    in the 14 days before the booking, config/appointments.json; team =
+    all dials ÷ all bookings), Army / Veteran split, Leader badges for
+    most bookings and best show rate (at least 5 marked appointments).
+    Row click opens the rep's appointments with a segment filter whose
+    counts reconcile with each column. Verified: card totals equal the
+    rep-table totals, every drilldown row count equals its headline, and
+    every rep segment equals its column (this month).

@@ -344,7 +344,7 @@ export function fmtMinutes(min: number | null): string {
 
 // ---- Appointments Booked ---------------------------------------------------------------
 
-function classifyTags(json: string | null): "army" | "veteran" | "both" | "untagged" {
+export function classifyTags(json: string | null): "army" | "veteran" | "both" | "untagged" {
   if (!json) return "untagged";
   let tags: string[] = [];
   try {

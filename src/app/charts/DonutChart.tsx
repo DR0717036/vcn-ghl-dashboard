@@ -17,7 +17,8 @@ export interface DonutSegment {
 const n = (v: number) => v.toLocaleString("en-US");
 
 function arc(cx: number, cy: number, r1: number, r2: number, a0: number, a1: number): string {
-  const p = (r: number, a: number) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  // rounded so the server and the browser produce the same path text (their trig differs in the last digit, which React reports as a hydration mismatch)
+  const p = (r: number, a: number) => [Math.round((cx + r * Math.cos(a)) * 1000) / 1000, Math.round((cy + r * Math.sin(a)) * 1000) / 1000];
   const [x0, y0] = p(r2, a0);
   const [x1, y1] = p(r2, a1);
   const [x2, y2] = p(r1, a1);

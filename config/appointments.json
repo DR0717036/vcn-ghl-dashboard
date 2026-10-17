@@ -1,0 +1,11 @@
+{
+  "_comment": "Appointments row settings (owner request 2026-10-17). callsBeforeBookingDays: 'Calls per booking' counts the host rep's outbound dials to the booked contact in this many days before the booking was created. showRateLeaderMinMarked: a rep needs at least this many appointments marked Showed or No-show before they can be the show-rate leader (so one lucky 1-of-1 does not win). ngtStage: the Veteran pipeline stage read as 'Appointment Booked (NGT)' for the appointment→outcome and NGT follow-up sections; its id must exist in config/ghl-mapping.json. outcomeMilestones: the tracked milestone keys that count as a conversion after an appointment (CA 101 submitted and IAU App Submitted (FS2)); NGT entries are read from the stage history instead.",
+  "callsBeforeBookingDays": 14,
+  "showRateLeaderMinMarked": 5,
+  "ngtStage": {
+    "pipelineId": "d4EiaI9N258GlOTJNIhg",
+    "stageId": "c073f135-22d3-425a-abd7-5efd929b8d78",
+    "stageName": "Appointment Booked (NGT)"
+  },
+  "outcomeMilestones": ["army_ca101", "vet_iau_app_submitted"]
+}

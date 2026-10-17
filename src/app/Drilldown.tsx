@@ -49,7 +49,18 @@ export type ColumnKey =
   | "template"
   | "sentBy"
   | "tagClass"
-  | "sentAt";
+  | "sentAt"
+  | "calendar"
+  | "apptStatus"
+  | "bookedOn"
+  | "scheduledFor"
+  | "callsBefore"
+  | "program"
+  | "createdBy"
+  | "rescheduledAt"
+  | "outcomeStage"
+  | "outcomeOn"
+  | "lostOn";
 
 const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "date" }> = {
   name: { label: "Contact name", kind: "text" },
@@ -84,7 +95,27 @@ const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "dat
   sentBy: { label: "Sent by", kind: "text" },
   tagClass: { label: "Tag", kind: "text" },
   sentAt: { label: "Template sent at", kind: "date" },
+  calendar: { label: "Calendar", kind: "text" },
+  apptStatus: { label: "Status", kind: "text" },
+  bookedOn: { label: "Booked on", kind: "date" },
+  scheduledFor: { label: "Scheduled for", kind: "date" },
+  callsBefore: { label: "Calls before booking", kind: "number" },
+  program: { label: "Program", kind: "text" },
+  createdBy: { label: "Booked by", kind: "text" },
+  rescheduledAt: { label: "Rescheduled at", kind: "date" },
+  outcomeStage: { label: "Outcome reached", kind: "text" },
+  outcomeOn: { label: "Reached on", kind: "date" },
+  lostOn: { label: "Lost on", kind: "date" },
 };
+
+/** Appointments behind a status card or a rep row. */
+export const APPT_COLUMNS: ColumnKey[] = ["name", "program", "calendar", "apptStatus", "assignedUser", "createdBy", "bookedOn", "scheduledFor", "rescheduledAt", "callsBefore"];
+/** Contacts in the Appointment Confirmed (VCN) stage (snapshot). */
+export const CONFIRMED_COLUMNS: ColumnKey[] = ["name", "program", "pipeline", "stage", "status", "assignedUser"];
+/** Appointment → outcome cohort rows. */
+export const OUTCOME_COLUMNS: ColumnKey[] = ["name", "program", "apptStatus", "assignedUser", "scheduledFor", "outcomeStage", "outcomeOn", "status"];
+/** Post-appointment losses. */
+export const LOST_COLUMNS: ColumnKey[] = ["name", "program", "apptStatus", "assignedUser", "scheduledFor", "pipeline", "stage", "lostOn"];
 
 /** KPI card drilldown columns, in the owner's order. */
 export const KPI_COLUMNS: ColumnKey[] = ["name", "source", "assignedUser", "pipeline", "status", "phone", "email", "value", "stage", "tags", "createdOn", "reachedOn"];
@@ -188,6 +219,28 @@ function cell(row: DrillRow, key: ColumnKey): { text: string; sort: string | num
       return { text: row.withinTarget === null || row.withinTarget === undefined ? DASH : row.withinTarget ? "Yes" : "No", sort: row.withinTarget === null || row.withinTarget === undefined ? null : row.withinTarget ? "1" : "0" };
     case "recording":
       return { text: row.recordingId ? "available" : DASH, sort: row.recordingId ? 1 : null };
+    case "bookedOn":
+      return { text: fmtDate(row.reachedOn || null), sort: row.reachedOn || null };
+    case "scheduledFor":
+      return { text: fmtDate(row.scheduledFor ?? null), sort: row.scheduledFor ?? null };
+    case "rescheduledAt":
+      return { text: row.rescheduledAt ? fmtDate(row.rescheduledAt) : DASH, sort: row.rescheduledAt ?? null };
+    case "outcomeOn":
+      return { text: fmtDate(row.outcomeOn ?? null), sort: row.outcomeOn ?? null };
+    case "lostOn":
+      return { text: fmtDate(row.lostOn ?? null), sort: row.lostOn ?? null };
+    case "callsBefore":
+      return { text: row.callsBefore === null || row.callsBefore === undefined ? DASH : row.callsBefore.toLocaleString("en-US"), sort: row.callsBefore ?? null };
+    case "program":
+      return { text: row.tagClass ? row.tagClass : DASH, sort: row.tagClass ?? null };
+    case "calendar":
+      return { text: row.calendar ? row.calendar : DASH, sort: row.calendar ?? null };
+    case "apptStatus":
+      return { text: row.apptStatus ? row.apptStatus : DASH, sort: row.apptStatus ?? null };
+    case "createdBy":
+      return { text: row.createdBy ? row.createdBy : DASH, sort: row.createdBy ?? null };
+    case "outcomeStage":
+      return { text: row.outcomeStage ? row.outcomeStage : "not yet", sort: row.outcomeStage ?? null };
     case "outcome":
       return { text: row.outcome ? row.outcome : DASH, sort: row.outcome ?? null };
     default: {
@@ -447,6 +500,8 @@ export interface DrilldownSpec {
   outcomeFilter?: boolean;
   /** The Conversations figure on the table row; the modal confirms its Conversation rows match it. */
   expectedConversations?: number | null;
+  /** Segment filter: each row carries the segments it was counted in; the selected segment's rows are checked against its expected count. The first segment is selected by default. */
+  segments?: { key: string; label: string; expected?: number | null }[];
   notes?: string[];
   csvName: string;
 }
@@ -455,7 +510,10 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
   const [data, setData] = useState<DrillResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [outcomeFilter, setOutcomeFilter] = useState<"all" | CallOutcome>("all");
-  const allRows = data?.rows ?? [];
+  const [segment, setSegment] = useState<string>(spec.segments?.[0]?.key ?? "all");
+  const everyRow = data?.rows ?? [];
+  const allRows = spec.segments && segment !== "all" ? everyRow.filter((r) => r.segments?.includes(segment)) : everyRow;
+  const segmentExpected = spec.segments ? (segment === "all" ? spec.expected : spec.segments.find((s) => s.key === segment)?.expected) : spec.expected;
   const conversationCount = allRows.filter((r) => r.callOutcome === "conversation").length;
   const shownRows = spec.outcomeFilter && outcomeFilter !== "all" ? allRows.filter((r) => r.callOutcome === outcomeFilter) : allRows;
   const conversationMismatch = data && spec.expectedConversations !== undefined && spec.expectedConversations !== null && conversationCount !== spec.expectedConversations;
@@ -526,6 +584,17 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
           </div>
         ) : null}
 
+        {spec.segments ? (
+          <div className="answer-filter" role="group" aria-label="Segment filter">
+            {[...spec.segments, { key: "all", label: "All rows", expected: undefined }].map((s) => (
+              <button key={s.key} type="button" className={`seg-btn${segment === s.key ? " active" : ""}`} onClick={() => setSegment(s.key)}>
+                {s.label}
+                <span className="seg-count">{(s.key === "all" ? everyRow : everyRow.filter((r) => r.segments?.includes(s.key))).length.toLocaleString("en-US")}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         {spec.outcomeFilter ? (
           <div className="answer-filter" role="group" aria-label="Outcome filter">
             {(
@@ -551,8 +620,8 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
           columns={spec.columns}
           loaded={Boolean(data)}
           error={error}
-          expected={spec.outcomeFilter && outcomeFilter !== "all" ? undefined : spec.expected}
-          expectedLabel="the card"
+          expected={spec.outcomeFilter && outcomeFilter !== "all" ? undefined : segmentExpected}
+          expectedLabel={spec.segments && segment !== "all" ? "the column" : "the card"}
           note={data?.detailsNote}
           csvName={spec.csvName}
           emptyText="No contacts in this period."
@@ -655,6 +724,19 @@ export function MilestoneDrilldown({ spec, children }: { spec: DrilldownSpec; ch
       {children}
       {open ? <DrilldownModal spec={spec} onClose={() => setOpen(false)} /> : null}
     </div>
+  );
+}
+
+/** A button that opens a drilldown (for cards whose body is itself a table, so the whole card cannot be the click target). */
+export function DrilldownButton({ spec, label = "View list" }: { spec: DrilldownSpec; label?: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="kpi-details-btn" onClick={() => setOpen(true)}>
+        {label}
+      </button>
+      {open ? <DrilldownModal spec={spec} onClose={() => setOpen(false)} /> : null}
+    </>
   );
 }
 

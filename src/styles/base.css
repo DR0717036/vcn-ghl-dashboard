@@ -3006,3 +3006,128 @@ section > h2 {
   padding-left: 8px;
   padding-right: 8px;
 }
+
+/* =====================================================================
+   Appointments row rebuild (2026-10-17)
+   ===================================================================== */
+
+/* Army / Veteran side by side under a card's headline number */
+.stat-split {
+  display: flex;
+  gap: var(--s-3);
+  flex-wrap: nowrap;
+  margin-top: 2px;
+}
+
+.stat-split > div {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.stat-split-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  position: relative;
+  top: -1px;
+  flex: 0 0 auto;
+}
+
+.stat-split-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-split-label {
+  font-size: var(--text-small);
+  color: var(--text-secondary);
+}
+
+.modal .stat-split-value {
+  font-size: 22px;
+}
+
+/* three headline numbers on the rep appointments card */
+.stat-pair > div:nth-child(3) {
+  flex: 0 1 auto;
+}
+
+/* rates table */
+.rep-table-rates {
+  min-width: 760px;
+}
+
+.rep-table-rates .col-name {
+  width: 260px;
+}
+
+.rep-table-rates .col-num {
+  width: 130px;
+}
+
+.rep-table-rates .col-basis {
+  width: auto;
+}
+
+.rep-table-rates td.basis,
+.rep-table-rates th.basis {
+  text-align: left;
+  font-size: var(--text-small);
+  white-space: normal;
+  line-height: 1.35;
+  padding-left: var(--s-5);
+}
+
+.rep-table-rates td.num .plan-label,
+.rep-table-appts td.num .plan-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+.rep-table th .stat-split-dot {
+  margin-right: 3px;
+}
+
+/* rep appointments table */
+.rep-table-appts {
+  min-width: 1080px;
+}
+
+.rep-table-appts .col-name {
+  width: 230px;
+}
+
+.rep-table-appts .col-num {
+  width: 104px;
+}
+
+.rep-table-appts .col-split {
+  width: 150px;
+}
+
+.rep-table-appts td.split .split-sep {
+  margin: 0 5px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.leader-badge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  padding: 1px 7px;
+  vertical-align: middle;
+}
+
+.rep-table td.num .plan-label .pill {
+  font-size: 10px;
+  padding: 1px 7px;
+}

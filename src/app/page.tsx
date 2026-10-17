@@ -12,12 +12,13 @@ import { latestSyncRuns } from "@/lib/db";
 import { fmtDateTime, fmtRange, isRangeKey, resolveRange, type RangeKey } from "@/lib/dates";
 import { chartSeries } from "@/lib/design";
 import { mappingConfig } from "@/lib/mapping-config";
-import { computePrimaryKpis, coverage, kpiAppointmentsCancelled, kpiAppointmentsConfirmed, kpiNewLeads } from "@/lib/metrics";
+import { computePrimaryKpis, coverage, kpiNewLeads } from "@/lib/metrics";
 import { computeMilestoneByKey, computeMilestones } from "@/lib/milestones";
 import { computeCommission } from "@/lib/commission";
 import { computeResponseTimes, computeStale } from "@/lib/conversations";
 import { analyzeMessaging, inboundChannelCard, keywordCard, replyRateCard } from "@/lib/messaging";
 import { computeRepCalls } from "@/lib/repCalls";
+import { computeRates, computeRepAppointments, computeStatusCards } from "@/lib/appointments";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { computeWon } from "@/lib/won";
@@ -30,6 +31,7 @@ import MilestoneCard from "./MilestoneCard";
 import MilestoneKpiCard from "./MilestoneKpiCard";
 import RangePicker from "./RangePicker";
 import RepCallsCard from "./RepCallsCard";
+import { AppointmentRatesCard, AppointmentStatusCard, RepAppointmentsCard } from "./AppointmentCards";
 import ResponseTimeCard from "./ResponseTimeCard";
 import StaleCard from "./StaleCard";
 import { InboundChannelCard, KeywordCard, ReplyRateCard } from "./MessagingCards";
@@ -62,8 +64,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const kpi = (key: string) => kpis.find((k) => k.key === key)!;
   const calls = callsSeries(range);
   const talk = talkTimeSeries(range);
-  const confirmed = kpiAppointmentsConfirmed(range);
-  const cancelled = kpiAppointmentsCancelled(range);
+  const apptCards = computeStatusCards(range);
+  const apptRates = computeRates(range);
+  const repAppts = computeRepAppointments(range);
   // KPI-row milestone cards, in the owner's order: CA 101, Supervisor Approval, then IAU App Submitted (FS2), the
   // current semester. FS1 stays tracked in config (kpiMilestones) as a historical group but has no card (round 3).
   const kpiMilestoneRows = [
@@ -235,12 +238,18 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
 
       <section className="band band-light">
         <div className="band-inner">
-          <div className="eyebrow">Appointments</div>
+          <h2 className="row-title">Appointments</h2>
           <div className="kpi-row cols-4">
-            <KpiCard k={kpi("appointmentsBooked")} />
-            <KpiCard k={kpi("appointmentsCompleted")} />
-            <KpiCard k={confirmed} />
-            <KpiCard k={cancelled} />
+            <AppointmentStatusCard c={apptCards.booked} rangeQuery={rangeQuery} rangeLabel={range.label} />
+            <AppointmentStatusCard c={apptCards.completed} rangeQuery={rangeQuery} rangeLabel={range.label} />
+            <AppointmentStatusCard c={apptCards.confirmed} rangeQuery={rangeQuery} rangeLabel={range.label} />
+            <AppointmentStatusCard c={apptCards.cancelled} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-1">
+            <AppointmentRatesCard r={apptRates} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-1">
+            <RepAppointmentsCard r={repAppts} rangeQuery={rangeQuery} rangeLabel={range.label} />
           </div>
         </div>
       </section>
