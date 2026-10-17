@@ -23,7 +23,7 @@ import { computeComparison, computeLosses, computeOutcome } from "@/lib/appointm
 import { buildLeads, computeAssignedByUser, computeLeadHeadlines, computeMatrix, computeOutcomes, computeSourceReport, computeStaleLeads } from "@/lib/leads";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
-import { computeWon } from "@/lib/won";
+import { computeCurrentPrograms, computeHeadline, computePastSemesters, wonOpps } from "@/lib/wonRow";
 import BarChart from "./charts/BarChart";
 import ControlBar from "./ControlBar";
 import FunnelChart from "./charts/FunnelChart";
@@ -41,7 +41,8 @@ import StaleCard from "./StaleCard";
 import { InboundChannelCard, KeywordCard, ReplyRateCard } from "./MessagingCards";
 import Reveal from "./Reveal";
 import SubmissionsCard from "./SubmissionsCard";
-import WonSection from "./WonSection";
+import { CurrentProgramsCard, PastSemestersCard, WonHeadlineCard } from "./WonCards";
+import WonModeSwitch from "./WonModeSwitch";
 
 export const dynamic = "force-dynamic";
 
@@ -110,7 +111,25 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   // Commission on the events inside the selected range (quota and Won (MTD) stay month-to-date).
   const commission = computeCommission(range, now);
   const milestones = computeMilestones(range);
-  const won = computeWon(range);
+  // Won row: both modes are computed so the client toggle can switch without a request.
+  const wonModes = (["current", "period"] as const).map((mode) => {
+    const opps = wonOpps(mode, range);
+    return { mode, headline: computeHeadline(opps, mode, range), programs: computeCurrentPrograms(opps, mode), past: computePastSemesters(opps, mode) };
+  });
+  const wonBlock = (mode: "current" | "period") => {
+    const w = wonModes.find((x) => x.mode === mode)!;
+    return (
+      <>
+        <div className="kpi-row cols-1">
+          <WonHeadlineCard h={w.headline} mode={mode} rangeQuery={rangeQuery} rangeLabel={range.label} />
+        </div>
+        <div className="kpi-row cols-2">
+          <CurrentProgramsCard c={w.programs} mode={mode} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          <PastSemestersCard p={w.past} mode={mode} rangeQuery={rangeQuery} rangeLabel={range.label} />
+        </div>
+      </>
+    );
+  };
   const leadsSeries = newLeadsSeries(range);
   const funnels = programFunnels();
   const hasData = Boolean(cov.lastCoreSyncOkAt);
@@ -303,6 +322,14 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
 
+      <section className="band band-light">
+        <div className="band-inner">
+          <h2 className="row-title">Won Opportunities</h2>
+          <p className="note">Won means opportunity status = won, once per opportunity ID. Dollar figures are Opportunity Value, never cash collected or commission.</p>
+          <WonModeSwitch current={wonBlock("current")} period={wonBlock("period")} periodLabel={range.label} />
+        </div>
+      </section>
+
       <div className="page">
         <section>
           <h2>Program milestones</h2>
@@ -328,7 +355,6 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           </div>
         </section>
 
-        <WonSection report={won} />
 
         <section>
           <h2>Charts</h2>

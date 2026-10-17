@@ -12,6 +12,7 @@ import { callsDrilldown } from "@/lib/repCalls";
 import { repAppointmentsDrilldown, statusCardDrilldown } from "@/lib/appointments";
 import { lostDrilldown, ngtDrilldown, outcomeDrilldown } from "@/lib/appointmentOutcomes";
 import { leadsDrilldown } from "@/lib/leads";
+import { wonDrilldown } from "@/lib/wonRow";
 
 export const dynamic = "force-dynamic";
 
@@ -52,8 +53,10 @@ export async function GET(req: Request): Promise<NextResponse> {
                             ? ngtDrilldown(range)
                             : kind === "leads"
                               ? leadsDrilldown(sp.get("which") ?? "all", sp.get("arg") ?? "", range)
-                              : undefined;
-    if (result === undefined) return NextResponse.json({ ok: false, error: "kind must be milestone, rep, calls, stale, response, keyword, appt, apptRep, apptOutcome, apptLost, apptNgt, or leads." }, { status: 400 });
+                              : kind === "won"
+                                ? wonDrilldown(sp.get("which") ?? "all", sp.get("arg") ?? "", sp.get("mode") === "period" ? "period" : "current", range)
+                                : undefined;
+    if (result === undefined) return NextResponse.json({ ok: false, error: "kind must be milestone, rep, calls, stale, response, keyword, appt, apptRep, apptOutcome, apptLost, apptNgt, leads, or won." }, { status: 400 });
     if (result === null) return NextResponse.json({ ok: false, error: "Unknown milestone or user." }, { status: 404 });
     return NextResponse.json(result);
   } catch (err) {

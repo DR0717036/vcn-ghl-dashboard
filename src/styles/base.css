@@ -3439,3 +3439,84 @@ section > h2 {
   height: auto;
   overflow: visible;
 }
+
+/* =====================================================================
+   Won Opportunities row rebuild (2026-10-17)
+   ===================================================================== */
+.won-mode {
+  display: inline-flex;
+  gap: 6px;
+  margin: var(--s-3) 0 var(--s-5);
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(8, 24, 45, 0.06);
+}
+
+.won-mode .seg-btn {
+  font-size: 13px;
+  padding: 7px 14px;
+}
+
+.won-split {
+  display: flex;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+}
+
+.rep-table-wonCampaign {
+  min-width: 860px;
+}
+
+.rep-table-wonCampaign td.stages,
+.rep-table-wonCampaign th.stages {
+  text-align: left;
+  white-space: normal;
+  font-size: var(--text-small);
+  line-height: 1.35;
+  padding-left: var(--s-5);
+}
+
+.rep-table-wonCampaign td.num .plan-label,
+.rep-table-close td .plan-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.rep-table-close {
+  min-width: 900px;
+}
+
+.rep-table-close td.rep-name {
+  white-space: normal;
+}
+
+.rep-table-past {
+  table-layout: fixed;
+}
+
+.rep-table-past .col-sem {
+  width: 26%;
+}
+
+.rep-table-past .col-num {
+  width: 17%;
+}
+
+.rep-table-past .col-val {
+  width: 23%;
+}
+
+.rep-table-past th.num,
+.rep-table-past td.num {
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.rep-table-past td.rep-name .plan-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}

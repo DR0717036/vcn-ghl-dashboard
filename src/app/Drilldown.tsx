@@ -116,6 +116,8 @@ const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "dat
 
 /** New leads behind a matrix cell, a user row, a source row, or the outcomes card. */
 export const LEAD_COLUMNS: ColumnKey[] = ["name", "program", "campaigns", "source", "assignedUser", "pipeline", "stage", "status", "createdOn", "lastTouch", "outcomeStage"];
+/** Won opportunities (Won Opportunities row). */
+export const WON_ROW_COLUMNS: ColumnKey[] = ["name", "pipeline", "stage", "value", "wonOn", "assignedUser", "program", "campaigns", "tags"];
 /** Stale new leads. */
 export const STALE_LEAD_COLUMNS: ColumnKey[] = ["name", "program", "createdOn", "daysWaiting", "assignedUser", "lastTouch", "campaigns", "source"];
 
