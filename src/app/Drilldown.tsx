@@ -60,7 +60,10 @@ export type ColumnKey =
   | "rescheduledAt"
   | "outcomeStage"
   | "outcomeOn"
-  | "lostOn";
+  | "lostOn"
+  | "campaigns"
+  | "lastTouch"
+  | "daysWaiting";
 
 const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "date" }> = {
   name: { label: "Contact name", kind: "text" },
@@ -106,7 +109,15 @@ const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "dat
   outcomeStage: { label: "Outcome reached", kind: "text" },
   outcomeOn: { label: "Reached on", kind: "date" },
   lostOn: { label: "Lost on", kind: "date" },
+  campaigns: { label: "Campaign tags", kind: "text" },
+  lastTouch: { label: "Last outbound touch", kind: "date" },
+  daysWaiting: { label: "Days waiting", kind: "number" },
 };
+
+/** New leads behind a matrix cell, a user row, a source row, or the outcomes card. */
+export const LEAD_COLUMNS: ColumnKey[] = ["name", "program", "campaigns", "source", "assignedUser", "pipeline", "stage", "status", "createdOn", "lastTouch", "outcomeStage"];
+/** Stale new leads. */
+export const STALE_LEAD_COLUMNS: ColumnKey[] = ["name", "program", "createdOn", "daysWaiting", "assignedUser", "lastTouch", "campaigns", "source"];
 
 /** Appointments behind a status card or a rep row. */
 export const APPT_COLUMNS: ColumnKey[] = ["name", "program", "calendar", "apptStatus", "assignedUser", "createdBy", "bookedOn", "scheduledFor", "rescheduledAt", "callsBefore"];
@@ -243,6 +254,12 @@ function cell(row: DrillRow, key: ColumnKey): { text: string; sort: string | num
       return { text: row.createdBy ? row.createdBy : DASH, sort: row.createdBy ?? null };
     case "outcomeStage":
       return { text: row.outcomeStage ? row.outcomeStage : "not yet", sort: row.outcomeStage ?? null };
+    case "campaigns":
+      return { text: row.campaigns ? row.campaigns : DASH, sort: row.campaigns ?? null };
+    case "lastTouch":
+      return { text: row.lastTouchAt ? fmtDate(row.lastTouchAt) : "none", sort: row.lastTouchAt ?? null };
+    case "daysWaiting":
+      return { text: row.daysWaiting === null || row.daysWaiting === undefined ? DASH : `${row.daysWaiting.toLocaleString("en-US", { maximumFractionDigits: 1 })}${row.daysEstimated ? " (estimated)" : ""}`, sort: row.daysWaiting ?? null };
     case "outcome":
       return { text: row.outcome ? row.outcome : DASH, sort: row.outcome ?? null };
     default: {

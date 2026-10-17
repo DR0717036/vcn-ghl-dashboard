@@ -1,0 +1,9 @@
+{
+  "_comment": "Leads row settings (owner request 2026-10-17). campaignTags: contact tags that identify a campaign, matched exactly (case-insensitive) against the contact's current tags; a lead with several campaign tags counts in each tag's column but once in totals. 'ccusa26' was added because that is the tag actually present on contacts (the owner's list said 'ccusa'); remove it if it is not a campaign. deadEndStages: pipeline stage names (any pipeline, case-insensitive) that mean the lead is parked, so a lead sitting in one is not 'in a working stage'. newLeadStageName: the stage name that means untouched. touchWindowDays: 'Touched' = any outbound call, SMS, or email to the contact within this many days before now. staleAfterDays: a lead still in New Lead for more than this many days is stale. topSources: how many sources the source donut shows before folding the rest into Other.",
+  "campaignTags": ["vcn26", "missioncyber", "ccnusa", "ccusa", "ccusa26", "ccn26", "vcn26 referral"],
+  "deadEndStages": ["DND", "Not interested", "Unqualified", "Wrong number", "Flagged"],
+  "newLeadStageName": "New Lead",
+  "touchWindowDays": 7,
+  "staleAfterDays": 2,
+  "topSources": 6
+}

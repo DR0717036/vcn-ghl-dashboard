@@ -3311,3 +3311,93 @@ section > h2 {
 .modal .kpi-pill {
   flex-basis: auto;
 }
+
+/* =====================================================================
+   Leads row rebuild (2026-10-17)
+   ===================================================================== */
+.rep-table-matrix,
+.rep-table-outcomes,
+.rep-table-users,
+.rep-table-sources {
+  min-width: 0;
+  table-layout: auto;
+}
+
+.rep-table-matrix td.num,
+.rep-table-users td.num,
+.rep-table-sources td.num {
+  font-size: 15px;
+}
+
+.rep-table-matrix th.num,
+.rep-table-users th.num,
+.rep-table-sources th.num {
+  white-space: nowrap;
+}
+
+.rep-table-matrix tr.matrix-actions td {
+  height: 36px;
+  font-size: 11px;
+  border-bottom: 0;
+}
+
+.rep-table-matrix tr.matrix-actions .kpi-details-btn {
+  font-size: 11px;
+}
+
+.rep-table-outcomes td.campaigns,
+.rep-table-outcomes th.campaigns {
+  text-align: left;
+  white-space: normal;
+  padding-left: var(--s-5);
+}
+
+.rep-table-outcomes td.campaigns .chips {
+  gap: 4px 6px;
+}
+
+.rep-table-outcomes td.campaigns .chip {
+  font-size: 11px;
+  padding: 1px 8px;
+}
+
+.rep-table-outcomes td.campaigns .chip b {
+  margin-left: 4px;
+}
+
+.rep-table-outcomes td.rep-name,
+.rep-table-sources td.rep-name,
+.rep-table-users td.rep-name,
+.rep-table-users td.note {
+  white-space: normal;
+}
+
+.rep-table-outcomes td.rep-name .plan-label,
+.rep-table-users td .plan-label,
+.rep-table-sources td .plan-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.rep-table-sources {
+  min-width: 980px;
+}
+
+.source-charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--s-5);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .source-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.lead-donut {
+  max-width: 560px;
+}

@@ -20,6 +20,7 @@ import { analyzeMessaging, inboundChannelCard, keywordCard, replyRateCard } from
 import { computeRepCalls } from "@/lib/repCalls";
 import { bookedShowedSeries, computeRates, computeRepAppointments, computeStatusCards } from "@/lib/appointments";
 import { computeComparison, computeLosses, computeOutcome } from "@/lib/appointmentOutcomes";
+import { buildLeads, computeLeadHeadlines, computeMatrix, computeOutcomes } from "@/lib/leads";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { computeWon } from "@/lib/won";
@@ -34,6 +35,7 @@ import RangePicker from "./RangePicker";
 import RepCallsCard from "./RepCallsCard";
 import { AppointmentRatesCard, AppointmentStatusCard, BookedVsShowedCard, RepAppointmentsCard } from "./AppointmentCards";
 import { AppointmentOutcomeCard, ArmyVsVeteranCard, PostAppointmentLossesCard } from "./AppointmentOutcomeCards";
+import { LeadHeadlineCard, LeadMatrixCard, LeadOutcomesCard } from "./LeadsCards";
 import ResponseTimeCard from "./ResponseTimeCard";
 import StaleCard from "./StaleCard";
 import { InboundChannelCard, KeywordCard, ReplyRateCard } from "./MessagingCards";
@@ -73,6 +75,10 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const apptLosses = computeLosses(range, apptOutcome);
   const apptCompare = computeComparison(range, apptRates, apptOutcome);
   const apptSeries = bookedShowedSeries(range);
+  const leads = buildLeads(range);
+  const leadHeadlines = computeLeadHeadlines(range);
+  const leadMatrix = computeMatrix(leads);
+  const leadOutcomes = computeOutcomes(leads);
   // KPI-row milestone cards, in the owner's order: CA 101, Supervisor Approval, then IAU App Submitted (FS2), the
   // current semester. FS1 stays tracked in config (kpiMilestones) as a historical group but has no card (round 3).
   const kpiMilestoneRows = [
@@ -270,10 +276,16 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
 
       <section className="band band-dark">
         <div className="band-inner">
-          <div className="eyebrow">Leads</div>
+          <h2 className="row-title">Leads</h2>
           <div className="kpi-row cols-2">
-            <KpiCard k={kpi("leadsAssigned")} />
-            <KpiCard k={kpi("newLeads")} />
+            <LeadHeadlineCard k={leadHeadlines.newLeads} s={leadHeadlines.newSeries} title="New Leads Created" subtitle={`Contacts created in period · ${range.label}`} priorLabel={priorLabel} rangeQuery={rangeQuery} rangeLabel={range.label} />
+            <LeadHeadlineCard k={leadHeadlines.assigned} s={leadHeadlines.assignedSeries} title="Leads Assigned" subtitle={`Contacts assigned to a user in period · ${range.label}`} priorLabel={priorLabel} />
+          </div>
+          <div className="kpi-row cols-1">
+            <LeadMatrixCard m={leadMatrix} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-1">
+            <LeadOutcomesCard o={leadOutcomes} rangeQuery={rangeQuery} rangeLabel={range.label} />
           </div>
         </div>
       </section>

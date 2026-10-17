@@ -84,6 +84,11 @@ export interface DrillRow {
   lostOn?: string | null;
   /** Which counted sets this row belongs to (the modal's segment filter reconciles each with its column). */
   segments?: string[];
+  /** Lead rows: matched campaign tags, last outbound touch, days in New Lead (estimated from creation when no stage time). */
+  campaigns?: string | null;
+  lastTouchAt?: string | null;
+  daysWaiting?: number | null;
+  daysEstimated?: boolean;
 }
 
 export interface DrillResult {
