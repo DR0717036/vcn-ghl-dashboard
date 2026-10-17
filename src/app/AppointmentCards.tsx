@@ -6,6 +6,7 @@ import { chartSeries, programColors } from "@/lib/design";
 import { pct, TAG_CLASS_LABEL, type BookedShowedSeries, type RateLine, type RatesResult, type RepApptRow, type RepApptsResult, type StatusCardResult } from "@/lib/appointments";
 import GroupedBarChart from "./charts/GroupedBarChart";
 import LineChart from "./charts/LineChart";
+import MiniDonut from "./charts/MiniDonut";
 import { APPT_COLUMNS, CONFIRMED_COLUMNS, MilestoneDrilldown, RepDrilldownRow, type DrilldownSpec } from "./Drilldown";
 import { GoalPill, GoalText, StatusPill } from "./GoalLine";
 import KpiShell, { Delta } from "./KpiShell";
@@ -37,13 +38,25 @@ export function AppointmentStatusCard({ c, rangeQuery, rangeLabel, className = "
   const army = c.byPipeline ? c.byPipeline.army : c.split.army;
   const veteran = c.byPipeline ? c.byPipeline.veteran : c.split.veteran;
   const splitTitle = c.byPipeline ? "pipeline" : "contact tag";
+  // donut: Army and Veteran as on the headline (pipeline for the snapshot, tag otherwise), Both and No tag as thin gray slices
+  const other = c.byPipeline ? Math.max(0, c.split.total - army - veteran) : 0;
+  const donutSegments = [
+    { label: "Army", value: army, color: programColors.army },
+    { label: "Veteran", value: veteran, color: programColors.veteran },
+    ...(c.byPipeline ? [{ label: "Neither pipeline", value: other, color: "var(--mini-donut-gray)" }] : [{ label: "Both (army + veteran)", value: c.split.both, color: "var(--mini-donut-gray)" }, { label: "No tag", value: c.split.untagged, color: "var(--mini-donut-gray-2)" }]),
+  ];
+  const donutSum = donutSegments.reduce((s, x) => s + x.value, 0);
+  const armyShare = donutSum > 0 ? `${Math.round((army / donutSum) * 100)}%` : "—";
   const headline = (
-    <>
-      <div className="stat-value">{n(c.split.total)}</div>
-      <ProgramSplit army={army} veteran={veteran} armyTitle={`Army by ${splitTitle}`} veteranTitle={`Veteran by ${splitTitle}`} />
-    </>
+    <div className="stat-with-donut">
+      <div className="stat-with-donut-text">
+        <div className="stat-value">{n(c.split.total)}</div>
+        <ProgramSplit army={army} veteran={veteran} armyTitle={`Army by ${splitTitle}`} veteranTitle={`Veteran by ${splitTitle}`} />
+      </div>
+      <MiniDonut segments={donutSegments} centerValue={armyShare} centerLabel="Army" ariaLabel={`${c.title} by ${splitTitle}`} />
+    </div>
   );
-  const notes = [...c.notes];
+  const notes = [...c.notes, `Donut — Army and Veteran shares by ${splitTitle}, with ${c.byPipeline ? "contacts counted in neither program pipeline" : "Both and No tag"} as thin gray slices; the center is the Army share of the headline.`];
   if (c.goal) notes.push(`Goal basis — ${c.goal.basis}.`);
   const pill = <GoalPill goal={c.goal} value={c.split.total} />;
   const facts = [
@@ -71,7 +84,7 @@ export function AppointmentStatusCard({ c, rangeQuery, rangeLabel, className = "
     <MilestoneDrilldown spec={spec}>
       <KpiShell
         id={c.key}
-        className={`kpi-clickable ${className}`.trim()}
+        className={`kpi-clickable kpi-donut ${className}`.trim()}
         title={c.title}
         subtitle={c.subtitle}
         value={headline}

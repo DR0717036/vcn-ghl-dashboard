@@ -3222,3 +3222,92 @@ section > h2 {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+/* small program-split donut beside the headline number on the appointment status cards */
+:root {
+  --mini-donut-gray: #8a97a8;
+  --mini-donut-gray-2: #b9c3d0;
+  --mini-donut-empty: rgba(8, 24, 45, 0.12);
+}
+
+.band-dark .mini-donut {
+  --mini-donut-empty: rgba(255, 255, 255, 0.12);
+}
+
+.stat-with-donut {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.stat-with-donut-text {
+  min-width: 0;
+}
+
+.mini-donut {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.mini-donut svg {
+  display: block;
+}
+
+.mini-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.mini-donut-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-donut-label {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* the pill may drop under the value block on the narrowest cards instead of squeezing the donut */
+.kpi-value-row {
+  flex-wrap: wrap;
+}
+
+.modal .stat-with-donut {
+  gap: var(--s-5);
+}
+
+/* status cards with a donut: the Army / Veteran split stacks so the donut always fits beside the number, and the pill takes its own line */
+.stat-with-donut {
+  flex-wrap: nowrap;
+}
+
+.stat-with-donut .stat-split {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kpi-donut .kpi-value-row {
+  flex-wrap: wrap;
+}
+
+.kpi-donut .kpi-pill {
+  flex-basis: 100%;
+  padding-top: 2px;
+}
+
+.modal .kpi-pill {
+  flex-basis: auto;
+}
