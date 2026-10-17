@@ -10,6 +10,7 @@ import { responseDrilldown, staleDrilldown } from "@/lib/conversations";
 import { keywordDrilldown } from "@/lib/messaging";
 import { callsDrilldown } from "@/lib/repCalls";
 import { repAppointmentsDrilldown, statusCardDrilldown } from "@/lib/appointments";
+import { lostDrilldown, ngtDrilldown, outcomeDrilldown } from "@/lib/appointmentOutcomes";
 
 export const dynamic = "force-dynamic";
 
@@ -42,8 +43,14 @@ export async function GET(req: Request): Promise<NextResponse> {
                     ? statusCardDrilldown(sp.get("which") ?? "", range)
                     : kind === "apptRep"
                       ? repAppointmentsDrilldown(sp.get("user") ?? "", range)
-                      : undefined;
-    if (result === undefined) return NextResponse.json({ ok: false, error: "kind must be milestone, rep, calls, stale, response, keyword, appt, or apptRep." }, { status: 400 });
+                      : kind === "apptOutcome"
+                        ? outcomeDrilldown(range)
+                        : kind === "apptLost"
+                          ? lostDrilldown(range)
+                          : kind === "apptNgt"
+                            ? ngtDrilldown(range)
+                            : undefined;
+    if (result === undefined) return NextResponse.json({ ok: false, error: "kind must be milestone, rep, calls, stale, response, keyword, appt, apptRep, apptOutcome, apptLost, or apptNgt." }, { status: 400 });
     if (result === null) return NextResponse.json({ ok: false, error: "Unknown milestone or user." }, { status: 404 });
     return NextResponse.json(result);
   } catch (err) {

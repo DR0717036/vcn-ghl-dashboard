@@ -3131,3 +3131,94 @@ section > h2 {
   font-size: 10px;
   padding: 1px 7px;
 }
+
+/* cohort tables (appointment → outcome, losses) and the Army vs Veteran comparison */
+.rep-table-cohort {
+  min-width: 0;
+  margin-top: var(--s-2);
+}
+
+.rep-table-cohort .col-name {
+  width: auto;
+}
+
+.rep-table-cohort .col-num {
+  width: 96px;
+}
+
+.rep-table-cohort th,
+.rep-table-cohort td {
+  height: 44px;
+}
+
+.rep-table-cohort td.rep-name {
+  font-size: 14px;
+  white-space: normal;
+}
+
+.rep-table-cohort td.num .plan-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.rep-table-cohort tr.row-strong td {
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.cohort-stages {
+  margin: var(--s-2) 0 0;
+}
+
+.cohort-sub-actions {
+  margin: var(--s-2) 0 var(--s-3);
+}
+
+.rep-table-compare {
+  min-width: 0;
+}
+
+.rep-table-compare .col-name {
+  width: auto;
+}
+
+.rep-table-compare .col-num {
+  width: 150px;
+}
+
+.rep-table-compare .col-gap {
+  width: 120px;
+}
+
+.rep-table-compare td.rep-name {
+  white-space: normal;
+  font-size: 14px;
+}
+
+.rep-table-compare td .plan-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.rep-table-compare td.compare-cell .compare-value {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.rep-table-compare td.compare-better {
+  background: rgba(21, 128, 61, 0.1) !important;
+  box-shadow: inset 3px 0 0 var(--status-good, #15803d);
+}
+
+.compare-badge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

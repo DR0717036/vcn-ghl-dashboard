@@ -116,6 +116,8 @@ export const CONFIRMED_COLUMNS: ColumnKey[] = ["name", "program", "pipeline", "s
 export const OUTCOME_COLUMNS: ColumnKey[] = ["name", "program", "apptStatus", "assignedUser", "scheduledFor", "outcomeStage", "outcomeOn", "status"];
 /** Post-appointment losses. */
 export const LOST_COLUMNS: ColumnKey[] = ["name", "program", "apptStatus", "assignedUser", "scheduledFor", "pipeline", "stage", "lostOn"];
+/** Contacts who entered the NGT stage. */
+export const NGT_COLUMNS: ColumnKey[] = ["name", "program", "pipeline", "stage", "status", "assignedUser", "bookedOn", "apptStatus", "outcomeStage", "outcomeOn"];
 
 /** KPI card drilldown columns, in the owner's order. */
 export const KPI_COLUMNS: ColumnKey[] = ["name", "source", "assignedUser", "pipeline", "status", "phone", "email", "value", "stage", "tags", "createdOn", "reachedOn"];

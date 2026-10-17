@@ -19,6 +19,7 @@ import { computeResponseTimes, computeStale } from "@/lib/conversations";
 import { analyzeMessaging, inboundChannelCard, keywordCard, replyRateCard } from "@/lib/messaging";
 import { computeRepCalls } from "@/lib/repCalls";
 import { computeRates, computeRepAppointments, computeStatusCards } from "@/lib/appointments";
+import { computeComparison, computeLosses, computeOutcome } from "@/lib/appointmentOutcomes";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { computeWon } from "@/lib/won";
@@ -32,6 +33,7 @@ import MilestoneKpiCard from "./MilestoneKpiCard";
 import RangePicker from "./RangePicker";
 import RepCallsCard from "./RepCallsCard";
 import { AppointmentRatesCard, AppointmentStatusCard, RepAppointmentsCard } from "./AppointmentCards";
+import { AppointmentOutcomeCard, ArmyVsVeteranCard, PostAppointmentLossesCard } from "./AppointmentOutcomeCards";
 import ResponseTimeCard from "./ResponseTimeCard";
 import StaleCard from "./StaleCard";
 import { InboundChannelCard, KeywordCard, ReplyRateCard } from "./MessagingCards";
@@ -67,6 +69,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const apptCards = computeStatusCards(range);
   const apptRates = computeRates(range);
   const repAppts = computeRepAppointments(range);
+  const apptOutcome = computeOutcome(range);
+  const apptLosses = computeLosses(range, apptOutcome);
+  const apptCompare = computeComparison(range, apptRates, apptOutcome);
   // KPI-row milestone cards, in the owner's order: CA 101, Supervisor Approval, then IAU App Submitted (FS2), the
   // current semester. FS1 stays tracked in config (kpiMilestones) as a historical group but has no card (round 3).
   const kpiMilestoneRows = [
@@ -250,6 +255,13 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="kpi-row cols-1">
             <RepAppointmentsCard r={repAppts} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-2">
+            <AppointmentOutcomeCard o={apptOutcome} rangeQuery={rangeQuery} rangeLabel={range.label} />
+            <PostAppointmentLossesCard l={apptLosses} rangeQuery={rangeQuery} rangeLabel={range.label} />
+          </div>
+          <div className="kpi-row cols-2">
+            <ArmyVsVeteranCard c={apptCompare} rangeLabel={range.label} />
           </div>
         </div>
       </section>
