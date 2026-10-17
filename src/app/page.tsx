@@ -23,7 +23,7 @@ import { computeComparison, computeLosses, computeOutcome } from "@/lib/appointm
 import { buildLeads, computeAssignedByUser, computeLeadHeadlines, computeMatrix, computeOutcomes, computeSourceReport, computeStaleLeads } from "@/lib/leads";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
-import { computeCurrentPrograms, computeHeadline, computePastSemesters, wonOpps } from "@/lib/wonRow";
+import { computeCloseRates, computeCurrentPrograms, computeHeadline, computeMonthly, computePastSemesters, computeWonByCampaign, wonOpps } from "@/lib/wonRow";
 import BarChart from "./charts/BarChart";
 import ControlBar from "./ControlBar";
 import FunnelChart from "./charts/FunnelChart";
@@ -41,7 +41,7 @@ import StaleCard from "./StaleCard";
 import { InboundChannelCard, KeywordCard, ReplyRateCard } from "./MessagingCards";
 import Reveal from "./Reveal";
 import SubmissionsCard from "./SubmissionsCard";
-import { CurrentProgramsCard, PastSemestersCard, WonHeadlineCard } from "./WonCards";
+import { CloseRateCard, CurrentProgramsCard, PastSemestersCard, WonByCampaignCard, WonHeadlineCard, WonMonthlyCard } from "./WonCards";
 import WonModeSwitch from "./WonModeSwitch";
 
 export const dynamic = "force-dynamic";
@@ -114,8 +114,10 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   // Won row: both modes are computed so the client toggle can switch without a request.
   const wonModes = (["current", "period"] as const).map((mode) => {
     const opps = wonOpps(mode, range);
-    return { mode, headline: computeHeadline(opps, mode, range), programs: computeCurrentPrograms(opps, mode), past: computePastSemesters(opps, mode) };
+    return { mode, headline: computeHeadline(opps, mode, range), programs: computeCurrentPrograms(opps, mode), past: computePastSemesters(opps, mode), campaign: computeWonByCampaign(opps, mode) };
   });
+  const wonCloseRates = computeCloseRates();
+  const wonMonthly = computeMonthly(now);
   const wonBlock = (mode: "current" | "period") => {
     const w = wonModes.find((x) => x.mode === mode)!;
     return (
@@ -126,6 +128,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         <div className="kpi-row cols-2">
           <CurrentProgramsCard c={w.programs} mode={mode} rangeQuery={rangeQuery} rangeLabel={range.label} />
           <PastSemestersCard p={w.past} mode={mode} rangeQuery={rangeQuery} rangeLabel={range.label} />
+        </div>
+        <div className="kpi-row cols-1">
+          <WonByCampaignCard w={w.campaign} mode={mode} rangeQuery={rangeQuery} rangeLabel={range.label} />
         </div>
       </>
     );
@@ -327,6 +332,12 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           <h2 className="row-title">Won Opportunities</h2>
           <p className="note">Won means opportunity status = won, once per opportunity ID. Dollar figures are Opportunity Value, never cash collected or commission.</p>
           <WonModeSwitch current={wonBlock("current")} period={wonBlock("period")} periodLabel={range.label} />
+          <div className="kpi-row cols-1">
+            <CloseRateCard c={wonCloseRates} rangeQuery={rangeQuery} />
+          </div>
+          <div className="kpi-row cols-1">
+            <WonMonthlyCard m={wonMonthly} />
+          </div>
         </div>
       </section>
 
