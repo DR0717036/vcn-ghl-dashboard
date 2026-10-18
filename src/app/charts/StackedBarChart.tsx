@@ -5,6 +5,7 @@
 // sit at the end of the bar. Hover shows an HTML tooltip with every segment.
 
 import { useState } from "react";
+import ChartTooltip, { type TipPos } from "./ChartTooltip";
 import { useWidth } from "./useWidth";
 
 export interface StackSegment {
@@ -25,7 +26,7 @@ const n = (v: number) => v.toLocaleString("en-US");
 
 export default function StackedBarChart({ rows, height = 220, legend, emptyText = "No data in range." }: { rows: StackRow[]; height?: number; legend: StackSegment[]; emptyText?: string }) {
   const [wrapRef, W] = useWidth<HTMLDivElement>();
-  const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<({ i: number } & TipPos) | null>(null);
   const totals = rows.map((r) => r.segments.reduce((s, x) => s + x.value, 0));
   const max = Math.max(1, ...totals, ...rows.map((r) => r.marker ?? 0));
   const legendH = 24;
@@ -60,7 +61,7 @@ export default function StackedBarChart({ rows, height = 220, legend, emptyText 
             const y = 4 + i * rowH;
             let cursor = 0;
             return (
-              <g key={r.label} onMouseMove={(e) => setHover({ i, x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY })}>
+              <g key={r.label} onMouseMove={(e) => setHover({ i, clientX: e.clientX, clientY: e.clientY })}>
                 <rect x={padL} y={y} width={plotW} height={barH} rx={4} fill="rgba(255,255,255,0.05)" />
                 {r.segments.map((s) => {
                   const x0 = x(cursor);
@@ -77,8 +78,9 @@ export default function StackedBarChart({ rows, height = 220, legend, emptyText 
           })}
         </svg>
       )}
-      {hover ? (
-        <div className="chart-tip" style={{ left: Math.min(hover.x + 12, Math.max(0, W - 240)), top: hover.y + 10 }}>
+      <ChartTooltip pos={hover} width={240}>
+        {hover ? (
+          <>
           <div className="chart-tip-title">{rows[hover.i].label}</div>
           {rows[hover.i].segments.map((s) => (
             <div key={s.label}>
@@ -89,8 +91,9 @@ export default function StackedBarChart({ rows, height = 220, legend, emptyText 
             Combined: <b>{n(totals[hover.i])}</b>
             {rows[hover.i].marker !== null && rows[hover.i].marker !== undefined ? ` · ${rows[hover.i].markerLabel ?? "goal"} ${n(Math.round(rows[hover.i].marker as number))}` : ""}
           </div>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </ChartTooltip>
     </div>
   );
 }

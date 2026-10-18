@@ -735,3 +735,24 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     Veteran pipelines, every drilldown equals its card, the campaign
     total equals the headline, and each close-rate cohort equals won +
     lost + still + other and its drilldown segments.
+64. **Won row scope and chart clipping (2026-10-17, owner edits).** Total
+    Won Opportunity Value now covers the Army CA + Veteran G.I. Bill
+    pipelines only (headline, donut, pipeline table, drilldown); Entire
+    CRM (every pipeline, including Intelagent Partner Inquiry) is listed
+    in the card's Details with its own drilldown. Won $ by Month sits
+    directly under the headline. Current Programs uses two vertical bars
+    (Army FY27 blue, Veteran FS2 gold) with the value and count above
+    each. Past Semesters highlights the best semester by won Opportunity
+    Value (gold row border, Best badge, brighter bar; the tooltip also
+    gives its rank by count). Clipping fixed globally: every chart
+    tooltip now renders through the document-body portal with position
+    fixed and edge flipping (LineChart, BarChart, StackedBarChart, and
+    DonutChart converted; GroupedBarChart, HBarChart, PairedHBarChart,
+    MiniDonut, and VBarChart already did); chart containers size to
+    their content (.kpi-chart and .chart-wrap no longer use a fixed
+    height or overflow: hidden, keeping only a minimum height so cards
+    in a row align); the line chart's right-axis label and the last
+    x-axis labels of line and bar charts are kept inside the SVG box. A
+    programmatic audit of all 24 chart areas at 1440px and 1024px finds
+    no SVG, legend, or label outside its container, and screenshots of
+    every chart card at both widths were reviewed.

@@ -762,11 +762,11 @@ export function DrilldownButton({ spec, label = "View list" }: { spec: Drilldown
 }
 
 /** A clickable rep row in the Program Submissions table. */
-export function RepDrilldownRow({ spec, children }: { spec: DrilldownSpec; children: ReactNode }) {
+export function RepDrilldownRow({ spec, children, className }: { spec: DrilldownSpec; children: ReactNode; className?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <tr
-      className="rep-row-click"
+      className={`rep-row-click${className ? ` ${className}` : ""}`}
       tabIndex={0}
       title="Click to see the contacts behind this row"
       onClick={() => setOpen(true)}

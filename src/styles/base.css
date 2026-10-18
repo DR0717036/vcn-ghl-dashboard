@@ -592,7 +592,7 @@ section > h2 {
 /* ---- charts (always drawn inside a light card) ---- */
 .chart-wrap {
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .chart {
@@ -884,10 +884,11 @@ section > h2 {
   color: var(--text-muted);
 }
 
+/* sized to its content (never clipping a plot or its axis labels); the minimum keeps cards in a row aligned */
 .kpi-chart {
-  height: 236px;
+  min-height: 236px;
   margin-top: var(--s-4);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .kpi-chart .chart-legend {
@@ -1883,7 +1884,7 @@ section > h2 {
 
 /* 260px plot + legend row */
 .kpi-tall .kpi-chart {
-  height: 296px;
+  min-height: 296px;
 }
 
 @media (max-width: 640px) {
@@ -3519,4 +3520,13 @@ section > h2 {
   font-size: 11px;
   font-weight: 500;
   color: var(--text-secondary);
+}
+
+/* best past semester: gold left border on its row */
+.rep-table tbody tr.row-best td {
+  background: rgba(224, 180, 0, 0.08) !important;
+}
+
+.rep-table tbody tr.row-best td:first-child {
+  box-shadow: inset 4px 0 0 #e0b400;
 }

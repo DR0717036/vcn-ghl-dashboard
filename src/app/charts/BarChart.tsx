@@ -7,6 +7,7 @@
 // selective direct label on the peak. Colors come from the shared tokens.
 
 import { useState } from "react";
+import ChartTooltip, { type TipPos } from "./ChartTooltip";
 import { fmtValue, type ValueFormat } from "./LineChart";
 import { useWidth } from "./useWidth";
 
@@ -35,7 +36,8 @@ export default function BarChart({
   unit?: string;
   format?: ValueFormat;
 }) {
-  const [hover, setHover] = useState<number | null>(null);
+  const [hoverPos, setHoverPos] = useState<({ i: number } & TipPos) | null>(null);
+  const hover = hoverPos?.i ?? null;
   const [wrapRef, W] = useWidth<HTMLDivElement>();
   const H = height;
   const padL = 52;
@@ -74,7 +76,7 @@ export default function BarChart({
       {points.length === 0 ? (
         <p className="note">No periods in range.</p>
       ) : (
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`${unit} per period`} onMouseLeave={() => setHover(null)}>
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`${unit} per period`} onMouseLeave={() => setHoverPos(null)}>
           {ticks.map((t) => (
             <g key={t}>
               <line x1={padL} x2={W - padR} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" strokeWidth={1} />
@@ -92,7 +94,7 @@ export default function BarChart({
             const active = hover === i;
             const dim = hover !== null && !active;
             return (
-              <g key={p.key} onMouseEnter={() => setHover(i)}>
+              <g key={p.key} onMouseMove={(e) => setHoverPos({ i, clientX: e.clientX, clientY: e.clientY })}>
                 <rect x={padL + i * slot} y={padT} width={slot} height={plotH} fill="transparent" />
                 {h > 0 ? <path d={roundedTop(x0, top, barW, h, Math.min(4, barW / 2))} fill={color} opacity={dim ? 0.45 : 1} /> : null}
                 {hasPrior && ph > 0 ? (
@@ -104,42 +106,30 @@ export default function BarChart({
                   </text>
                 ) : null}
                 {i % labelEvery === 0 ? (
-                  <text x={x0 + groupW / 2} y={H - padB + 18} textAnchor="middle" className="chart-tick">
+                  <text x={x0 + groupW / 2} y={H - padB + 18} textAnchor={x0 + groupW / 2 > W - 28 ? "end" : x0 + groupW / 2 < 28 ? "start" : "middle"} className="chart-tick">
                     {p.label}
                   </text>
                 ) : null}
               </g>
             );
           })}
-          {hover !== null ? (
-            <g pointerEvents="none">
-              {(() => {
-                const p = points[hover];
-                const pr = prior?.[hover];
-                const boxW = Math.min(220, Math.max(150, plotW * 0.6));
-                const boxH = pr ? 62 : 44;
-                const tx = Math.min(W - padR - boxW, Math.max(padL, padL + hover * slot + slot / 2 - boxW / 2));
-                return (
-                  <g transform={`translate(${tx}, ${padT})`}>
-                    <rect width={boxW} height={boxH} rx={6} fill="var(--surface-raised)" stroke="var(--border)" />
-                    <text x={10} y={18} className="chart-tooltip-title">
-                      {p.label}
-                    </text>
-                    <text x={10} y={36} className="chart-tooltip-value">
-                      {fmt(p.count)} {unit.split(" per ")[0]}
-                    </text>
-                    {pr ? (
-                      <text x={10} y={54} className="chart-tooltip-title">
-                        prior ({pr.label}): {fmt(pr.count)}
-                      </text>
-                    ) : null}
-                  </g>
-                );
-              })()}
-            </g>
-          ) : null}
         </svg>
       )}
+      <ChartTooltip pos={hoverPos} width={220}>
+        {hover !== null ? (
+          <>
+            <div className="chart-tip-title">{points[hover].label}</div>
+            <div>
+              <span className="legend-swatch" style={{ background: color }} /> <b>{fmt(points[hover].count)}</b> {unit.split(" per ")[0]}
+            </div>
+            {prior?.[hover] ? (
+              <div>
+                <span className="legend-swatch" style={{ background: priorColor }} /> prior ({prior[hover].label}): <b>{fmt(prior[hover].count)}</b>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </ChartTooltip>
     </div>
   );
 }

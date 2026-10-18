@@ -11,10 +11,12 @@ import DonutChart from "./charts/DonutChart";
 import HBarChart from "./charts/HBarChart";
 import LineChart from "./charts/LineChart";
 import StackedBarChart from "./charts/StackedBarChart";
+import VBarChart from "./charts/VBarChart";
 import { DrilldownButton, RepDrilldownRow, WON_ROW_COLUMNS, type DrilldownSpec } from "./Drilldown";
 import KpiShell from "./KpiShell";
 
 const DASH = "—";
+const BEST_GOLD = "#e0b400";
 const KIND_COLOR = { army: programColors.army, veteran: programColors.veteran, partner: chartSeries[2], other: "#8a97a8" } as const;
 
 /** "$12,345 · 3 at $0 · 2 missing a value" */
@@ -37,16 +39,17 @@ function modeSub(mode: WonMode, rangeLabel: string): string {
 
 export function WonHeadlineCard({ h, mode, rangeQuery, rangeLabel, className = "" }: { h: HeadlineResult; mode: WonMode; rangeQuery: string; rangeLabel: string; className?: string }) {
   const q = `kind=won&mode=${mode}&${rangeQuery}`;
-  const donut = h.byPipeline
+  const programPipes = h.byPipeline.filter((p) => p.kind === "army" || p.kind === "veteran");
+  const donut = programPipes
     .filter((p) => p.totals.count > 0)
     .map((p) => ({ label: p.name, value: p.totals.count, color: KIND_COLOR[p.kind], extra: `${usd(p.totals.value)} · ${pct(p.totals.count, h.total.count)}` }));
-  const allSpec = spec(`${q}&which=all`, `Won opportunities · ${n(h.total.count)}`, `${MODE_LABEL[mode]} · every pipeline · ${modeSub(mode, rangeLabel)}`, h.total.count, h.notes, `Won opportunities ${mode} ${rangeLabel}`, {
+  const allSpec = spec(`${q}&which=all`, `Won opportunities · ${n(h.total.count)}`, `${MODE_LABEL[mode]} · Army CA + Veteran G.I. Bill pipelines · ${modeSub(mode, rangeLabel)}`, h.total.count, h.notes, `Won opportunities ${mode} ${rangeLabel}`, {
     segments: [
       { key: "army", label: "Army CA", expected: h.byPipeline.find((p) => p.kind === "army")?.totals.count ?? 0 },
       { key: "veteran", label: "Veteran G.I. Bill", expected: h.byPipeline.find((p) => p.kind === "veteran")?.totals.count ?? 0 },
-      { key: "partner", label: "Partner Inquiry", expected: h.byPipeline.filter((p) => p.kind === "partner").reduce((s, p) => s + p.totals.count, 0) },
     ],
   });
+  const crmSpec = spec(`${q}&which=crm`, `Won opportunities · entire CRM · ${n(h.entireCrm.count)}`, `${MODE_LABEL[mode]} · every pipeline in the connected sub-account · ${modeSub(mode, rangeLabel)}`, h.entireCrm.count, h.notes, `Won opportunities entire CRM ${mode} ${rangeLabel}`);
   const table = (
     <div className="kpi-body">
       <table className="stat-breakdown rep-table rep-table-cohort">
@@ -60,7 +63,7 @@ export function WonHeadlineCard({ h, mode, rangeQuery, rangeLabel, className = "
           </tr>
         </thead>
         <tbody>
-          {h.byPipeline.map((p) => (
+          {programPipes.map((p) => (
             <RepDrilldownRow key={p.pipelineId} spec={spec(`${q}&which=pipeline&arg=${encodeURIComponent(p.pipelineId)}`, `${p.name} · ${n(p.totals.count)} won`, `${MODE_LABEL[mode]} · ${modeSub(mode, rangeLabel)}`, p.totals.count, h.notes, `${p.name} won ${mode} ${rangeLabel}`)}>
               <td className="rep-name">
                 <span className="stat-split-dot" style={{ background: KIND_COLOR[p.kind], marginRight: 6 }} />
@@ -77,7 +80,7 @@ export function WonHeadlineCard({ h, mode, rangeQuery, rangeLabel, className = "
             </RepDrilldownRow>
           ))}
           <tr className="rep-total">
-            <td className="rep-name">Every pipeline</td>
+            <td className="rep-name">Army CA + Veteran G.I. Bill</td>
             <td className="num combined">{n(h.total.count)}</td>
             <td className="num">{h.total.count > 0 ? "100%" : DASH}</td>
             <td className="num combined">{usd(h.total.value)}</td>
@@ -94,7 +97,7 @@ export function WonHeadlineCard({ h, mode, rangeQuery, rangeLabel, className = "
       id={`wonHeadline-${mode}`}
       className={`kpi-title-xl ${className}`.trim()}
       title="Total Won Opportunity Value"
-      subtitle={`sum of won opportunity values · not cash collected · ${MODE_LABEL[mode]} · every pipeline in the connected account`}
+      subtitle={`sum of won opportunity values · not cash collected · ${MODE_LABEL[mode]} · Army CA + Veteran G.I. Bill pipelines`}
       value={
         <div className="stat-pair">
           <div>
@@ -115,12 +118,9 @@ export function WonHeadlineCard({ h, mode, rangeQuery, rangeLabel, className = "
           {"   "}
           <span className="stat-split-dot" style={{ background: programColors.veteran, margin: "0 4px 0 12px" }} />
           Veteran G.I. Bill <b>{n(vet?.totals.count ?? 0)}</b> · {usd(vet?.totals.value ?? 0)}
-          {h.byPipeline.filter((p) => p.kind === "partner").some((p) => p.totals.count > 0)
-            ? ` · Partner Inquiry ${n(h.byPipeline.filter((p) => p.kind === "partner").reduce((s, p) => s + p.totals.count, 0))}`
-            : ""}
         </span>
       }
-      deltaLine={<span className="kpi-muted">{mode === "period" ? `${n(h.reversals)} reopened / reversed in period (listed, never subtracted).` : "Snapshot of status = won across every pipeline, at current Opportunity Value."}</span>}
+      deltaLine={<span className="kpi-muted">{mode === "period" ? `${n(h.reversals)} reopened / reversed in period (listed, never subtracted).` : "Snapshot of status = won in the two program pipelines, at current Opportunity Value."} Entire CRM is in Details.</span>}
       chart={
         <div className="lead-donut">
           <DonutChart segments={donut} total={h.total.count} centerLabel="won" size={150} emptyText="No won opportunities." />
@@ -128,6 +128,16 @@ export function WonHeadlineCard({ h, mode, rangeQuery, rangeLabel, className = "
       }
       body={table}
       footer={<DrilldownButton spec={allSpec} label="View all won opportunities" />}
+      breakdown={[
+        { label: "Entire CRM · won opportunities (every pipeline)", value: n(h.entireCrm.count) },
+        { label: "Entire CRM · Won Opportunity Value", value: usd(h.entireCrm.value) },
+        { label: "…of which outside the program pipelines (Partner Inquiry and others)", value: `${n(h.nonProgram.count)} · ${usd(h.nonProgram.value)}` },
+      ]}
+      details={
+        <div className="cohort-sub-actions">
+          <DrilldownButton spec={crmSpec} label="View entire CRM won opportunities" />
+        </div>
+      }
       notes={h.notes}
     />
   );
@@ -139,7 +149,7 @@ export function CurrentProgramsCard({ c, mode, rangeQuery, rangeLabel, className
   const q = `kind=won&mode=${mode}&${rangeQuery}`;
   const army = c.stages.find((s) => s.program === "army");
   const vet = c.stages.find((s) => s.program === "veteran");
-  const bars = c.stages.map((s) => ({ label: s.program === "army" ? "Army · FY27" : "Veteran · FS2", value: s.totals.value, color: programColors[s.program], text: `${usd(s.totals.value)} · ${n(s.totals.count)} won`, detail: s.label }));
+  const bars = c.stages.map((s) => ({ label: s.program === "army" ? "Army · FY27" : "Veteran · FS2", value: s.totals.value, color: programColors[s.program], text: usd(s.totals.value), sub: `${n(s.totals.count)} won`, detail: s.label }));
   return (
     <KpiShell
       id={`wonPrograms-${mode}`}
@@ -182,7 +192,7 @@ export function CurrentProgramsCard({ c, mode, rangeQuery, rangeLabel, className
           {c.otherWonStages.length > 0 ? ` Other won stages in the program pipelines: ${c.otherWonStages.map((s) => `${s.stageName} ${n(s.count)}`).join(", ")}.` : ""}
         </span>
       }
-      chart={<HBarChart rows={bars} height={120} emptyText="No won opportunities in these stages." />}
+      chart={<VBarChart bars={bars} height={236} emptyText="No won opportunities in these stages." />}
       footer={<DrilldownButton spec={spec(`${q}&which=programs`, `Current programs · ${n(c.combined.count)} won`, `${MODE_LABEL[mode]} · ${modeSub(mode, rangeLabel)}`, c.combined.count, c.notes, `Current programs won ${mode} ${rangeLabel}`, { segments: c.stages.map((s) => ({ key: s.program, label: s.label, expected: s.totals.count })) })} label="View won opportunities" />}
       notes={c.notes}
     />
@@ -194,7 +204,7 @@ export function CurrentProgramsCard({ c, mode, rangeQuery, rangeLabel, className
 export function PastSemestersCard({ p, mode, rangeQuery, rangeLabel, className = "" }: { p: PastSemestersResult; mode: WonMode; rangeQuery: string; rangeLabel: string; className?: string }) {
   const q = `kind=won&mode=${mode}&${rangeQuery}`;
   const bars = [
-    ...p.rows.map((r) => ({ label: r.short, value: r.totals.value, color: programColors.veteran, text: `${usd(r.totals.value)} · ${n(r.totals.count)} won`, detail: r.label })),
+    ...p.rows.map((r) => ({ label: r.best ? `${r.short} ★` : r.short, value: r.totals.value, color: r.best ? BEST_GOLD : programColors.veteran, text: `${usd(r.totals.value)} · ${n(r.totals.count)} won`, detail: r.best ? `${r.label} · best by won $ (rank ${r.rankCount} by count)` : `${r.label} · rank ${r.rankValue} by won $, ${r.rankCount} by count` })),
     ...(p.fs2 ? [{ label: "FS2 (current)", value: p.fs2.totals.value, color: chartSeries[3], text: `${usd(p.fs2.totals.value)} · ${n(p.fs2.totals.count)} won`, detail: `${p.fs2.label} · for comparison` }] : []),
   ];
   const table = (
@@ -220,9 +230,10 @@ export function PastSemestersCard({ p, mode, rangeQuery, rangeLabel, className =
         </thead>
         <tbody>
           {p.rows.map((r) => (
-            <RepDrilldownRow key={r.key} spec={spec(`${q}&which=stage&arg=${encodeURIComponent(r.stageId)}`, `${r.label} · ${n(r.totals.count)} won`, `${MODE_LABEL[mode]} · ${modeSub(mode, rangeLabel)}`, r.totals.count, p.notes, `${r.short} won ${mode} ${rangeLabel}`)}>
-              <td className="rep-name" title={`${r.label} · application stage: ${r.applicationStageName}`}>
+            <RepDrilldownRow key={r.key} className={r.best ? "row-best" : undefined} spec={spec(`${q}&which=stage&arg=${encodeURIComponent(r.stageId)}`, `${r.label} · ${n(r.totals.count)} won`, `${MODE_LABEL[mode]} · ${modeSub(mode, rangeLabel)}`, r.totals.count, p.notes, `${r.short} won ${mode} ${rangeLabel}`)}>
+              <td className="rep-name" title={`${r.label} · application stage: ${r.applicationStageName}${r.best ? ` · best by won $ · rank ${r.rankCount} by count` : ` · rank ${r.rankValue} by won $, ${r.rankCount} by count`}`}>
                 {r.short}
+                {r.best ? <span className="pill pill-gold leader-badge" title={`Highest won Opportunity Value of the past semesters; rank ${r.rankCount} by won count`}>Best</span> : null}
                 <span className="plan-label">{r.label.replace("Enrolled/ Won ", "").replace(/[()]/g, "")}</span>
               </td>
               <td className="num combined">{n(r.totals.count)}</td>

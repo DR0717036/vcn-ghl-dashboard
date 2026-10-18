@@ -180,7 +180,12 @@ export interface PipelineTotals {
 
 export interface HeadlineResult {
   mode: WonMode;
+  /** Army CA + Veteran G.I. Bill pipelines only. */
   total: Totals;
+  /** Every pipeline in the connected sub-account (Details only). */
+  entireCrm: Totals;
+  /** Non-program pipelines (Partner Inquiry and any other). */
+  nonProgram: Totals;
   byPipeline: PipelineTotals[];
   reversals: number;
   earliest: string | null;
@@ -201,18 +206,22 @@ export function computeHeadline(opps: WonOpp[], mode: WonMode, range: DateRange)
   }
   const order: ProgramKind[] = ["army", "veteran", "partner", "other"];
   const earliest = (getDb().prepare(`SELECT MIN(event_time) AS t FROM milestone_events WHERE kind = 'won'`).get() as { t: string | null }).t;
+  const program = opps.filter((o) => o.programKind === "army" || o.programKind === "veteran");
   return {
     mode,
-    total: totalsOf(opps),
+    total: totalsOf(program),
+    entireCrm: totalsOf(opps),
+    nonProgram: totalsOf(opps.filter((o) => o.programKind !== "army" && o.programKind !== "veteran")),
     byPipeline: [...by.values()].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || a.name.localeCompare(b.name)),
     reversals: reversalsIn(range),
     earliest,
     notes: [
       "Won — opportunity status = won, once per opportunity ID; a stage named Won is never enough on its own.",
       "Total Won Opportunity Value — the sum of the Opportunity Value on those opportunities: not cash collected, not commission; opportunities with no value are counted but add nothing (shown as missing).",
-      "Currently Won (snapshot) — opportunities whose status is won right now, at their current value and stage, every pipeline in the connected sub-account.",
+      "Scope — Army CA + Veteran G.I. Bill pipelines; the headline, the donut, and the drilldown exclude the Intelagent Partner Inquiry pipeline. Entire CRM (every pipeline in the connected sub-account) is listed in Details only.",
+      "Currently Won (snapshot) — opportunities whose status is won right now, at their current value and stage.",
       "Became Won During Period — the first time each opportunity reached status = won inside the selected range, by GHL's status-change time, at the value and stage it had then; an opportunity reopened and won again is not counted twice, and reversals are listed, never subtracted.",
-      "By pipeline — Army CA Pipeline, Veteran G.I. Bill, and the Intelagent Partner Inquiry pipeline (the only place the non-program pipeline is included); the three add up to the total.",
+      "By pipeline — Army CA Pipeline and Veteran G.I. Bill add up to the headline; the non-program pipeline is shown only on the Entire CRM line in Details.",
       `Limitation: won history is known from GHL's status-change time on opportunities that were won at the first sync${earliest ? ` (earliest ${earliest.slice(0, 10)})` : ""} plus every change seen since; an opportunity won and reopened before that is not visible.`,
     ],
   };
@@ -287,6 +296,10 @@ export interface SemesterRow {
   reached: number;
   reachedShared: boolean;
   applicationStageName: string;
+  /** Rank by won Opportunity Value (1 = best) and by won count. */
+  rankValue: number;
+  rankCount: number;
+  best: boolean;
 }
 
 export interface PastSemestersResult {
@@ -328,7 +341,17 @@ export function computePastSemesters(opps: WonOpp[], mode: WonMode): PastSemeste
     reached: reachedBy.get(s.group) ?? 0,
     reachedShared: (groupsSeen.get(s.group) ?? 0) > 1,
     applicationStageName: cfg.closeRateGroups.find((g) => g.key === s.group)?.applicationStageName ?? s.group,
+    rankValue: 0,
+    rankCount: 0,
+    best: false,
   }));
+  const byValue = [...rows].sort((a, b) => b.totals.value - a.totals.value || b.totals.count - a.totals.count);
+  const byCount = [...rows].sort((a, b) => b.totals.count - a.totals.count || b.totals.value - a.totals.value);
+  for (const r of rows) {
+    r.rankValue = byValue.indexOf(r) + 1;
+    r.rankCount = byCount.indexOf(r) + 1;
+    r.best = r.rankValue === 1 && r.totals.value > 0;
+  }
   const pastIds = new Set(cfg.pastSemesters.map((s) => s.wonStageId));
   const fs2 = cfg.currentPrograms.find((p) => p.program === "veteran");
   const groupsCounted = [...new Set(cfg.pastSemesters.map((s) => s.group))];
@@ -343,6 +366,7 @@ export function computePastSemesters(opps: WonOpp[], mode: WonMode): PastSemeste
       "Reached application stage — distinct contacts whose opportunity currently sits in that semester's application, accepted, signed, or enrolled/won stage, or was marked lost while in one of them. GHL keeps no stage history for these semesters, so this assumes the pipeline path (an enrolled contact must have applied) and is a snapshot, not an event count.",
       "SS1 & SS2 — the two summer sessions share one application stage (IAU Application Submitted (SS1 & SS2)), so the same reached figure is shown on both rows and counted once in the total.",
       "Chart — Won Opportunity Value per semester, with Enrolled Won (FS2) alongside for comparison.",
+      "Best — the semester with the highest won Opportunity Value (gold border, Best badge, brighter bar); its tooltip also gives its rank by won count.",
       "Limitation: reached-application counts are assumed from current stages; a contact who applied and was then moved to an unrelated stage is not counted.",
     ],
   };
@@ -637,8 +661,11 @@ export function wonDrilldown(which: string, arg: string, mode: WonMode, range: D
   let list: WonOpp[];
   let title: string;
   if (which === "all") {
+    list = opps.filter((o) => o.programKind === "army" || o.programKind === "veteran");
+    title = `Won opportunities · Army CA + Veteran G.I. Bill · ${MODE_LABEL[mode]}`;
+  } else if (which === "crm") {
     list = opps;
-    title = `Won opportunities · ${MODE_LABEL[mode]}`;
+    title = `Won opportunities · entire CRM · ${MODE_LABEL[mode]}`;
   } else if (which === "pipeline") {
     list = opps.filter((o) => o.pipelineId === arg);
     title = `${list[0]?.pipelineName ?? mappingConfig.pipelines.find((p) => p.id === arg)?.name ?? arg} · won`;

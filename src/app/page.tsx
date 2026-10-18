@@ -112,18 +112,21 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const commission = computeCommission(range, now);
   const milestones = computeMilestones(range);
   // Won row: both modes are computed so the client toggle can switch without a request.
+  const wonMonthly = computeMonthly(now);
   const wonModes = (["current", "period"] as const).map((mode) => {
     const opps = wonOpps(mode, range);
     return { mode, headline: computeHeadline(opps, mode, range), programs: computeCurrentPrograms(opps, mode), past: computePastSemesters(opps, mode), campaign: computeWonByCampaign(opps, mode) };
   });
   const wonCloseRates = computeCloseRates();
-  const wonMonthly = computeMonthly(now);
   const wonBlock = (mode: "current" | "period") => {
     const w = wonModes.find((x) => x.mode === mode)!;
     return (
       <>
         <div className="kpi-row cols-1">
           <WonHeadlineCard h={w.headline} mode={mode} rangeQuery={rangeQuery} rangeLabel={range.label} />
+        </div>
+        <div className="kpi-row cols-1">
+          <WonMonthlyCard m={wonMonthly} />
         </div>
         <div className="kpi-row cols-2">
           <CurrentProgramsCard c={w.programs} mode={mode} rangeQuery={rangeQuery} rangeLabel={range.label} />
@@ -334,9 +337,6 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           <WonModeSwitch current={wonBlock("current")} period={wonBlock("period")} periodLabel={range.label} />
           <div className="kpi-row cols-1">
             <CloseRateCard c={wonCloseRates} rangeQuery={rangeQuery} />
-          </div>
-          <div className="kpi-row cols-1">
-            <WonMonthlyCard m={wonMonthly} />
           </div>
         </div>
       </section>

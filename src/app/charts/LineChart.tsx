@@ -9,6 +9,7 @@
 // all series, legend in HTML above the plot. Colors come from the shared tokens.
 
 import { useState } from "react";
+import ChartTooltip, { type TipPos } from "./ChartTooltip";
 import { useWidth } from "./useWidth";
 
 export type ValueFormat = "count" | "minutes" | "usd";
@@ -107,7 +108,8 @@ export default function LineChart({
   leftLabel?: string;
   rightLabel?: string;
 }) {
-  const [hover, setHover] = useState<number | null>(null);
+  const [hoverPos, setHoverPos] = useState<({ i: number } & TipPos) | null>(null);
+  const hover = hoverPos?.i ?? null;
   const [wrapRef, W] = useWidth<HTMLDivElement>();
   const n = Math.max(1, ...series.map((s) => s.points.length));
   const hasRight = series.some((s) => s.axis === "right");
@@ -144,7 +146,7 @@ export default function LineChart({
       {!primary || primary.points.length === 0 ? (
         <p className="note">No data points in range.</p>
       ) : (
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={series.map((s) => s.label).join(" and ")} onMouseLeave={() => setHover(null)}>
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={series.map((s) => s.label).join(" and ")} onMouseLeave={() => setHoverPos(null)}>
           {ticks.map((f) => {
             const yy = padT + plotH - f * plotH;
             return (
@@ -167,13 +169,13 @@ export default function LineChart({
             </text>
           ) : null}
           {hasRight && rightLabel ? (
-            <text transform={`translate(${W - 9}, ${padT + plotH / 2}) rotate(90)`} textAnchor="middle" className="chart-tick">
+            <text transform={`translate(${W - 2}, ${padT + plotH / 2}) rotate(-90)`} textAnchor="middle" className="chart-tick">
               {rightLabel}
             </text>
           ) : null}
           {labels.map((l, i) =>
             i % labelEvery === 0 ? (
-              <text key={i} x={x(i)} y={H - padB + 18} textAnchor="middle" className="chart-tick">
+              <text key={i} x={x(i)} y={H - padB + 18} textAnchor={x(i) > W - 28 ? "end" : x(i) < 28 ? "start" : "middle"} className="chart-tick">
                 {l}
               </text>
             ) : null,
@@ -204,35 +206,27 @@ export default function LineChart({
           {Array.from({ length: n }, (_, i) => {
             const left = i === 0 ? padL : (x(i - 1) + x(i)) / 2;
             const right = i === n - 1 ? W - padR : (x(i) + x(i + 1)) / 2;
-            return <rect key={i} x={left} y={padT} width={Math.max(1, right - left)} height={plotH} fill="transparent" onMouseEnter={() => setHover(i)} />;
+            return <rect key={i} x={left} y={padT} width={Math.max(1, right - left)} height={plotH} fill="transparent" onMouseMove={(e) => setHoverPos({ i, clientX: e.clientX, clientY: e.clientY })} />;
           })}
-          {hover !== null ? (
-            <g pointerEvents="none">
-              <line x1={x(hover)} x2={x(hover)} y1={padT} y2={padT + plotH} stroke="var(--chart-axis)" strokeDasharray="3 3" />
-              {(() => {
-                const rows = series.map((s) => ({ s, p: s.points[hover] })).filter((r) => r.p);
-                const boxW = Math.min(240, Math.max(150, plotW * 0.6));
-                const boxH = 22 + rows.length * 18;
-                const tx = Math.min(W - padR - boxW, Math.max(padL, x(hover) - boxW / 2));
-                return (
-                  <g transform={`translate(${tx}, ${padT})`}>
-                    <rect width={boxW} height={boxH} rx={6} fill="var(--surface-raised)" stroke="var(--border)" />
-                    <text x={10} y={16} className="chart-tooltip-title">
-                      {labels[hover]}
-                    </text>
-                    {rows.map((r, j) => (
-                      <text key={r.s.label} x={10} y={34 + j * 18} className="chart-tooltip-value">
-                        <tspan fill={r.s.color}>●</tspan> {r.s.muted ? "prior" : r.s.label.split(" per ")[0]}
-                        {r.s.muted && r.p.label !== labels[hover] ? ` (${r.p.label})` : ""}: {fmtValue(r.p.value, r.s.format ?? "count")}
-                      </text>
-                    ))}
-                  </g>
-                );
-              })()}
-            </g>
-          ) : null}
+          {hover !== null ? <line pointerEvents="none" x1={x(hover)} x2={x(hover)} y1={padT} y2={padT + plotH} stroke="var(--chart-axis)" strokeDasharray="3 3" /> : null}
         </svg>
       )}
+      <ChartTooltip pos={hoverPos} width={240}>
+        {hover !== null ? (
+          <>
+            <div className="chart-tip-title">{labels[hover]}</div>
+            {series
+              .map((s) => ({ s, p: s.points[hover] }))
+              .filter((r) => r.p)
+              .map((r) => (
+                <div key={r.s.label}>
+                  <span className={`legend-swatch${r.s.muted ? " legend-swatch-line" : ""}`} style={{ background: r.s.color }} /> {r.s.muted ? "prior" : r.s.label.split(" per ")[0]}
+                  {r.s.muted && r.p.label !== labels[hover] ? ` (${r.p.label})` : ""}: <b>{fmtValue(r.p.value, r.s.format ?? "count")}</b>
+                </div>
+              ))}
+          </>
+        ) : null}
+      </ChartTooltip>
     </div>
   );
 }
