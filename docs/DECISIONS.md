@@ -832,3 +832,36 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     middle, a 1px lighter inner line along the top edge, and a faint
     darker inner shadow at the bottom, all vector so it stays crisp on
     Retina.
+69. **Rep Performance band (2026-10-18, owner request).** A seventh band
+    after Won Opportunities, with its own dock tile (person with a bar
+    chart, gold / blue). One card per sales rep in config/sales-reps.json
+    (reps with no activity still appear), three across, sorted by a
+    selectable metric (default combined submissions) with a rank badge
+    and a crown for #1. Each card shows a circular photo from the rep's
+    new "photo" field (public/reps/…; initials on a brand gradient when
+    the file is missing, as for Isabela Estrada), a Full-time /
+    Part-time tag from kpiMultiplier, a stats grid with goal pills, a
+    daily combined-submissions sparkline, and a goals-met count over the
+    six per-rep goals (dials, talk time, bookings, showed, combined
+    submissions, quota pacing). Every figure is the rep's row in the band
+    it comes from: Rep Call Activity (dials, conversations / connected,
+    talk time, first call), Rep Appointments (bookings, show rate, calls
+    per booking), Program Submissions (CA 101, FS2, combined vs weekly
+    goal, quota pacing, est. commission), New Leads Assigned by User
+    (new leads assigned), Response Time (median). Three are computed
+    with the same rules as their bands: leads assigned in the range
+    (assignment events; unavailable before tracking began), won in the
+    range (first won event per opportunity credited to the owner at the
+    event, Opportunity Value), and close rate (of the contacts the rep
+    submitted in the range, the share whose opportunity is won now).
+    Clicking a card opens a modal whose tabs reuse the submissions,
+    calls, appointments, and won drilldowns; the drilldown modal was
+    split into a shell and a body for this. A leaderboard below lists
+    every rep, sortable by any column (click again to reverse), with a
+    gold team-average row (mean over reps with a value) and an "Other
+    users" row, and the best value per column tinted (ties all tinted;
+    lower is better for first call, calls per booking, and median
+    response). The old Program Milestones cards and the Charts section
+    were removed from the page; their data functions remain for reuse.
+    Verified this month: 98 card figures equal their band rows and 119
+    leaderboard cells equal the cards.

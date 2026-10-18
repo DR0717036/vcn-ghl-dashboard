@@ -44,6 +44,7 @@ import Dock from "./Dock";
 import { SECTIONS } from "./sections";
 import SubmissionsCard from "./SubmissionsCard";
 import RepCards from "./RepCards";
+import Leaderboard from "./Leaderboard";
 import { computeRepPerformance } from "@/lib/repPerformance";
 import { CloseRateCard, CurrentProgramsCard, PastSemestersCard, WonByCampaignCard, WonHeadlineCard, WonMonthlyCard } from "./WonCards";
 import WonModeSwitch from "./WonModeSwitch";
@@ -349,6 +350,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         <div className="band-inner">
           <BandHeading s={SECTIONS[6]} />
           <RepCards data={repPerf} rangeLabel={range.label} />
+          <Leaderboard data={repPerf} rangeLabel={range.label} />
         </div>
       </section>
     </>
