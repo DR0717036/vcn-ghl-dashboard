@@ -6,12 +6,43 @@
 // summary, and a click-through modal whose tabs reuse the existing
 // drilldowns (submissions, calls, appointments, won).
 
-import { useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Metric, MetricDef, RepPerformance, RepScore } from "@/lib/repPerformance";
 import { DrilldownBody, ModalShell } from "./Drilldown";
 import Notes from "./Notes";
 
 const n = (v: number) => v.toLocaleString("en-US");
+
+/**
+ * Reveal once per card instance: the card renders hidden (the shared "reveal"
+ * style) and becomes visible the first time it enters the viewport. The state
+ * lives in React, so re-sorting (which only reorders the keyed cards) never
+ * hides a card again, and a card already in view stays visible.
+ */
+function useRevealOnce<T extends HTMLElement>(): [React.RefObject<T | null>, boolean] {
+  const ref = useRef<T | null>(null);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || on) return;
+    if (!("IntersectionObserver" in window)) {
+      setOn(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setOn(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.05, rootMargin: "0px 0px -6% 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [on]);
+  return [ref, on];
+}
 
 // Local copy of the goal pill: GoalLine imports the goals library, which reaches the SQLite layer and cannot ship to the browser.
 const PILL: Record<string, { cls: string; label: string }> = { met: { cls: "pill-ok", label: "Met" }, on_track: { cls: "pill-info", label: "On Track" }, missed: { cls: "pill-bad", label: "Missed" } };
@@ -113,12 +144,15 @@ function RepModal({ r, rangeLabel, onClose }: { r: RepScore; rangeLabel: string;
 
 function RepCard({ r, rank, def, rangeLabel, defs }: { r: RepScore; rank: number; def: MetricDef; rangeLabel: string; defs: MetricDef[] }) {
   const [open, setOpen] = useState(false);
+  const [ref, revealed] = useRevealOnce<HTMLDivElement>();
   const sortMetric = r.metrics[def.key];
   return (
     <>
       <div
-        className={`stat kpi rep-card reveal${rank === 1 ? " rep-card-leader" : ""}`}
+        ref={ref}
+        className={`stat kpi rep-card reveal${revealed ? " is-visible" : ""}${rank === 1 ? " rep-card-leader" : ""}`}
         data-kpi={`rep-${r.userId ?? "others"}`}
+        data-rep={r.userId ?? "others"}
         role="button"
         tabIndex={0}
         title="Click for this rep's calls, appointments, submissions, and won deals"
@@ -189,6 +223,40 @@ export default function RepCards({ data, rangeLabel }: { data: RepPerformance; r
   const [sortKey, setSortKey] = useState(data.defaultSort);
   const def = data.defs.find((d) => d.key === sortKey) ?? data.defs[0];
   const sorted = useMemo(() => rankReps(data.reps, sortKey, data.defs), [data, sortKey]);
+
+  // FLIP: when the order changes, each card slides from its old slot to its new one instead of jumping
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const lastRects = useRef(new Map<string, DOMRect>());
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const cards = [...grid.querySelectorAll<HTMLElement>("[data-rep]")];
+    const next = new Map<string, DOMRect>();
+    for (const el of cards) {
+      const key = el.dataset.rep as string;
+      const now = el.getBoundingClientRect();
+      next.set(key, now);
+      const prev = lastRects.current.get(key);
+      if (!prev || reduced) continue;
+      const dx = prev.left - now.left;
+      const dy = prev.top - now.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
+      el.style.transition = "none";
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      requestAnimationFrame(() => {
+        el.style.transition = "transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1)";
+        el.style.transform = "";
+        const clear = () => {
+          el.style.transition = "";
+          el.removeEventListener("transitionend", clear);
+        };
+        el.addEventListener("transitionend", clear);
+      });
+    }
+    lastRects.current = next;
+  }, [sorted]);
+
   return (
     <div className="rep-section">
       <div className="rep-toolbar">
@@ -207,7 +275,7 @@ export default function RepCards({ data, rangeLabel }: { data: RepPerformance; r
           {n(data.reps.length)} reps · {rangeLabel} · click a card for its drilldowns
         </span>
       </div>
-      <div className="rep-grid">
+      <div className="rep-grid" ref={gridRef}>
         {sorted.map((r, i) => (
           <RepCard key={r.userId ?? r.name} r={r} rank={i + 1} def={def} rangeLabel={rangeLabel} defs={data.defs} />
         ))}
