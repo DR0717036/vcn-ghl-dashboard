@@ -135,7 +135,7 @@ export default function LineChart({
 
   const plottedTotal = primary ? primary.points.reduce((s, p) => s + p.value, 0) : 0;
   return (
-    <div className="chart-wrap" ref={wrapRef} data-total={plottedTotal} data-first={labels[0] ?? ""} data-last={labels[labels.length - 1] ?? ""}>
+    <div className="chart-wrap anim-root" ref={wrapRef} data-total={plottedTotal} data-first={labels[0] ?? ""} data-last={labels[labels.length - 1] ?? ""}>
       <div className="chart-legend">
         {series.map((s) => (
           <span key={s.label} className="legend">
@@ -187,6 +187,8 @@ export default function LineChart({
               <g key={s.label}>
                 <path
                   d={d}
+                  pathLength={s.muted ? undefined : 1}
+                  className={s.muted ? undefined : "line-draw"}
                   fill="none"
                   stroke={s.color}
                   strokeWidth={s.muted ? 1.5 : 2.5}
@@ -197,7 +199,7 @@ export default function LineChart({
                 />
                 {showMarkers && !s.muted
                   ? s.points.map((p, i) => (
-                      <circle key={i} cx={x(i)} cy={y(p.value)} r={hover === i ? 5 : 3.5} fill="var(--surface-card)" stroke={s.color} strokeWidth={2} />
+                      <circle key={i} cx={x(i)} cy={y(p.value)} r={hover === i ? 5 : 3.5} fill="var(--surface-card)" stroke={s.color} strokeWidth={2} className="line-dot" />
                     ))
                   : null}
               </g>

@@ -62,7 +62,7 @@ export default function BarChart({
   const fmt = (v: number) => fmtValue(v, format);
 
   return (
-    <div className="chart-wrap" ref={wrapRef}>
+    <div className="chart-wrap anim-root" ref={wrapRef}>
       <div className="chart-legend">
         <span className="legend">
           <span className="legend-swatch" style={{ background: color }} /> {unit}
@@ -96,9 +96,9 @@ export default function BarChart({
             return (
               <g key={p.key} onMouseMove={(e) => setHoverPos({ i, clientX: e.clientX, clientY: e.clientY })}>
                 <rect x={padL + i * slot} y={padT} width={slot} height={plotH} fill="transparent" />
-                {h > 0 ? <path d={roundedTop(x0, top, barW, h, Math.min(4, barW / 2))} fill={color} opacity={dim ? 0.45 : 1} /> : null}
+                {h > 0 ? <path d={roundedTop(x0, top, barW, h, Math.min(4, barW / 2))} fill={color} opacity={dim ? 0.45 : 1} className="bar-v" style={{ "--i": Math.min(i, 12) } as React.CSSProperties} /> : null}
                 {hasPrior && ph > 0 ? (
-                  <path d={roundedTop(x0 + barW + 2, padT + plotH - ph, barW, ph, Math.min(4, barW / 2))} fill={priorColor} opacity={dim ? 0.35 : 0.85} />
+                  <path d={roundedTop(x0 + barW + 2, padT + plotH - ph, barW, ph, Math.min(4, barW / 2))} fill={priorColor} opacity={dim ? 0.35 : 0.85} className="bar-v" style={{ "--i": Math.min(i, 12) } as React.CSSProperties} />
                 ) : null}
                 {i === peak && p.count > 0 && hover === null ? (
                   <text x={x0 + barW / 2} y={top - 5} textAnchor="middle" className="chart-label-strong">

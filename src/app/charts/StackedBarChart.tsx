@@ -40,7 +40,7 @@ export default function StackedBarChart({ rows, height = 220, legend, emptyText 
   const check = JSON.stringify(rows.map((r) => ({ label: r.label, values: r.segments.map((s) => s.value), marker: r.marker ?? null })));
 
   return (
-    <div className="chart-wrap chart-rel" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
+    <div className="chart-wrap chart-rel anim-root" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
       <div className="chart-legend">
         {legend.map((s) => (
           <span key={s.label} className="legend">
@@ -67,7 +67,7 @@ export default function StackedBarChart({ rows, height = 220, legend, emptyText 
                   const x0 = x(cursor);
                   const w = Math.max(0, x(cursor + s.value) - x0);
                   cursor += s.value;
-                  return w > 0 ? <rect key={s.label} x={x0} y={y} width={Math.max(w - 1, 1)} height={barH} rx={3} fill={s.color} opacity={hover && hover.i !== i ? 0.55 : 1} /> : null;
+                  return w > 0 ? <rect key={s.label} x={x0} y={y} width={Math.max(w - 1, 1)} height={barH} rx={3} fill={s.color} opacity={hover && hover.i !== i ? 0.55 : 1} className="bar-h" style={{ "--i": i } as React.CSSProperties} /> : null;
                 })}
                 {r.marker !== null && r.marker !== undefined ? <line x1={x(r.marker)} x2={x(r.marker)} y1={y - 3} y2={y + barH + 3} stroke="var(--accent-yellow)" strokeWidth={2} /> : null}
                 <text x={x(totals[i]) + 8} y={y + barH / 2 + 4} className="chart-row-label">

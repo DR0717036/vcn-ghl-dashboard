@@ -40,8 +40,8 @@ export default function MiniDonut({ segments, centerValue, centerLabel, size = 9
   const check = JSON.stringify(segments.map((s) => ({ label: s.label, value: s.value })));
 
   return (
-    <div className="mini-donut" style={{ width: size, height: size }} data-check={check} onMouseLeave={() => setHover(null)}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="chart" role="img" aria-label={sum === 0 ? `${ariaLabel}: none` : `${ariaLabel}: ${shown.map((s) => `${s.label} ${n(s.value)}`).join(", ")}`}>
+    <div className="mini-donut anim-root" style={{ width: size, height: size }} data-check={check} onMouseLeave={() => setHover(null)}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="chart donut-sweep" role="img" aria-label={sum === 0 ? `${ariaLabel}: none` : `${ariaLabel}: ${shown.map((s) => `${s.label} ${n(s.value)}`).join(", ")}`}>
         {sum === 0 ? (
           <circle cx={cx} cy={cy} r={(r1 + r2) / 2} fill="none" stroke="var(--mini-donut-empty)" strokeWidth={r2 - r1} />
         ) : shown.length === 1 ? (

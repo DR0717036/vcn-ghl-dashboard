@@ -41,8 +41,8 @@ export default function DonutChart({ segments, total, centerLabel, size = 160, e
   const check = JSON.stringify({ total, segments: segments.map((s) => ({ label: s.label, value: s.value })) });
 
   return (
-    <div className="donut-wrap" data-check={check} onMouseLeave={() => { setHover(null); setTip(null); }}>
-      <div className="donut" style={{ width: size, height: size }}>
+    <div className="donut-wrap anim-root" data-check={check} onMouseLeave={() => { setHover(null); setTip(null); }}>
+      <div className="donut donut-sweep" style={{ width: size, height: size }}>
         {sum === 0 ? (
           <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="chart" role="img" aria-label={centerLabel}>
             <circle cx={cx} cy={cy} r={(r1 + r2) / 2} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={r2 - r1} />

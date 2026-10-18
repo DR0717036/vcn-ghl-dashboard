@@ -51,7 +51,7 @@ export default function PairedHBarChart({
   const check = JSON.stringify(rows.map((r) => ({ label: r.label, a: r.a, b: r.b })));
 
   return (
-    <div className="chart-wrap chart-rel" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
+    <div className="chart-wrap chart-rel anim-root" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
       <div className="chart-legend">
         <span className="legend">
           <span className="legend-swatch" style={{ background: seriesA.color }} /> {seriesA.label}
@@ -80,12 +80,12 @@ export default function PairedHBarChart({
                 <text x={padL - 10} y={y + rowH / 2 + 4} textAnchor="end" className={`chart-row-label${r.muted ? " muted" : ""}`}>
                   {r.label.length > 24 ? r.label.slice(0, 23) + "…" : r.label}
                 </text>
-                <rect x={padL} y={yA} width={Math.max(r.a > 0 ? 2 : 0, x(r.a) - padL)} height={barH} rx={3} fill={seriesA.color} opacity={dim} />
+                <rect x={padL} y={yA} width={Math.max(r.a > 0 ? 2 : 0, x(r.a) - padL)} height={barH} rx={3} fill={seriesA.color} opacity={dim} className="bar-h" style={{ "--i": i * 2 } as React.CSSProperties} />
                 {r.muted && r.a > 0 ? <rect x={padL} y={yA} width={Math.max(2, x(r.a) - padL)} height={barH} rx={3} fill="url(#paired-hatch)" opacity={dim} /> : null}
                 <text x={x(r.a) + 6} y={yA + barH / 2 + 3.5} className="chart-tick chart-value">
                   {n(r.a)}
                 </text>
-                <rect x={padL} y={yB} width={Math.max(r.b > 0 ? 2 : 0, x(r.b) - padL)} height={barH} rx={3} fill={seriesB.color} opacity={dim} />
+                <rect x={padL} y={yB} width={Math.max(r.b > 0 ? 2 : 0, x(r.b) - padL)} height={barH} rx={3} fill={seriesB.color} opacity={dim} className="bar-h" style={{ "--i": i * 2 + 1 } as React.CSSProperties} />
                 {r.muted && r.b > 0 ? <rect x={padL} y={yB} width={Math.max(2, x(r.b) - padL)} height={barH} rx={3} fill="url(#paired-hatch)" opacity={dim} /> : null}
                 <text x={x(r.b) + 6} y={yB + barH / 2 + 3.5} className="chart-tick chart-value">
                   {n(r.b)}

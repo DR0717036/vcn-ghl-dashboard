@@ -34,7 +34,7 @@ export default function VBarChart({ bars, height = 236, emptyText = "No data." }
   const check = JSON.stringify(bars.map((b) => ({ label: b.label, value: b.value })));
 
   return (
-    <div className="chart-wrap chart-rel" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
+    <div className="chart-wrap chart-rel anim-root" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
       {bars.length === 0 ? (
         <p className="note">{emptyText}</p>
       ) : (
@@ -47,7 +47,7 @@ export default function VBarChart({ bars, height = 236, emptyText = "No data." }
             return (
               <g key={b.label} onMouseMove={(e) => setHover({ i, clientX: e.clientX, clientY: e.clientY })}>
                 <rect x={padX + i * slot} y={0} width={slot} height={height} fill={hover?.i === i ? "rgba(22,119,255,0.06)" : "transparent"} />
-                <rect x={cx - barW / 2} y={padT + plotH - h} width={barW} height={h} rx={4} fill={b.color} opacity={hover && hover.i !== i ? 0.55 : 1} />
+                <rect x={cx - barW / 2} y={padT + plotH - h} width={barW} height={h} rx={4} fill={b.color} opacity={hover && hover.i !== i ? 0.55 : 1} className="bar-v" style={{ "--i": i } as React.CSSProperties} />
                 <text x={cx} y={padT + plotH - h - 24} textAnchor="middle" className="chart-label-strong">
                   {b.text}
                 </text>

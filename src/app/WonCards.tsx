@@ -11,7 +11,6 @@ import DonutChart from "./charts/DonutChart";
 import HBarChart from "./charts/HBarChart";
 import LineChart from "./charts/LineChart";
 import StackedBarChart from "./charts/StackedBarChart";
-import VBarChart from "./charts/VBarChart";
 import { DrilldownButton, RepDrilldownRow, WON_ROW_COLUMNS, type DrilldownSpec } from "./Drilldown";
 import KpiShell from "./KpiShell";
 
@@ -149,11 +148,11 @@ export function CurrentProgramsCard({ c, mode, rangeQuery, rangeLabel, className
   const q = `kind=won&mode=${mode}&${rangeQuery}`;
   const army = c.stages.find((s) => s.program === "army");
   const vet = c.stages.find((s) => s.program === "veteran");
-  const bars = c.stages.map((s) => ({ label: s.program === "army" ? "Army · FY27" : "Veteran · FS2", value: s.totals.value, color: programColors[s.program], text: usd(s.totals.value), sub: `${n(s.totals.count)} won`, detail: s.label }));
+  const bars = c.stages.map((s) => ({ label: s.program === "army" ? "Army · FY27" : "Veteran · FS2", value: s.totals.value, color: programColors[s.program], text: `${usd(s.totals.value)} · ${n(s.totals.count)} won`, detail: s.label }));
   return (
     <KpiShell
       id={`wonPrograms-${mode}`}
-      className={`kpi-title-xl ${className}`.trim()}
+      className={`kpi-title-xl kpi-chart-fit ${className}`.trim()}
       title="Current Programs"
       subtitle={`Won in Won/Submitted (Fy 27) + Enrolled Won (FS2) · ${MODE_LABEL[mode]}`}
       value={
@@ -192,7 +191,7 @@ export function CurrentProgramsCard({ c, mode, rangeQuery, rangeLabel, className
           {c.otherWonStages.length > 0 ? ` Other won stages in the program pipelines: ${c.otherWonStages.map((s) => `${s.stageName} ${n(s.count)}`).join(", ")}.` : ""}
         </span>
       }
-      chart={<VBarChart bars={bars} height={236} emptyText="No won opportunities in these stages." />}
+      chart={<HBarChart rows={bars} height={84} emptyText="No won opportunities in these stages." />}
       footer={<DrilldownButton spec={spec(`${q}&which=programs`, `Current programs · ${n(c.combined.count)} won`, `${MODE_LABEL[mode]} · ${modeSub(mode, rangeLabel)}`, c.combined.count, c.notes, `Current programs won ${mode} ${rangeLabel}`, { segments: c.stages.map((s) => ({ key: s.program, label: s.label, expected: s.totals.count })) })} label="View won opportunities" />}
       notes={c.notes}
     />

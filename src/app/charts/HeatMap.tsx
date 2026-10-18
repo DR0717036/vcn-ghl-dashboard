@@ -77,7 +77,7 @@ export default function HeatMap({ bundle, title = "Best times to call", showPeri
       </div>
 
       <div className="heat-scroll">
-        <table className="heat-grid" role="grid" aria-label={`${title}: ${metricWord} by weekday and hour`}>
+        <table className="heat-grid anim-root" role="grid" aria-label={`${title}: ${metricWord} by weekday and hour`}>
           <thead>
             <tr>
               <th className="heat-corner" />
@@ -92,10 +92,11 @@ export default function HeatMap({ bundle, title = "Best times to call", showPeri
             {DAY_LABELS.map((day, d) => (
               <tr key={day}>
                 <th className="heat-day">{day}</th>
-                {hours.map((h) => {
+                {hours.map((h, hi) => {
                   const c = data.grid[d][h];
+                  const order = { "--i": Math.min(d * hours.length + hi, 120) } as React.CSSProperties;
                   const v = metricValue(c, metric);
-                  if (v === null) return <td key={h} className="heat-cell heat-empty" title={`${day} ${hourLabel(h)} · no dials`} />;
+                  if (v === null) return <td key={h} className="heat-cell heat-empty" style={order} title={`${day} ${hourLabel(h)} · no dials`} />;
                   const strength = max > 0 ? Math.max(0.1, v / max) : 0.1;
                   const low = c.dials < bundle.minDials;
                   const tip =
@@ -106,7 +107,7 @@ export default function HeatMap({ bundle, title = "Best times to call", showPeri
                     <td
                       key={h}
                       className={`heat-cell${low ? " heat-low" : ""}${strength > 0.55 ? " heat-strong" : ""}`}
-                      style={{ "--heat": strength } as React.CSSProperties}
+                      style={{ ...order, "--heat": strength } as React.CSSProperties}
                       title={tip}
                       aria-label={tip}
                     >

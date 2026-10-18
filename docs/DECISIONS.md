@@ -756,3 +756,31 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     programmatic audit of all 24 chart areas at 1440px and 1024px finds
     no SVG, legend, or label outside its container, and screenshots of
     every chart card at both widths were reviewed.
+65. **Navigation, section icons, and motion (2026-10-17, owner request).**
+    A slide-in glass side nav (same liquid-glass style as the control
+    bar, 280px, fixed left) opens when the pointer enters the leftmost
+    24px on hover-capable screens at least 900px wide and closes 400ms
+    after the pointer leaves it (250ms ease); on touch or narrow screens,
+    and for keyboard users via Tab, a small glass edge tab toggles it.
+    It lists the six sections with an animated icon, name, and a
+    one-line description; clicking scrolls smoothly to the band and the
+    band in view is highlighted by IntersectionObserver; Escape closes
+    it; prefers-reduced-motion disables the slide and the smooth scroll.
+    Section icons are inline SVG with CSS keyframes (envelope into a
+    mailbox, ringing handset, chat bubbles with alternating typing dots,
+    calendar check drawing in, org tree connecting node by node, coin
+    into a piggy bank), each under 2KB, playing once when the band
+    heading enters view and looping while hovered or focused in the nav.
+    Band headings are 32px / 800 with the icon on the left and the
+    description beneath. Chart visuals animate once per page load at a
+    20% IntersectionObserver threshold: bars grow from the baseline
+    (400ms, 40ms stagger capped at 14 steps), lines draw left to right
+    (600ms stroke-dash via pathLength), donuts sweep from zero (500ms
+    conic mask), heat-map cells fade in staggered; everything is CSS
+    keyed off an "anim" class on <html> that is only added when JS runs
+    and reduced motion is off, so numbers, labels, tooltips, and the
+    no-JS render are never affected. Current Programs is back to two
+    horizontal bars in a card that keeps its own height. Measured: the
+    added client code is about 13KB of source (5KB gzipped) plus 10KB of
+    CSS; scrolling the full page at 1440px produced 116 frames with a
+    worst frame of 19ms and none over 33ms.

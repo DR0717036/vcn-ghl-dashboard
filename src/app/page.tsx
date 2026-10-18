@@ -40,6 +40,10 @@ import ResponseTimeCard from "./ResponseTimeCard";
 import StaleCard from "./StaleCard";
 import { InboundChannelCard, KeywordCard, ReplyRateCard } from "./MessagingCards";
 import Reveal from "./Reveal";
+import BandHeading from "./BandHeading";
+import Motion from "./Motion";
+import SideNav from "./SideNav";
+import { SECTIONS } from "./sections";
 import SubmissionsCard from "./SubmissionsCard";
 import { CloseRateCard, CurrentProgramsCard, PastSemestersCard, WonByCampaignCard, WonHeadlineCard, WonMonthlyCard } from "./WonCards";
 import WonModeSwitch from "./WonModeSwitch";
@@ -128,7 +132,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         <div className="kpi-row cols-1">
           <WonMonthlyCard m={wonMonthly} />
         </div>
-        <div className="kpi-row cols-2">
+        <div className="kpi-row cols-2 kpi-row-top">
           <CurrentProgramsCard c={w.programs} mode={mode} rangeQuery={rangeQuery} rangeLabel={range.label} />
           <PastSemestersCard p={w.past} mode={mode} rangeQuery={rangeQuery} rangeLabel={range.label} />
         </div>
@@ -165,6 +169,8 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <Reveal />
+      <Motion />
+      <SideNav />
       <ControlBar>
         <div className="control-sync">
           <span>
@@ -196,10 +202,10 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         </div>
       ) : null}
 
-      <section className="band band-dark">
+      <section className="band band-dark" id={SECTIONS[0].id}>
         <div className="band-inner">
           <h1 className="page-title">Primary KPIs Overall</h1>
-          <h2 className="row-title">Submissions</h2>
+          <BandHeading s={SECTIONS[0]} />
           {kpiMilestoneRows.map((keys) => (
             <div className="kpi-row cols-2" key={keys.join("+")}>
               {kpiMilestones
@@ -215,9 +221,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
 
-      <section className="band band-light">
+      <section className="band band-light" id={SECTIONS[1].id}>
         <div className="band-inner">
-          <h2 className="row-title">Activity</h2>
+          <BandHeading s={SECTIONS[1]} />
           <div className="kpi-row cols-2">
             <KpiCard
               k={kpi("callsMade")}
@@ -254,9 +260,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
 
-      <section className="band band-dark">
+      <section className="band band-dark" id={SECTIONS[2].id}>
         <div className="band-inner">
-          <h2 className="row-title">Conversations</h2>
+          <BandHeading s={SECTIONS[2]} />
           <div className="kpi-row cols-1">
             <StaleCard s={stale} />
           </div>
@@ -279,9 +285,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
 
-      <section className="band band-light">
+      <section className="band band-light" id={SECTIONS[3].id}>
         <div className="band-inner">
-          <h2 className="row-title">Appointments</h2>
+          <BandHeading s={SECTIONS[3]} />
           <div className="kpi-row cols-4">
             <AppointmentStatusCard c={apptCards.booked} rangeQuery={rangeQuery} rangeLabel={range.label} />
             <AppointmentStatusCard c={apptCards.completed} rangeQuery={rangeQuery} rangeLabel={range.label} />
@@ -305,9 +311,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
 
-      <section className="band band-dark">
+      <section className="band band-dark" id={SECTIONS[4].id}>
         <div className="band-inner">
-          <h2 className="row-title">Leads</h2>
+          <BandHeading s={SECTIONS[4]} />
           <div className="kpi-row cols-2">
             <LeadHeadlineCard k={leadHeadlines.newLeads} s={leadHeadlines.newSeries} title="New Leads Created" subtitle={`Contacts created in period · ${range.label}`} priorLabel={priorLabel} rangeQuery={rangeQuery} rangeLabel={range.label} />
             <LeadHeadlineCard k={leadHeadlines.assigned} s={leadHeadlines.assignedSeries} title="Leads Assigned" subtitle={`Contacts assigned to a user in period · ${range.label}`} priorLabel={priorLabel} />
@@ -330,9 +336,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
 
-      <section className="band band-light">
+      <section className="band band-light" id={SECTIONS[5].id}>
         <div className="band-inner">
-          <h2 className="row-title">Won Opportunities</h2>
+          <BandHeading s={SECTIONS[5]} />
           <p className="note">Won means opportunity status = won, once per opportunity ID. Dollar figures are Opportunity Value, never cash collected or commission.</p>
           <WonModeSwitch current={wonBlock("current")} period={wonBlock("period")} periodLabel={range.label} />
           <div className="kpi-row cols-1">

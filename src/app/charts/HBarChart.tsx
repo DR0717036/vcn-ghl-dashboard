@@ -33,7 +33,7 @@ export default function HBarChart({ rows, height = 220, line, lineLabel, maxValu
   const check = JSON.stringify(rows.map((r) => ({ label: r.label, value: Math.round(r.value * 100) / 100 })));
 
   return (
-    <div className="chart-wrap chart-rel" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
+    <div className="chart-wrap chart-rel anim-root" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
       {rows.length === 0 ? (
         <p className="note">{emptyText}</p>
       ) : (
@@ -55,7 +55,7 @@ export default function HBarChart({ rows, height = 220, line, lineLabel, maxValu
                   {r.label}
                 </text>
                 <rect x={padL} y={y} width={plotW} height={barH} rx={4} fill="rgba(255,255,255,0.05)" />
-                <rect x={padL} y={y} width={Math.max(2, x(r.value) - padL)} height={barH} rx={4} fill={r.color} opacity={hover && hover.i !== i ? 0.55 : 1} />
+                <rect x={padL} y={y} width={Math.max(2, x(r.value) - padL)} height={barH} rx={4} fill={r.color} opacity={hover && hover.i !== i ? 0.55 : 1} className="bar-h" style={{ "--i": i } as React.CSSProperties} />
                 <text x={x(r.value) + 8} y={y + barH / 2 + 4} className="chart-label-strong">
                   {r.text}
                 </text>

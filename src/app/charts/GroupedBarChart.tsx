@@ -70,7 +70,7 @@ export default function GroupedBarChart({ groups, legend, height = 220, emptyTex
   const tipW = 220;
 
   return (
-    <div className="chart-wrap chart-rel" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
+    <div className="chart-wrap chart-rel anim-root" ref={wrapRef} data-check={check} onMouseLeave={() => setHover(null)}>
       <div className="chart-legend">
         {legend.map((s) => (
           <span key={s.label} className="legend">
@@ -105,7 +105,7 @@ export default function GroupedBarChart({ groups, legend, height = 220, emptyTex
                   const top = y(b.value);
                   return (
                     <g key={b.label}>
-                      <rect x={bx} y={top} width={barW} height={Math.max(b.value > 0 ? 2 : 0, padT + plotH - top)} rx={3} fill={b.color} opacity={hover && hover.i !== i ? 0.55 : 1} />
+                      <rect x={bx} y={top} width={barW} height={Math.max(b.value > 0 ? 2 : 0, padT + plotH - top)} rx={3} fill={b.color} opacity={hover && hover.i !== i ? 0.55 : 1} className="bar-v" style={{ "--i": i * g.bars.length + j } as React.CSSProperties} />
                       {b.value > 0 ? (
                         <text x={bx + barW / 2} y={top - 4} textAnchor="middle" className="chart-tick chart-value">
                           {n(b.value)}
