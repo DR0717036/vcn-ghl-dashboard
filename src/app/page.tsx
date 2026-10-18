@@ -42,7 +42,7 @@ import { InboundChannelCard, KeywordCard, ReplyRateCard } from "./MessagingCards
 import Reveal from "./Reveal";
 import BandHeading from "./BandHeading";
 import Motion from "./Motion";
-import SideNav from "./SideNav";
+import Dock from "./Dock";
 import { SECTIONS } from "./sections";
 import SubmissionsCard from "./SubmissionsCard";
 import { CloseRateCard, CurrentProgramsCard, PastSemestersCard, WonByCampaignCard, WonHeadlineCard, WonMonthlyCard } from "./WonCards";
@@ -170,7 +170,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
     <>
       <Reveal />
       <Motion />
-      <SideNav />
+      <Dock />
       <ControlBar>
         <div className="control-sync">
           <span>

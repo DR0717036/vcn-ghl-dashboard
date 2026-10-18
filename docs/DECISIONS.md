@@ -784,3 +784,22 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     added client code is about 13KB of source (5KB gzipped) plus 10KB of
     CSS; scrolling the full page at 1440px produced 116 frames with a
     worst frame of 19ms and none over 33ms.
+66. **Dock navigation (2026-10-17, owner request, replaces the slide-in
+    panel).** A macOS-style dock fixed to the left edge and always
+    visible: a slim vertical glass strip (about 58px wide, vertically
+    centred) with the six section tiles at 32px and no labels. When the
+    pointer enters it the tiles grow to a 52px base, the tile under the
+    pointer magnifies to 1.6× (about 84px) and its two neighbours to
+    1.25× with a 150ms spring-like easing, and the hovered section's name
+    and description appear in a small glass label to its right. A white
+    dot under a tile marks the band in view. Touch devices keep the rest
+    size: one tap shows the label (with a "Tap again to go" hint), a
+    second tap navigates. The tiles are buttons, so Tab focuses and
+    magnifies them and Enter navigates; prefers-reduced-motion removes
+    the transitions and the smooth scroll. Icons were redrawn as 64×64
+    app-style tiles (rounded square with a brand blue, gold, or cyan
+    gradient and gloss, 2px-aligned strokes, consistent weight) with the
+    same hover animations; the band headings use the same tiles with no
+    box around them. The page content keeps an 84px left gutter so the
+    dock never overlaps a card: measured at 1440px and 1024px the dock's
+    right edge is at 70px and the first card starts at 108px.

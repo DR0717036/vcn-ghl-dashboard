@@ -1,114 +1,142 @@
-// Animated section icons: inline SVG, brand colors, animated with CSS
-// keyframes (see base.css, "section icons"). Each icon plays once when its
-// band heading scrolls into view (Motion.tsx adds "is-playing") and loops
-// subtly while its item in the side nav is hovered or focused. No icon
-// library; each SVG is well under 2KB. Server-renderable (no hooks).
+// Section icons drawn as macOS-style app tiles: a 64×64 rounded square with
+// a subtle brand gradient and a crisp symbol inside (2px-aligned strokes,
+// consistent weight). Inline SVG only, no raster, so they stay sharp on
+// Retina. The parts marked ico-* animate with CSS keyframes (base.css,
+// "section icons"): once when a band heading scrolls into view
+// (Motion.tsx adds "is-playing") and while hovered or focused in the dock.
+// Server-renderable (no hooks). Gradient ids repeat across instances on
+// purpose: they are identical, so any instance's definition serves all.
 
 import type { SectionIconName } from "./sections";
 
-const A = "var(--ico-a)"; // brand blue
-const B = "var(--ico-b)"; // brand gold
-const L = "var(--ico-line)"; // outline color
+const BLUE = ["#4d9bff", "#0f5fd1"];
+const GOLD = ["#f7cf3a", "#c99a00"];
+const CYAN = ["#2fb6dc", "#077a9c"];
+
+function Tile({ id, colors, children }: { id: string; colors: string[]; children: React.ReactNode }) {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true" className="tile">
+      <defs>
+        <linearGradient id={`tile-${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={colors[0]} />
+          <stop offset="1" stopColor={colors[1]} />
+        </linearGradient>
+        <linearGradient id={`gloss-${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.28" />
+          <stop offset="0.5" stopColor="#ffffff" stopOpacity="0.04" />
+          <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="62" height="62" rx="15" fill={`url(#tile-${id})`} />
+      <rect x="1" y="1" width="62" height="62" rx="15" fill={`url(#gloss-${id})`} />
+      <rect x="1.5" y="1.5" width="61" height="61" rx="14.5" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
+      {children}
+    </svg>
+  );
+}
 
 function Submissions() {
   return (
-    <svg viewBox="0 0 48 48" aria-hidden="true">
+    <Tile id="sub" colors={BLUE}>
       {/* mailbox */}
-      <rect x="8" y="22" width="32" height="20" rx="4" fill={B} />
-      <rect x="14" y="26" width="20" height="3" rx="1.5" fill="rgba(0,0,0,0.35)" className="ico-slot" />
-      <rect x="22" y="42" width="4" height="4" fill={B} />
+      <rect x="14" y="32" width="36" height="20" rx="5" fill="#f7cf3a" stroke="#9a7600" strokeWidth="2" />
+      <rect x="22" y="37" width="20" height="4" rx="2" fill="#6b5200" className="ico-slot" />
+      <rect x="29" y="52" width="6" height="6" rx="1" fill="#9a7600" />
       {/* envelope dropping into the slot */}
       <g className="ico-env">
-        <rect x="15" y="8" width="18" height="12" rx="2" fill="#fff" stroke={A} strokeWidth="2" />
-        <path d="M15 9l9 7 9-7" fill="none" stroke={A} strokeWidth="2" strokeLinejoin="round" />
+        <rect x="20" y="13" width="24" height="16" rx="3" fill="#ffffff" stroke="#0f5fd1" strokeWidth="2" />
+        <path d="M21 15l11 8 11-8" fill="none" stroke="#0f5fd1" strokeWidth="2" strokeLinejoin="round" />
       </g>
-    </svg>
+    </Tile>
   );
 }
 
 function Activity() {
   return (
-    <svg viewBox="0 0 48 48" aria-hidden="true">
+    <Tile id="act" colors={CYAN}>
       {/* handset */}
-      <path d="M14 8c-2 0-5 2-5 5 0 13 13 26 26 26 3 0 5-3 5-5l-7-5-4 3c-5-2-10-7-12-12l3-4-6-8z" fill={A} className="ico-handset" />
+      <path d="M19 12c-3 0-7 3-7 7 0 17 16 33 33 33 4 0 7-4 7-7l-9-6-5 4c-6-3-13-10-16-16l4-5-7-10z" fill="#ffffff" stroke="#055f7a" strokeWidth="2" strokeLinejoin="round" className="ico-handset" />
       {/* ring waves */}
-      <path d="M29 11a9 9 0 0 1 8 8" fill="none" stroke={B} strokeWidth="2.5" strokeLinecap="round" className="ico-wave ico-wave-1" />
-      <path d="M30 5a15 15 0 0 1 13 13" fill="none" stroke={B} strokeWidth="2.5" strokeLinecap="round" className="ico-wave ico-wave-2" />
-    </svg>
+      <path d="M38 17a9 9 0 0 1 9 9" fill="none" stroke="#f7cf3a" strokeWidth="3" strokeLinecap="round" className="ico-wave ico-wave-1" />
+      <path d="M40 9a17 17 0 0 1 15 15" fill="none" stroke="#f7cf3a" strokeWidth="3" strokeLinecap="round" className="ico-wave ico-wave-2" />
+    </Tile>
   );
 }
 
 function Conversations() {
   return (
-    <svg viewBox="0 0 48 48" aria-hidden="true">
-      <path d="M6 8h22a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H16l-7 6v-6H6a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4z" fill={A} />
-      <g fill="#fff" className="ico-dots ico-dots-1">
-        <circle cx="11" cy="17" r="2" />
-        <circle cx="17" cy="17" r="2" />
-        <circle cx="23" cy="17" r="2" />
+    <Tile id="conv" colors={GOLD}>
+      <path d="M10 12h26a5 5 0 0 1 5 5v12a5 5 0 0 1-5 5H22l-8 7v-7h-4a5 5 0 0 1-5-5V17a5 5 0 0 1 5-5z" fill="#ffffff" stroke="#8a6a00" strokeWidth="2" strokeLinejoin="round" />
+      <g fill="#0f5fd1" className="ico-dots ico-dots-1">
+        <circle cx="16" cy="23" r="2.5" />
+        <circle cx="23" cy="23" r="2.5" />
+        <circle cx="30" cy="23" r="2.5" />
       </g>
-      <path d="M42 20H22a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h12l7 6v-6h1a4 4 0 0 0 4-4V24a4 4 0 0 0-4-4z" fill={B} />
-      <g fill="#fff" className="ico-dots ico-dots-2">
-        <circle cx="26" cy="29" r="2" />
-        <circle cx="32" cy="29" r="2" />
-        <circle cx="38" cy="29" r="2" />
+      <path d="M54 28H30a5 5 0 0 0-5 5v12a5 5 0 0 0 5 5h12l8 7v-7h4a5 5 0 0 0 5-5V33a5 5 0 0 0-5-5z" fill="#0f5fd1" stroke="#083c86" strokeWidth="2" strokeLinejoin="round" />
+      <g fill="#ffffff" className="ico-dots ico-dots-2">
+        <circle cx="35" cy="39" r="2.5" />
+        <circle cx="42" cy="39" r="2.5" />
+        <circle cx="49" cy="39" r="2.5" />
       </g>
-    </svg>
+    </Tile>
   );
 }
 
 function Appointments() {
   return (
-    <svg viewBox="0 0 48 48" aria-hidden="true">
-      <rect x="6" y="10" width="36" height="32" rx="4" fill="#fff" stroke={L} strokeWidth="2" />
-      <rect x="6" y="10" width="36" height="10" rx="4" fill={A} />
-      <rect x="6" y="16" width="36" height="4" fill={A} />
-      <rect x="13" y="5" width="4" height="9" rx="2" fill={L} />
-      <rect x="31" y="5" width="4" height="9" rx="2" fill={L} />
-      <path d="M15 31l6 6 12-13" fill="none" stroke={B} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" pathLength={1} className="ico-check" />
-    </svg>
+    <Tile id="appt" colors={BLUE}>
+      <rect x="11" y="15" width="42" height="38" rx="5" fill="#ffffff" stroke="#083c86" strokeWidth="2" />
+      <path d="M11 20a5 5 0 0 1 5-5h32a5 5 0 0 1 5 5v8H11z" fill="#f7cf3a" stroke="#083c86" strokeWidth="2" />
+      <rect x="19" y="9" width="4" height="12" rx="2" fill="#083c86" />
+      <rect x="41" y="9" width="4" height="12" rx="2" fill="#083c86" />
+      <path d="M21 41l7 7 15-16" fill="none" stroke="#0f5fd1" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" pathLength={1} className="ico-check" />
+    </Tile>
   );
 }
 
 function Leads() {
   return (
-    <svg viewBox="0 0 48 48" aria-hidden="true">
-      <path d="M24 16v8M24 24H12v6M24 24h12v6" fill="none" stroke={L} strokeWidth="2" pathLength={1} className="ico-link" />
+    <Tile id="leads" colors={CYAN}>
+      <path d="M32 23v9M32 32H18v8M32 32h14v8" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" pathLength={1} className="ico-link" />
       <g className="ico-node ico-node-1">
-        <circle cx="24" cy="10" r="6" fill={A} />
+        <circle cx="32" cy="16" r="7" fill="#ffffff" stroke="#055f7a" strokeWidth="2" />
+        <circle cx="32" cy="14" r="2.5" fill="#077a9c" />
+        <path d="M27 20a5 5 0 0 1 10 0" fill="#077a9c" />
       </g>
       <g className="ico-node ico-node-2">
-        <circle cx="12" cy="36" r="6" fill={B} />
+        <circle cx="18" cy="47" r="7" fill="#f7cf3a" stroke="#8a6a00" strokeWidth="2" />
+        <circle cx="18" cy="45" r="2.5" fill="#8a6a00" />
+        <path d="M13 51a5 5 0 0 1 10 0" fill="#8a6a00" />
       </g>
       <g className="ico-node ico-node-3">
-        <circle cx="36" cy="36" r="6" fill={B} />
+        <circle cx="46" cy="47" r="7" fill="#f7cf3a" stroke="#8a6a00" strokeWidth="2" />
+        <circle cx="46" cy="45" r="2.5" fill="#8a6a00" />
+        <path d="M41 51a5 5 0 0 1 10 0" fill="#8a6a00" />
       </g>
-    </svg>
+    </Tile>
   );
 }
 
 function Won() {
   return (
-    <svg viewBox="0 0 48 48" aria-hidden="true">
+    <Tile id="won" colors={GOLD}>
       {/* piggy bank */}
-      <path d="M12 24c0-6 6-10 14-10s14 4 14 10c0 3-1 5-3 7v5h-5l-1-3h-8l-1 3h-5v-5c-3-2-5-4-5-7z" fill={B} />
-      <circle cx="33" cy="22" r="1.6" fill="#000" opacity="0.5" />
-      <rect x="20" y="13" width="9" height="2.5" rx="1" fill="rgba(0,0,0,0.35)" className="ico-pslot" />
-      <path d="M8 22l4 2v4l-4 1z" fill={B} />
+      <path d="M17 34c0-8 7-13 16-13s16 5 16 13c0 4-2 7-4 9v6h-6l-2-4h-8l-2 4h-6v-6c-3-2-4-5-4-9z" fill="#ffffff" stroke="#8a6a00" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="43" cy="31" r="2" fill="#8a6a00" />
+      <rect x="27" y="22" width="12" height="3" rx="1.5" fill="#8a6a00" className="ico-pslot" />
+      <path d="M13 31l5 2v5l-5 1z" fill="#ffffff" stroke="#8a6a00" strokeWidth="2" strokeLinejoin="round" />
       {/* coin dropping */}
       <g className="ico-coin">
-        <circle cx="24.5" cy="7" r="5" fill={A} stroke="#fff" strokeWidth="1.5" />
-        <text x="24.5" y="9.6" textAnchor="middle" fontSize="7" fontWeight="800" fill="#fff" fontFamily="inherit">
-          $
-        </text>
+        <circle cx="33" cy="11" r="6" fill="#0f5fd1" stroke="#ffffff" strokeWidth="2" />
+        <path d="M33 7.5v7M31 9.5h3.5a1.25 1.25 0 0 1 0 2.5h-3a1.25 1.25 0 0 0 0 2.5H35" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
       </g>
-    </svg>
+    </Tile>
   );
 }
 
 const ICONS: Record<SectionIconName, () => React.JSX.Element> = { submissions: Submissions, activity: Activity, conversations: Conversations, appointments: Appointments, leads: Leads, won: Won };
 
-export default function SectionIcon({ name, size = 44, className = "" }: { name: SectionIconName; size?: number; className?: string }) {
+export default function SectionIcon({ name, size = 44, className = "" }: { name: SectionIconName; size?: number | string; className?: string }) {
   const Icon = ICONS[name];
   return (
     <span className={`sec-icon sec-icon-${name} ${className}`.trim()} style={{ width: size, height: size }}>
