@@ -818,3 +818,17 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     the tab order while the dock is open. Reduced motion removes the
     slide, the pulse, and the smooth scroll. The content gutter shrinks
     to 28px since only the handle sits in it at rest.
+68. **Dock polish (2026-10-17, owner request).** The container behind the
+    dock tiles is gone; the tiles float over the page with a soft drop
+    shadow (stronger in the dock than on band headings) so they read on
+    dark and light bands, and the hover label keeps its glass pill.
+    Spacing is 28px between tiles at rest and 18px while magnified. Tile
+    colors: Won Opportunities emerald (#22c55e → #15803d) with a white
+    piggy bank outlined in gold and a gold coin; Appointments red
+    (#ef4444 → #b91c1c) with a white calendar and white check;
+    Conversations green (#34d399 → #059669) with white bubbles; Leads
+    teal; Submissions blue and Activity cyan unchanged. Every tile has a
+    macOS-style gloss: a white top-half gradient at 25% fading out by the
+    middle, a 1px lighter inner line along the top edge, and a faint
+    darker inner shadow at the bottom, all vector so it stays crisp on
+    Retina.

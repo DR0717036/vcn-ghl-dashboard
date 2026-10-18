@@ -4101,3 +4101,35 @@ html.anim .anim-root:not(.chart-in) .heat-cell {
     animation: none !important;
   }
 }
+
+/* ---- dock polish (2026-10-17): no panel behind the tiles, wider spacing, stronger tile shadow ---- */
+.dock,
+.dock.is-over {
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-radius: 0;
+}
+
+.dock {
+  --gap: 28px;
+}
+
+.dock.is-over {
+  --gap: 18px;
+}
+
+.sec-icon svg.tile {
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.dock-btn .sec-icon svg.tile {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.dock-dot {
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+}
