@@ -2,7 +2,7 @@
 // descriptions, and the icon each one uses (SectionIcon.tsx). Shared by the
 // band headings and the slide-in side navigation.
 
-export type SectionIconName = "submissions" | "activity" | "conversations" | "appointments" | "leads" | "won";
+export type SectionIconName = "submissions" | "activity" | "conversations" | "appointments" | "leads" | "won" | "reps";
 
 export interface Section {
   id: string;
@@ -18,4 +18,5 @@ export const SECTIONS: Section[] = [
   { id: "sec-appointments", name: "Appointments", desc: "Booked, showed, cancelled, outcomes", icon: "appointments" },
   { id: "sec-leads", name: "Leads", desc: "New leads, campaigns, sources, stale leads", icon: "leads" },
   { id: "sec-won", name: "Won Opportunities", desc: "Won deals, value, past semesters, close rates", icon: "won" },
+  { id: "sec-reps", name: "Rep Performance", desc: "Per-rep scorecards and leaderboard", icon: "reps" },
 ];

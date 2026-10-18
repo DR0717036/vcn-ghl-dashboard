@@ -680,6 +680,9 @@ export function wonDrilldown(which: string, arg: string, mode: WonMode, range: D
     const ids = new Set(cfg.pastSemesters.map((p) => p.wonStageId));
     list = opps.filter((o) => ids.has(o.stageId));
     title = "Past semesters · won";
+  } else if (which === "user") {
+    list = opps.filter((o) => (arg === "others" ? !o.assignedTo : o.assignedTo === arg));
+    title = `Won · ${arg === "others" ? "no owner" : (names.get(arg) ?? arg)}`;
   } else if (which === "campaign") {
     list = arg === "none" ? opps.filter((o) => o.campaigns.length === 0) : opps.filter((o) => o.campaigns.some((c) => c.toLowerCase() === arg));
     title = arg === "none" ? "Won · no campaign tag" : `Won · ${arg}`;

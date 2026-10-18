@@ -7,13 +7,13 @@
 // (src/app/KpiShell.tsx) so cards in a row line up exactly; cards fade in on
 // scroll (src/app/Reveal.tsx) and lift on hover (CSS only).
 
-import { callsSeries, milestoneSeries, newLeadsSeries, programFunnels, talkTimeSeries } from "@/lib/charts";
+import { callsSeries, milestoneSeries, talkTimeSeries } from "@/lib/charts";
 import { latestSyncRuns } from "@/lib/db";
 import { fmtDateTime, fmtRange, isRangeKey, resolveRange, type RangeKey } from "@/lib/dates";
 import { chartSeries } from "@/lib/design";
 import { mappingConfig } from "@/lib/mapping-config";
 import { computePrimaryKpis, coverage, kpiNewLeads } from "@/lib/metrics";
-import { computeMilestoneByKey, computeMilestones } from "@/lib/milestones";
+import { computeMilestoneByKey } from "@/lib/milestones";
 import { computeCommission } from "@/lib/commission";
 import { computeResponseTimes, computeStale } from "@/lib/conversations";
 import { analyzeMessaging, inboundChannelCard, keywordCard, replyRateCard } from "@/lib/messaging";
@@ -26,10 +26,8 @@ import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { computeCloseRates, computeCurrentPrograms, computeHeadline, computeMonthly, computePastSemesters, computeWonByCampaign, wonOpps } from "@/lib/wonRow";
 import BarChart from "./charts/BarChart";
 import ControlBar from "./ControlBar";
-import FunnelChart from "./charts/FunnelChart";
 import LineChart from "./charts/LineChart";
 import KpiCard from "./KpiCard";
-import MilestoneCard from "./MilestoneCard";
 import MilestoneKpiCard from "./MilestoneKpiCard";
 import RangePicker from "./RangePicker";
 import RepCallsCard from "./RepCallsCard";
@@ -45,6 +43,8 @@ import Motion from "./Motion";
 import Dock from "./Dock";
 import { SECTIONS } from "./sections";
 import SubmissionsCard from "./SubmissionsCard";
+import RepCards from "./RepCards";
+import { computeRepPerformance } from "@/lib/repPerformance";
 import { CloseRateCard, CurrentProgramsCard, PastSemestersCard, WonByCampaignCard, WonHeadlineCard, WonMonthlyCard } from "./WonCards";
 import WonModeSwitch from "./WonModeSwitch";
 
@@ -114,7 +114,6 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const inboundChannel = inboundChannelCard(messaging);
   // Commission on the events inside the selected range (quota and Won (MTD) stay month-to-date).
   const commission = computeCommission(range, now);
-  const milestones = computeMilestones(range);
   // Won row: both modes are computed so the client toggle can switch without a request.
   const wonMonthly = computeMonthly(now);
   const wonModes = (["current", "period"] as const).map((mode) => {
@@ -142,14 +141,13 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
       </>
     );
   };
-  const leadsSeries = newLeadsSeries(range);
-  const funnels = programFunnels();
   const hasData = Boolean(cov.lastCoreSyncOkAt);
   const per = calls.grouping === "hourly" ? "per hour" : calls.grouping === "daily" ? "per day" : "per week";
   const priorLabel = range.key === "this_week" || range.key === "last_week" ? "prior week" : "prior period";
   const alignedBy = calls.grouping === "hourly" ? "hour" : "day";
   // Names the selected range for drilldown requests (same keys the page itself reads).
   const rangeQuery = new URLSearchParams({ range: key, ...(key === "custom" && from ? { from } : {}), ...(key === "custom" && to ? { to } : {}) }).toString();
+  const repPerf = computeRepPerformance({ range, now, repCalls, repAppts, submissions, commission, responseTimes, leadsByUser, rangeQuery, rangeLabel: range.label });
 
   const milestoneTitle: Record<string, string> = {
     army_ca101: "Army CA 101 Submissions",
@@ -347,76 +345,12 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
 
-      <div className="page">
-        <section>
-          <h2>Program milestones</h2>
-          <p className="note">
-            Each card counts contacts reaching the milestone during the selected range (an event), with the current number sitting in the
-            stage shown separately (a snapshot). Never add the three cards of a program together: one opportunity can pass through all three.
-          </p>
-          <h3>Army CA · FY27</h3>
-          <div className="grid grid-3">
-            {milestones
-              .filter((m) => m.program === "army")
-              .map((m) => (
-                <MilestoneCard key={m.key} m={m} />
-              ))}
-          </div>
-          <h3>Veteran G.I. Bill · FS2</h3>
-          <div className="grid grid-3">
-            {milestones
-              .filter((m) => m.program === "veteran")
-              .map((m) => (
-                <MilestoneCard key={m.key} m={m} />
-              ))}
-          </div>
-        </section>
-
-
-        <section>
-          <h2>Charts</h2>
-          <div className="grid grid-2">
-            <div className="card">
-              <div className="chart-head">
-                <div>
-                  <div className="label">New Leads over time</div>
-                  <div className="note">
-                    {range.label}, {leadsSeries.grouping === "daily" ? "per day" : leadsSeries.grouping === "hourly" ? "per hour" : "per week (range longer than 92 days)"} ·
-                    contact creation date
-                  </div>
-                </div>
-                <div className="stat-value">{leadsSeries.total.toLocaleString("en-US")}</div>
-              </div>
-              <BarChart points={leadsSeries.points} color={chartSeries[0]} unit="new leads" height={220} />
-            </div>
-            <div className="card">
-              <div className="chart-head">
-                <div>
-                  <div className="label">Program funnels · currently in stage</div>
-                  <div className="note">Snapshot of opportunities sitting in each milestone stage now, all statuses and fiscal years. Not achievements.</div>
-                </div>
-                <div>
-                  <span className="legend">
-                    <span className="legend-swatch" style={{ background: chartSeries[0] }} /> {funnels[0]?.label}
-                  </span>
-                  {"  "}
-                  <span className="legend">
-                    <span className="legend-swatch" style={{ background: chartSeries[1] }} /> {funnels[1]?.label}
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-2">
-                {funnels.map((f, i) => (
-                  <div key={f.program}>
-                    <h3 style={{ marginTop: 4 }}>{f.label}</h3>
-                    <FunnelChart funnel={f} color={chartSeries[i] ?? chartSeries[0]} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
+      <section className="band band-dark" id={SECTIONS[6].id}>
+        <div className="band-inner">
+          <BandHeading s={SECTIONS[6]} />
+          <RepCards data={repPerf} rangeLabel={range.label} />
+        </div>
+      </section>
     </>
   );
 }

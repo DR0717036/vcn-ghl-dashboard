@@ -19,6 +19,8 @@ export interface Rep {
   commissionPlan: string;
   /** Fixed goal rates for specific KPIs, in the KPI's own unit, replacing base × multiplier. */
   goalOverrides?: Record<string, number>;
+  /** Path under public/ to the rep's photo (e.g. "reps/jane-doe.jpg"); initials are shown when missing. */
+  photo?: string;
 }
 
 export const salesReps: Rep[] = (raw as { reps: Rep[] }).reps;

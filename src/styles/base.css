@@ -4133,3 +4133,270 @@ html.anim .anim-root:not(.chart-in) .heat-cell {
 .dock-dot {
   box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
 }
+
+/* =====================================================================
+   Rep Performance band (2026-10-18)
+   ===================================================================== */
+.rep-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  margin: 0 0 var(--s-5);
+}
+
+.rep-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.rep-sort select {
+  font: inherit;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.rep-sort select option {
+  color: #0b1626;
+}
+
+.rep-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-5);
+  align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+  .rep-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .rep-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rep-card {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.rep-card:focus-visible {
+  outline: 2px solid var(--accent-blue, #1677ff);
+  outline-offset: 2px;
+}
+
+.rep-card-leader {
+  box-shadow: inset 0 0 0 1px rgba(224, 180, 0, 0.55), 0 0 0 1px rgba(224, 180, 0, 0.25);
+}
+
+.rep-card-head {
+  display: flex;
+  gap: var(--s-4);
+  align-items: center;
+}
+
+.rep-avatar {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #4d9bff, #0f5fd1 55%, #e0b400);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12), 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.rep-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.rep-avatar-initials {
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.rep-card-id {
+  min-width: 0;
+}
+
+.rep-card-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rep-crown {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.rep-card-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.rep-rank {
+  font-weight: 800;
+}
+
+.rep-card-sortval {
+  margin-top: 8px;
+  font-size: var(--text-small);
+}
+
+.rep-card-sortval b {
+  color: #ffffff;
+}
+
+.rep-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin-top: var(--s-5);
+}
+
+.rep-stat {
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.rep-stat-label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rep-stat-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.rep-stat-value.note {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.rep-stat-value .pill {
+  font-size: 10px;
+  padding: 1px 7px;
+}
+
+.rep-stat-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.rep-card-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--s-4);
+  margin-top: var(--s-5);
+  align-items: end;
+}
+
+.rep-spark {
+  display: block;
+  margin-top: 4px;
+}
+
+.rep-goals-value {
+  font-size: 20px;
+  color: #ffffff;
+  margin-top: 2px;
+}
+
+.rep-goals-dots {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.rep-goal-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8a97a8;
+}
+
+.rep-goal-met {
+  background: #22c55e;
+}
+
+.rep-goal-on_track {
+  background: #4d9bff;
+}
+
+.rep-goal-missed {
+  background: #ef4444;
+}
+
+.rep-notes {
+  margin-top: var(--s-5);
+}
+
+/* rep modal */
+.modal-rep .rep-modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.rep-tabs {
+  margin-bottom: var(--s-3);
+}
+
+/* reps icon animation: bars rise one by one, person nods */
+@keyframes ico-rise {
+  0% { transform: scaleY(0); }
+  60% { transform: scaleY(1.08); }
+  100% { transform: scaleY(1); }
+}
+
+.sec-icon .ico-bar {
+  transform-origin: 50% 100%;
+}
+
+.sec-icon.is-playing .ico-bar-1,
+.dock-item.is-hot .ico-bar-1 { animation: ico-rise 0.6s ease 1 both; }
+.sec-icon.is-playing .ico-bar-2,
+.dock-item.is-hot .ico-bar-2 { animation: ico-rise 0.6s ease 0.2s 1 both; }
+.sec-icon.is-playing .ico-bar-3,
+.dock-item.is-hot .ico-bar-3 { animation: ico-rise 0.6s ease 0.4s 1 both; }
+.dock-item.is-hot .ico-bar { animation-iteration-count: infinite; animation-duration: 1.8s; }

@@ -527,7 +527,8 @@ export interface DrilldownSpec {
   csvName: string;
 }
 
-export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose: () => void }) {
+/** The drilldown content (fetch, facts, chart, tables, notes) without the modal shell, so a tabbed modal can host several. */
+export function DrilldownBody({ spec }: { spec: DrilldownSpec }) {
   const [data, setData] = useState<DrillResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [outcomeFilter, setOutcomeFilter] = useState<"all" | CallOutcome>("all");
@@ -558,33 +559,8 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
     };
   }, [spec.query]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [onClose]);
-
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div
-      className="modal-backdrop"
-      role="presentation"
-      onClick={(e) => {
-        e.stopPropagation();
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="modal" role="dialog" aria-modal="true" aria-label={spec.title}>
-        <button type="button" className="modal-close" aria-label="Close" onClick={onClose}>
-          ×
-        </button>
+  return (
+    <>
         <div className="modal-head">
           <div className="modal-title">{spec.title}</div>
           {spec.subtitle ? <div className="note modal-sub">{spec.subtitle}</div> : null}
@@ -731,9 +707,50 @@ export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose
         {spec.notes && spec.notes.length > 0 ? (
           <Notes notes={spec.notes} className="modal-notes" />
         ) : null}
+    </>
+  );
+}
+
+/** The modal shell: backdrop, dialog, close button, Escape, body scroll lock. Children default to one DrilldownBody. */
+export function ModalShell({ title, onClose, children, className = "" }: { title: string; onClose: () => void; children: ReactNode; className?: string }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      className="modal-backdrop"
+      role="presentation"
+      onClick={(e) => {
+        e.stopPropagation();
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className={`modal ${className}`.trim()} role="dialog" aria-modal="true" aria-label={title}>
+        <button type="button" className="modal-close" aria-label="Close" onClick={onClose}>
+          ×
+        </button>
+        {children}
       </div>
     </div>,
     document.body,
+  );
+}
+
+export function DrilldownModal({ spec, onClose }: { spec: DrilldownSpec; onClose: () => void }) {
+  return (
+    <ModalShell title={spec.title} onClose={onClose}>
+      <DrilldownBody spec={spec} />
+    </ModalShell>
   );
 }
 

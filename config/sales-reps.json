@@ -1,27 +1,29 @@
 {
-  "_comment": "The sales reps used for every per-rep goal, the Program Submissions table, quotas, and commission estimates. Matched to GHL users by userId (the id in GHL's user list); name and email are for readability only. kpiMultiplier scales every per-rep goal rate (1.0 = full-time, 0.5 = part-time); goalOverrides sets a fixed rate for one KPI instead (in the KPI's own unit: per week for weekly goals, per day for daily goals). monthlyQuota is combined submissions for the calendar month. commissionPlan names a plan in config/commission.json. Team-wide goals are the sum of each rep's goal. Everyone not listed here is grouped as 'Other users, not sales reps' and still counts in team totals. Owner decision 2026-10-13 (edits round 6).",
+  "_comment": "The sales reps used for every per-rep goal, the Program Submissions table, quotas, and commission estimates. Matched to GHL users by userId (the id in GHL's user list); name and email are for readability only. kpiMultiplier scales every per-rep goal rate (1.0 = full-time, 0.5 = part-time); goalOverrides sets a fixed rate for one KPI instead (in the KPI's own unit: per week for weekly goals, per day for daily goals). monthlyQuota is combined submissions for the calendar month. commissionPlan names a plan in config/commission.json. Team-wide goals are the sum of each rep's goal. Everyone not listed here is grouped as 'Other users, not sales reps' and still counts in team totals. Owner decision 2026-10-13 (edits round 6). photo: a path under public/ to the rep's picture; shown as a circle on the Rep Performance cards, with initials when missing (added 2026-10-18).",
   "reps": [
     {
       "name": "Miguel Torres",
       "userId": "zAScZsaQOAHdH4asBzY7",
       "email": "migueltorresc03@gmail.com",
-      "kpiMultiplier": 1.0,
+      "kpiMultiplier": 1,
       "monthlyQuota": 20,
-      "commissionPlan": "submission-retro"
+      "commissionPlan": "submission-retro",
+      "photo": "reps/miguel-torres.jpg"
     },
     {
       "name": "William Bobier",
       "userId": "qpXxqyAmfmhYPvS1DvsE",
       "email": "Wbobier94@gmail.com",
-      "kpiMultiplier": 1.0,
+      "kpiMultiplier": 1,
       "monthlyQuota": 20,
-      "commissionPlan": "submission-retro"
+      "commissionPlan": "submission-retro",
+      "photo": "reps/william-bobier.jpg"
     },
     {
       "name": "Isabela Estrada",
       "userId": "6kogPo6iqyj42RePabFJ",
       "email": "Estradabela1@gmail.com",
-      "kpiMultiplier": 1.0,
+      "kpiMultiplier": 1,
       "monthlyQuota": 20,
       "commissionPlan": "submission-retro"
     },
@@ -29,25 +31,28 @@
       "name": "Anthony N.",
       "userId": "ZcAj80dEDtC4yvJTBilP",
       "email": "cybertone2.0@gmail.com",
-      "kpiMultiplier": 1.0,
+      "kpiMultiplier": 1,
       "monthlyQuota": 20,
-      "commissionPlan": "won-tiered"
+      "commissionPlan": "won-tiered",
+      "photo": "reps/anthony-navarette.jpg"
     },
     {
       "name": "Johnny M",
       "userId": "MyxjSUHWpKqryOJT2f9o",
       "email": "jessemargarini1@gmail.com",
-      "kpiMultiplier": 1.0,
+      "kpiMultiplier": 1,
       "monthlyQuota": 20,
-      "commissionPlan": "per-won-flat"
+      "commissionPlan": "per-won-flat",
+      "photo": "reps/johnny-margarini.jpg"
     },
     {
       "name": "Michael Nieves",
       "userId": "Ll4hIijoZ5PscaEsqMpp",
       "email": "Michaelnieves199@gmail.com",
-      "kpiMultiplier": 1.0,
+      "kpiMultiplier": 1,
       "monthlyQuota": 20,
-      "commissionPlan": "submission-retro"
+      "commissionPlan": "submission-retro",
+      "photo": "reps/michael-nieves.jpg"
     },
     {
       "name": "Sam R.",
@@ -58,7 +63,8 @@
       "commissionPlan": "per-won-flat",
       "goalOverrides": {
         "programSubmissions": 3
-      }
+      },
+      "photo": "reps/sam-rodriguez.jpg"
     }
   ]
 }

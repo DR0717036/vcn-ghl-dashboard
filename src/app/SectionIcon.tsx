@@ -150,7 +150,24 @@ function Won() {
   );
 }
 
-const ICONS: Record<SectionIconName, () => React.JSX.Element> = { submissions: Submissions, activity: Activity, conversations: Conversations, appointments: Appointments, leads: Leads, won: Won };
+function Reps() {
+  return (
+    <Tile id="reps" colors={["#f7cf3a", "#1677ff"]}>
+      {/* person */}
+      <g className="ico-person">
+        <circle cx="23" cy="22" r="8" fill="#ffffff" stroke="#0f5fd1" strokeWidth="2" />
+        <path d="M9 50c0-9 6-14 14-14s14 5 14 14v3H9z" fill="#ffffff" stroke="#0f5fd1" strokeWidth="2" strokeLinejoin="round" />
+      </g>
+      {/* small bar chart */}
+      <rect x="40" y="38" width="5" height="15" rx="1.5" fill="#ffffff" className="ico-bar ico-bar-1" />
+      <rect x="47" y="30" width="5" height="23" rx="1.5" fill="#ffffff" className="ico-bar ico-bar-2" />
+      <rect x="54" y="22" width="5" height="31" rx="1.5" fill="#ffffff" className="ico-bar ico-bar-3" />
+      <path d="M38 54h22" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+    </Tile>
+  );
+}
+
+const ICONS: Record<SectionIconName, () => React.JSX.Element> = { submissions: Submissions, activity: Activity, conversations: Conversations, appointments: Appointments, leads: Leads, won: Won, reps: Reps };
 
 export default function SectionIcon({ name, size = 44, className = "" }: { name: SectionIconName; size?: number | string; className?: string }) {
   const Icon = ICONS[name];
