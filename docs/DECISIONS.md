@@ -803,3 +803,18 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     box around them. The page content keeps an 84px left gutter so the
     dock never overlaps a card: measured at 1440px and 1024px the dock's
     right edge is at 70px and the first card starts at 108px.
+67. **Dock hidden behind a dot-grid handle (2026-10-17, owner request).**
+    At rest only a handle shows on the left edge, vertically centred: a
+    2×6 grid of 3px gray dots at 60% opacity inside a 20×64px glass pill
+    that pulses once about half a second after the page loads. Hovering
+    the handle, or moving the pointer into the leftmost 24px, slides the
+    dock in from the left (250ms ease) while the handle fades out; the
+    dock is otherwise unchanged (52px base, 1.6× / 1.25× magnification,
+    glass labels, active dot). The dock slides out and the handle returns
+    400ms after the pointer leaves it. Touch: tap the handle to open, tap
+    it again or outside to close. Keyboard: the handle is focusable,
+    Enter or Space opens the dock and moves focus to the first tile,
+    Escape closes it and returns focus to the handle; tiles are only in
+    the tab order while the dock is open. Reduced motion removes the
+    slide, the pulse, and the smooth scroll. The content gutter shrinks
+    to 28px since only the handle sits in it at rest.
