@@ -893,3 +893,28 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     GHL access is unchanged
     and read-only. Header shows the signed-in name and a Sign out button;
     nav is hidden when signed out.
+71. **Sync resilience after the first hosted run failed with "database or
+    disk is full" (2026-10-19, owner request).** The Railway volume was too
+    small for the message history. Changes: (a) the cache is checked with
+    `PRAGMA quick_check` when the server opens it; a damaged file is moved
+    aside as `cache.corrupt-<time>.sqlite` and a fresh cache starts (all data
+    re-syncs from GHL). SQLite's journal makes a disk-full write roll back
+    cleanly, so this is a safety net, not an expected path. (b) Rollbacks
+    after a failed write no longer throw ("cannot rollback - no transaction
+    is active" had hidden the real disk-full error). Messages were already
+    committed per 500-row page with the cursor advanced per page, so a
+    failure keeps everything loaded so far and the next run resumes.
+    (c) A run now counts as a successful core sync when the five core
+    phases (users, contacts, opportunities, calls, appointments) succeed,
+    even if a messaging phase fails; `last_core_sync_ok_at` drives "Last
+    successful sync", `last_core_sync_complete_at` records all-phase runs.
+    (d) Each run logs cache size and free disk at start and stores a
+    `disk_warning` below 1 GB free, shown on both pages. (e) Runs the
+    server stopped mid-way are closed as "interrupted" at the next start.
+    (f) `src/lib/syncStatus.ts` turns raw errors into plain-English
+    sentences; the Mapping page gained an "Automatic data sync" section
+    (last core/complete sync, last attempt, explanation, cache file size,
+    free disk, integrity, last six runs). Size estimate from the local
+    cache: 0.9 GB for Jan–Oct 2026, 80% of it email bodies, growing about
+    0.3 GB per month at the October rate, so a 5 GB volume lasts roughly a
+    year; trimming stored email HTML would cut that sharply (not done).

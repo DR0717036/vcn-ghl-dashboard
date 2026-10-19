@@ -13,7 +13,9 @@
 //   connection date.
 
 import { conversationsConfig } from "@/lib/conversations";
-import { finishSyncRun, getDb, getState, setState, startSyncRun } from "@/lib/db";
+import type { DatabaseSync } from "node:sqlite";
+import { cacheHealth, clearState, finishSyncRun, getDb, getState, markInterruptedRuns, setState, startSyncRun } from "@/lib/db";
+import { CORE_PHASES, fmtBytes, lowDiskMessage } from "@/lib/syncStatus";
 import { bounceKind } from "@/lib/emailStatus";
 import * as ghl from "@/lib/ghl/read";
 import { mappingConfig, type MilestoneMapping , trackedMilestones } from "@/lib/mapping-config";
@@ -87,10 +89,40 @@ function reportingGroupFor(m: MilestoneMapping, contactTags: string[] | undefine
   return "unclassified";
 }
 
+/**
+ * Ends a transaction after a failed write. When the failure was the disk
+ * filling up, SQLite has already rolled back and a second ROLLBACK throws
+ * "cannot rollback - no transaction is active", which would hide the real
+ * error; so this never throws.
+ */
+function rollback(db: DatabaseSync): void {
+  try {
+    if (db.isTransaction) rollback(db);
+  } catch {
+    // already rolled back by SQLite
+  }
+}
+
+/** Logs cache size and free disk at the start of a run; records a warning the pages can show. */
+function checkDisk(): void {
+  const h = cacheHealth();
+  console.log(`[sync] disk: cache ${fmtBytes(h.dbBytes + h.walBytes)}, free ${fmtBytes(h.freeBytes)} of ${fmtBytes(h.totalBytes)} at ${h.dir}`);
+  const warn = lowDiskMessage(h.freeBytes, h.dir);
+  if (warn) {
+    console.warn(`[sync] WARNING: ${warn}`);
+    setState("disk_warning", warn);
+  } else {
+    clearState("disk_warning");
+  }
+}
+
 export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phases: PhaseResult[] }> {
   if (isCoreSyncRunning()) throw new Error("A core sync is already running.");
   running = true;
   const db = getDb();
+  const interrupted = markInterruptedRuns(CORE_SYNC_KIND);
+  if (interrupted) console.warn(`[sync] ${interrupted} earlier run(s) never finished (server restarted); marked interrupted.`);
+  checkDisk();
   const runId = startSyncRun(CORE_SYNC_KIND);
   const runStart = new Date().toISOString();
   const firstSyncDone = Boolean(getState("first_core_sync_at"));
@@ -122,10 +154,16 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
       ? `All ${PHASES} phases succeeded (${phases.map((p) => `${p.phase} ${p.count}`).join(", ")}).`
       : `${okCount} of ${phases.length} phases succeeded. ` + phases.filter((p) => !p.ok).map((p) => `${p.phase}: ${p.error}`).join("; ");
     finishSyncRun(runId, ok, PHASES, okCount, summary);
-    if (ok) {
+    // The scorecard's core numbers need only the five core phases. If those
+    // succeeded, the run counts as a successful core sync even when a
+    // messaging phase failed (e.g. disk full): the pages show the loaded
+    // data plus a plain-English warning instead of "never".
+    const coreOk = CORE_PHASES.every((p) => phases.find((x) => x.phase === p)?.ok);
+    if (coreOk) {
       if (!firstSyncDone) setState("first_core_sync_at", runStart);
       setState("last_core_sync_ok_at", runStart);
     }
+    if (ok) setState("last_core_sync_complete_at", runStart);
     running = false;
   }
   return { runId, ok: phases.every((p) => p.ok), phases };
@@ -152,7 +190,7 @@ async function syncUsers(now: string): Promise<PhaseResult> {
       }
       db.exec("COMMIT");
     } catch (e) {
-      db.exec("ROLLBACK");
+      rollback(db);
       throw e;
     }
     res.ok = true;
@@ -199,7 +237,7 @@ async function syncContacts(now: string, firstSyncDone: boolean): Promise<PhaseR
         }
         db.exec("COMMIT");
       } catch (e) {
-        db.exec("ROLLBACK");
+        rollback(db);
         throw e;
       }
       const m = r.data.meta;
@@ -311,7 +349,7 @@ async function syncOpportunities(now: string, firstSyncDone: boolean): Promise<P
           }
           db.exec("COMMIT");
         } catch (e) {
-          db.exec("ROLLBACK");
+          rollback(db);
           throw e;
         }
         const m = r.data.meta;
@@ -412,7 +450,7 @@ async function syncMessages(now: string): Promise<PhaseResult> {
           }
           db.exec("COMMIT");
         } catch (e) {
-          db.exec("ROLLBACK");
+          rollback(db);
           throw e;
         }
         if (newest) setState(key, newest);
@@ -460,7 +498,7 @@ async function syncConversations(now: string): Promise<PhaseResult> {
       for (const row of rows) ins.run(...(row as (string | number | null)[]));
       db.exec("COMMIT");
     } catch (e) {
-      db.exec("ROLLBACK");
+      rollback(db);
       throw e;
     }
     setState("conversations_snapshot_at", now);
@@ -490,7 +528,7 @@ async function syncWorkflows(now: string): Promise<PhaseResult> {
       db.prepare(`DELETE FROM workflows WHERE seen_at <> ?`).run(now);
       db.exec("COMMIT");
     } catch (e) {
-      db.exec("ROLLBACK");
+      rollback(db);
       throw e;
     }
     res.ok = true;
@@ -700,7 +738,7 @@ async function syncCalls(now: string): Promise<PhaseResult> {
         }
         db.exec("COMMIT");
       } catch (e) {
-        db.exec("ROLLBACK");
+        rollback(db);
         throw e;
       }
       // Checkpoint after every page so an interrupted backfill resumes where it stopped.
@@ -763,7 +801,7 @@ async function syncAppointments(now: string): Promise<PhaseResult> {
           }
           db.exec("COMMIT");
         } catch (err) {
-          db.exec("ROLLBACK");
+          rollback(db);
           throw err;
         }
       }

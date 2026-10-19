@@ -8,7 +8,8 @@
 // scroll (src/app/Reveal.tsx) and lift on hover (CSS only).
 
 import { callsSeries, milestoneSeries, talkTimeSeries } from "@/lib/charts";
-import { latestSyncRuns } from "@/lib/db";
+import { getState, latestSyncRuns } from "@/lib/db";
+import { explainSyncSummary } from "@/lib/syncStatus";
 import { fmtDateTime, fmtRange, isRangeKey, resolveRange, type RangeKey } from "@/lib/dates";
 import { chartSeries } from "@/lib/design";
 import { mappingConfig } from "@/lib/mapping-config";
@@ -72,6 +73,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
 
   const cov = coverage();
   const lastRun = latestSyncRuns(CORE_SYNC_KIND, 1)[0];
+  const diskWarning = getState("disk_warning");
   const kpis = computePrimaryKpis(range).map((k) => (k.key === "newLeads" ? kpiNewLeads(newLeadsRange) : k));
   const kpi = (key: string) => kpis.find((k) => k.key === key)!;
   const calls = callsSeries(range);
@@ -179,10 +181,16 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           </span>
           {lastRun && lastRun.ok === 0 ? (
             <span>
-              <span className="pill pill-warn">last attempt partial</span> <span title={lastRun.summary ?? undefined}>see mapping page</span>
+              <span className="pill pill-warn">last attempt partial</span>{" "}
+              <span title={lastRun.summary ?? undefined}>{explainSyncSummary(lastRun.summary)} Details on the Mapping page.</span>
             </span>
           ) : null}
           {lastRun && lastRun.ok === null ? <span className="pill pill-info">sync running</span> : null}
+          {diskWarning ? (
+            <span>
+              <span className="pill pill-warn">low disk space</span> <span title={diskWarning}>see mapping page</span>
+            </span>
+          ) : null}
           <span>
             <b>Date range:</b> {range.label}, {fmtRange(range.start, range.end, range.partial)}
           </span>
@@ -197,8 +205,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
       {!hasData ? (
         <div className="band-inner">
           <div className="callout callout-info">
-            No completed sync yet. The first sync starts a few seconds after the server boots and takes a couple of minutes. Refresh this page
-            once &quot;Last successful sync&quot; shows a time.
+            No completed sync yet. The first sync starts a few seconds after the server boots; on a fresh cache it can take 30 to 60 minutes
+            because it loads the full history from GHL. Refresh this page once &quot;Last successful sync&quot; shows a time.
+            {lastRun && lastRun.ok === 0 ? <> The last attempt did not finish: {explainSyncSummary(lastRun.summary)}</> : null}
           </div>
         </div>
       ) : null}

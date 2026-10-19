@@ -4,18 +4,77 @@
 // All timestamps are ISO-8601 UTC strings ("2026-10-11T20:51:19.495Z") so
 // that string comparison orders them correctly in SQL.
 
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, statSync, statfsSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 let db: DatabaseSync | undefined;
 
+export interface CacheHealth {
+  dir: string;
+  file: string;
+  dbBytes: number;
+  walBytes: number;
+  freeBytes: number | null;
+  totalBytes: number | null;
+  /** Result of PRAGMA quick_check when the process opened the file ("ok" when sound). */
+  integrity: string;
+  integrityCheckedAt: string;
+  /** Set when a damaged file was moved aside and a fresh cache started. */
+  recoveredFrom?: string;
+}
+
+let openInfo: { integrity: string; checkedAt: string; recoveredFrom?: string } = { integrity: "not checked", checkedAt: "" };
+
+function dataDir(): string {
+  // DATA_DIR (optional) points at a persistent disk on the host; default is ./data.
+  return process.env.DATA_DIR?.trim() || path.join(process.cwd(), "data");
+}
+
+/**
+ * Checks an existing cache file before use. SQLite's journal makes an
+ * interrupted or disk-full write roll back cleanly, so damage is rare; if
+ * quick_check still reports a problem, the file (and its -wal/-shm) is moved
+ * aside as cache.corrupt-<time>.sqlite and a fresh cache is created. The
+ * cache only ever holds data re-syncable from GHL, so nothing is lost but
+ * the event history recorded on this machine, which stays in the moved file.
+ */
+function checkAndRecover(file: string): void {
+  const checkedAt = new Date().toISOString();
+  if (!existsSync(file)) {
+    openInfo = { integrity: "new file", checkedAt };
+    return;
+  }
+  let integrity = "ok";
+  try {
+    const probe = new DatabaseSync(file);
+    try {
+      const rows = probe.prepare("PRAGMA quick_check").all() as { quick_check: string }[];
+      integrity = rows.map((r) => r.quick_check).join("; ") || "ok";
+    } finally {
+      probe.close();
+    }
+  } catch (e) {
+    integrity = (e as Error).message;
+  }
+  if (integrity === "ok") {
+    openInfo = { integrity, checkedAt };
+    return;
+  }
+  const stamp = checkedAt.replace(/[:.]/g, "-");
+  const target = file.replace(/\.sqlite$/, `.corrupt-${stamp}.sqlite`);
+  for (const suffix of ["", "-wal", "-shm"]) if (existsSync(file + suffix)) renameSync(file + suffix, target + suffix);
+  console.error(`[db] cache integrity check failed (${integrity}). Moved the file to ${target} and started a fresh cache; everything re-syncs from GHL.`);
+  openInfo = { integrity: `failed: ${integrity}`, checkedAt, recoveredFrom: target };
+}
+
 export function getDb(): DatabaseSync {
   if (db) return db;
-  // DATA_DIR (optional) points at a persistent disk on the host; default is ./data.
-  const dir = process.env.DATA_DIR?.trim() || path.join(process.cwd(), "data");
+  const dir = dataDir();
   mkdirSync(dir, { recursive: true });
-  db = new DatabaseSync(path.join(dir, "cache.sqlite"));
+  const file = path.join(dir, "cache.sqlite");
+  checkAndRecover(file);
+  db = new DatabaseSync(file);
   db.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA synchronous = NORMAL;
@@ -338,6 +397,32 @@ export function finishSyncRun(
     .run(new Date().toISOString(), ok ? 1 : 0, probesTotal, probesOk, summary, id);
 }
 
+/** Runs of this kind that never finished (the server stopped mid-sync) are closed as interrupted. */
+export function markInterruptedRuns(kind: string): number {
+  const r = getDb()
+    .prepare(`UPDATE sync_runs SET finished_at = ?, ok = 0, summary = 'Interrupted: the server restarted during this sync.' WHERE kind = ? AND finished_at IS NULL`)
+    .run(new Date().toISOString(), kind);
+  return Number(r.changes);
+}
+
+/** Size of the cache, free space on its disk, and the integrity result from when this process opened it. */
+export function cacheHealth(): CacheHealth {
+  getDb();
+  const dir = dataDir();
+  const file = path.join(dir, "cache.sqlite");
+  const size = (p: string) => (existsSync(p) ? statSync(p).size : 0);
+  let freeBytes: number | null = null;
+  let totalBytes: number | null = null;
+  try {
+    const s = statfsSync(dir);
+    freeBytes = Number(s.bavail) * Number(s.bsize);
+    totalBytes = Number(s.blocks) * Number(s.bsize);
+  } catch {
+    // statfs unsupported on this platform: report unavailable rather than guess
+  }
+  return { dir, file, dbBytes: size(file), walBytes: size(file + "-wal"), freeBytes, totalBytes, integrity: openInfo.integrity, integrityCheckedAt: openInfo.checkedAt, recoveredFrom: openInfo.recoveredFrom };
+}
+
 export function latestSyncRuns(kind: string, limit = 5): SyncRunRow[] {
   return getDb()
     .prepare(`SELECT * FROM sync_runs WHERE kind = ? ORDER BY id DESC LIMIT ?`)
@@ -353,6 +438,10 @@ export function lastSuccessfulSync(kind: string): SyncRunRow | undefined {
 export function getState(key: string): string | undefined {
   const row = getDb().prepare(`SELECT value FROM sync_state WHERE key = ?`).get(key) as { value: string | null } | undefined;
   return row?.value ?? undefined;
+}
+
+export function clearState(key: string): void {
+  getDb().prepare(`DELETE FROM sync_state WHERE key = ?`).run(key);
 }
 
 export function setState(key: string, value: string): void {

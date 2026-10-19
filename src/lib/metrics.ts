@@ -2,7 +2,7 @@
 // cache; nothing here calls GHL. Each KPI returns either a number or an
 // explicit "unavailable" reason. Zero is never substituted for missing data.
 
-import { getDb, getState, lastSuccessfulSync } from "@/lib/db";
+import { getDb, getState } from "@/lib/db";
 import type { DateRange } from "@/lib/dates";
 import { fmtDay } from "@/lib/dates";
 import { goalFor, type Goal } from "@/lib/goals";
@@ -44,7 +44,8 @@ export interface Coverage {
 export function coverage(): Coverage {
   return {
     firstCoreSyncAt: getState("first_core_sync_at"),
-    lastCoreSyncOkAt: lastSuccessfulSync(CORE_SYNC_KIND)?.finished_at ?? undefined,
+    // Set when the five core phases succeeded (messaging phases may still have failed; the pages say so).
+    lastCoreSyncOkAt: getState("last_core_sync_ok_at"),
     historyStart: HISTORY_START,
   };
 }

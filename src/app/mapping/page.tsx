@@ -2,7 +2,9 @@
 // brief's labels map onto it, and which endpoints the token may read.
 // Everything shown comes from the local cache; nothing here calls GHL.
 
-import { lastSuccessfulSync, latestSyncRuns, readSnapshots, type SnapshotRow } from "@/lib/db";
+import { cacheHealth, getState, lastSuccessfulSync, latestSyncRuns, readSnapshots, type SnapshotRow } from "@/lib/db";
+import { CORE_SYNC_KIND } from "@/lib/sync/core";
+import { explainSyncSummary, fmtBytes } from "@/lib/syncStatus";
 import { funnelOnlyForStage, mappedTags, mappingConfig, milestoneForStage } from "@/lib/mapping-config";
 import {
   KEY_PREFIX,
@@ -114,6 +116,14 @@ export default async function MappingPage() {
   const lastOk = lastSuccessfulSync(MAPPING_SYNC_KIND);
   const runs = latestSyncRuns(MAPPING_SYNC_KIND, 1);
   const lastRun = runs[0];
+  // Automatic 15-minute sync (core data) and cache health
+  const coreRuns = latestSyncRuns(CORE_SYNC_KIND, 6);
+  const coreLast = coreRuns[0];
+  const coreOkAt = getState("last_core_sync_ok_at");
+  const coreCompleteAt = getState("last_core_sync_complete_at") ?? lastSuccessfulSync(CORE_SYNC_KIND)?.started_at;
+  const health = cacheHealth();
+  const diskWarning = getState("disk_warning");
+  const duration = (a: string, b: string | null) => (b ? `${Math.max(1, Math.round((Date.parse(b) - Date.parse(a)) / 60000))} min` : "running");
 
   const location = pick<LocationSnapshot>(rows, "location");
   const pipelines = pick<PipelinesSnapshot>(rows, "pipelines");
@@ -198,14 +208,101 @@ export default async function MappingPage() {
 
       {lastRun && lastRun.ok === 0 ? (
         <div className="callout callout-warn">
-          The last sync did not fully succeed: {lastRun.summary}. Sections below that depend on a failed check show
-          &quot;unavailable&quot; rather than partial numbers.
+          The last account check did not fully succeed: {explainSyncSummary(lastRun.summary)} Sections below that depend on a failed check
+          show &quot;unavailable&quot; rather than partial numbers.
         </div>
       ) : null}
 
       {rows.length === 0 ? (
         <div className="callout callout-info">No sync has run yet. Click &quot;Sync from GHL now&quot; to read the account.</div>
       ) : null}
+
+      {/* ---- Automatic data sync ---- */}
+      <section className="card">
+        <h2>Automatic data sync</h2>
+        <p className="note">
+          Runs every 15 minutes on the server (contacts, opportunities, calls, appointments, then messages, conversations, workflows, email
+          templates, and email delivery status). The scorecard needs the first five; if a later phase fails, the loaded data still shows with a
+          warning.
+        </p>
+        <div className="status-bar">
+          <span>
+            <b>Last successful sync (core data):</b> {coreOkAt ? when(coreOkAt) : "never"}
+          </span>
+          <span>
+            <b>Last fully complete sync:</b> {coreCompleteAt ? when(coreCompleteAt) : "never"}
+          </span>
+          {coreLast ? (
+            <span>
+              <b>Last attempt:</b> {when(coreLast.started_at)}{" "}
+              {coreLast.ok === 1 ? (
+                <span className="pill pill-ok">complete</span>
+              ) : coreLast.ok === 0 ? (
+                <span className="pill pill-warn">{/interrupted/i.test(coreLast.summary ?? "") ? "interrupted" : "partial"}</span>
+              ) : (
+                <span className="pill pill-info">running</span>
+              )}
+            </span>
+          ) : null}
+        </div>
+        {coreLast && coreLast.ok === 0 ? (
+          <div className="callout callout-warn">
+            <b>The last automatic sync did not finish.</b> {explainSyncSummary(coreLast.summary)}
+          </div>
+        ) : null}
+        {diskWarning ? (
+          <div className="callout callout-warn">
+            <b>Low disk space.</b> {diskWarning}
+          </div>
+        ) : null}
+        {health.recoveredFrom ? (
+          <div className="callout callout-warn">
+            <b>The cache file was damaged and replaced.</b> The old file was kept at {health.recoveredFrom}. Everything re-syncs from GHL; event
+            history recorded before the replacement is not shown.
+          </div>
+        ) : null}
+        <div className="status-bar">
+          <span>
+            <b>Cache file:</b> {fmtBytes(health.dbBytes)}
+            {health.walBytes > 0 ? ` (+ ${fmtBytes(health.walBytes)} pending writes)` : ""}
+          </span>
+          <span>
+            <b>Free disk:</b> {health.freeBytes === null ? "unavailable" : `${fmtBytes(health.freeBytes)} of ${fmtBytes(health.totalBytes)}`}
+          </span>
+          <span>
+            <b>Integrity check at start:</b> {health.integrity}
+          </span>
+          <span>
+            <b>Location:</b> {health.dir}
+          </span>
+        </div>
+        {coreRuns.length > 0 ? (
+          <table>
+            <thead>
+              <tr>
+                <th>Started</th>
+                <th>Duration</th>
+                <th>Result</th>
+                <th>What happened</th>
+              </tr>
+            </thead>
+            <tbody>
+              {coreRuns.map((r) => (
+                <tr key={r.id}>
+                  <td>{when(r.started_at)}</td>
+                  <td>{duration(r.started_at, r.finished_at)}</td>
+                  <td>
+                    {r.ok === 1 ? <span className="pill pill-ok">complete</span> : r.ok === 0 ? <span className="pill pill-warn">partial</span> : <span className="pill pill-info">running</span>}
+                  </td>
+                  <td className="note">{r.ok === 1 ? r.summary : r.ok === 0 ? explainSyncSummary(r.summary) : "In progress."}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="note">No automatic sync has started yet.</p>
+        )}
+      </section>
 
       {/* ---- Endpoint access ---- */}
       <section className="card">
