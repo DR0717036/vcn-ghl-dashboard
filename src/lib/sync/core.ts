@@ -142,6 +142,13 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
     await run(() => syncOpportunities(runStart, firstSyncDone));
     await run(() => syncCalls(runStart));
     await run(() => syncAppointments(runStart));
+    // The scorecard's core numbers are complete at this point: record the
+    // success now so a long first messages backfill does not keep the
+    // dashboard on "never" for half an hour.
+    if (CORE_PHASES.every((p) => phases.find((x) => x.phase === p)?.ok)) {
+      if (!firstSyncDone) setState("first_core_sync_at", runStart);
+      setState("last_core_sync_ok_at", runStart);
+    }
     await run(() => syncMessages(runStart));
     await run(() => syncConversations(runStart));
     await run(() => syncWorkflows(runStart));
