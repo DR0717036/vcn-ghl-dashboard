@@ -7,3 +7,4 @@ data/
 *.sqlite-shm
 *.tsbuildinfo
 next-env.d.ts
+*.png.png

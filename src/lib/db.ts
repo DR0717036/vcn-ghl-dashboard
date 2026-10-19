@@ -12,7 +12,8 @@ let db: DatabaseSync | undefined;
 
 export function getDb(): DatabaseSync {
   if (db) return db;
-  const dir = path.join(process.cwd(), "data");
+  // DATA_DIR (optional) points at a persistent disk on the host; default is ./data.
+  const dir = process.env.DATA_DIR?.trim() || path.join(process.cwd(), "data");
   mkdirSync(dir, { recursive: true });
   db = new DatabaseSync(path.join(dir, "cache.sqlite"));
   db.exec(`
