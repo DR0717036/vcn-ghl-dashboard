@@ -918,3 +918,18 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     cache: 0.9 GB for Jan–Oct 2026, 80% of it email bodies, growing about
     0.3 GB per month at the October rate, so a 5 GB volume lasts roughly a
     year; trimming stored email HTML would cut that sharply (not done).
+72. **Event history migrated from the owner's PC to the host (2026-10-19,
+    owner request).** The hosted cache started on 2026-10-19; the PC had
+    recorded milestone events, assignment events, and opportunity history
+    since 2026-10-11. A login-protected route, `POST
+    /api/admin/import-history` (allowed only for addresses under
+    `historyImportAdmins` in `config/users.json`; `?dryRun=1` previews),
+    merges an export of those three tables plus the first-sync marker.
+    Rules in `src/lib/historyImport.ts`: milestone events are keyed by
+    (kind, milestone key, opportunity, GHL event time), so the same event
+    seen by both copies is one row; a host "baseline" row for an event the
+    PC saw happen is upgraded to a real event; history and assignment rows
+    are skipped when the host has the same row or one within 36 hours;
+    `first_core_sync_at` moves back to the PC's date so "history available
+    since" matches. Nothing touches GHL. A dry run against the PC itself
+    reported every row as already present (427 / 509 / 13,960 skipped).

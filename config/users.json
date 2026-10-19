@@ -4,5 +4,9 @@
     "diego@intelagentmedia.com",
     "dante@intelagentmedia.com",
     "tonyn@intelagentmedia.com"
+  ],
+  "_comment2": "Signed-in users who may merge event history from another copy of the dashboard (POST /api/admin/import-history).",
+  "historyImportAdmins": [
+    "diego@intelagentmedia.com"
   ]
 }
