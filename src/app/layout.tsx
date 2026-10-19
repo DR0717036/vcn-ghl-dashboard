@@ -3,6 +3,8 @@ import { Manrope } from "next/font/google";
 import type { ReactNode } from "react";
 import "@/styles/tokens.css";
 import "@/styles/base.css";
+import { currentUser } from "@/auth";
+import UserMenu from "./UserMenu";
 
 // Self-hosted by Next.js at build time: no request to Google Fonts at runtime.
 const manrope = Manrope({
@@ -18,7 +20,10 @@ export const metadata: Metadata = {
   icons: { icon: "/vcn-logo.png" },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Signed-out visitors only ever see the login page, so the nav and the
+  // user block are omitted until there is a session.
+  const user = await currentUser();
   return (
     <html lang="en" className={manrope.variable}>
       <body>
@@ -30,10 +35,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <span>VCN Sales Dashboard</span>
             </a>
             <span className="brand-sub">by Intelagent Media</span>
-            <nav className="nav">
-              <a href="/">Scorecard</a>
-              <a href="/mapping">Mapping</a>
-            </nav>
+            {user ? (
+              <nav className="nav">
+                <a href="/">Scorecard</a>
+                <a href="/mapping">Mapping</a>
+              </nav>
+            ) : null}
+            {user ? <UserMenu user={user} /> : null}
           </div>
         </header>
         <main>{children}</main>

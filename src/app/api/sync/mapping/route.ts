@@ -3,19 +3,14 @@
 // only; it never writes to GHL.
 
 import { NextResponse } from "next/server";
+import { isDenied, requireApiUser } from "@/lib/guard";
 import { runMappingSync } from "@/lib/sync/mapping";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(): Promise<NextResponse> {
-  // Until login (Sign in with Google) is wired up, this endpoint only works
-  // in local development. It must stay disabled in production until then.
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json(
-      { ok: false, error: "Sync endpoint is disabled in production until login is configured." },
-      { status: 403 },
-    );
-  }
+  const user = await requireApiUser();
+  if (isDenied(user)) return user;
   try {
     const result = await runMappingSync();
     return NextResponse.json(result);

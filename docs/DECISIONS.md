@@ -865,3 +865,31 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     were removed from the page; their data functions remain for reuse.
     Verified this month: 98 card figures equal their band rows and 119
     leaderboard cells equal the cards.
+70. **Login with Sign in with Google (2026-10-18, owner request).** Auth.js
+    (next-auth 5 beta, the release that supports Next.js 16) with the Google
+    provider. The allow-list lives in `config/users.json` (three addresses:
+    diego@, dante@, tonyn@intelagentmedia.com; matched ignoring case; the
+    file is re-read when it changes, no restart needed). A Google account
+    that is not listed, or whose email Google has not verified, is refused
+    inside the sign-in callback, so no session is ever created; the visitor
+    lands on `/login?error=AccessDenied` and sees "This dashboard is
+    private." Sessions are signed JWT cookies lasting 30 days; the session
+    callback re-checks the allow-list on every read so removing an address
+    takes effect at once. Protection is two layers deep: `src/proxy.ts`
+    (Next 16's middleware) redirects signed-out page requests to `/login`
+    and answers `/api/*` with 401 JSON, and every page and route checks
+    again through `src/lib/guard.ts` (`requirePageUser` / `requireApiUser`).
+    The former "disabled in production until login exists" switches on the
+    drilldown, recording, email-template, and sync routes were replaced by
+    these session checks. Open without a session: `/login`, `/api/auth/*`,
+    Next's own assets, the logo, and rep photos. The 15-minute sync runs
+    from `src/instrumentation.ts` without HTTP, so it needs no session.
+    Secrets `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET`
+    live only in `.env` (names in `.env.example`; the provider is given these
+    names explicitly because Auth.js defaults to `AUTH_GOOGLE_ID` /
+    `AUTH_GOOGLE_SECRET`). Tested 2026-10-18: the owner signed in and landed
+    on the scorecard, a non-listed Google account got the private page with
+    no session, and signed-out calls to every API path returned 401.
+    GHL access is unchanged
+    and read-only. Header shows the signed-in name and a Sign out button;
+    nav is hidden when signed out.

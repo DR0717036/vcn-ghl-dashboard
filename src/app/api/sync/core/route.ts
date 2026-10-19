@@ -1,15 +1,15 @@
 // POST /api/sync/core — runs the core 15-minute sync on demand. Writes only
-// to the local cache; never to GHL. Disabled in production until login exists.
+// to the local cache; never to GHL. Requires a signed-in user.
 
 import { NextResponse } from "next/server";
+import { isDenied, requireApiUser } from "@/lib/guard";
 import { isCoreSyncRunning, runCoreSync } from "@/lib/sync/core";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(): Promise<NextResponse> {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ ok: false, error: "Sync endpoint is disabled in production until login is configured." }, { status: 403 });
-  }
+  const user = await requireApiUser();
+  if (isDenied(user)) return user;
   if (isCoreSyncRunning()) {
     return NextResponse.json({ ok: false, error: "A sync is already running." }, { status: 409 });
   }

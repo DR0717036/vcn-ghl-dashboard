@@ -1,9 +1,10 @@
 // GET /api/drilldown — rows behind one Submissions KPI card or one rep row.
 // Reads the local cache; the only GHL calls are read-only GET /contacts/{id}
 // for the listed contacts (see src/lib/drilldown.ts). Returns personal data,
-// so it is disabled in production until login exists, like the sync route.
+// so it requires a signed-in user (src/lib/guard.ts).
 
 import { NextResponse } from "next/server";
+import { isDenied, requireApiUser } from "@/lib/guard";
 import { isRangeKey, resolveRange } from "@/lib/dates";
 import { milestoneDrilldown, repDrilldown } from "@/lib/drilldown";
 import { responseDrilldown, staleDrilldown } from "@/lib/conversations";
@@ -17,9 +18,8 @@ import { wonDrilldown } from "@/lib/wonRow";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request): Promise<NextResponse> {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ ok: false, error: "Drilldowns are disabled in production until login is configured." }, { status: 403 });
-  }
+  const user = await requireApiUser();
+  if (isDenied(user)) return user;
   const sp = new URL(req.url).searchParams;
   const rangeParam = sp.get("range") ?? undefined;
   const now = new Date();
