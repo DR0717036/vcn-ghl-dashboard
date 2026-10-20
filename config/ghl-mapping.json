@@ -1,5 +1,5 @@
 {
- "_comment": "Generated from the live GHL pipelines endpoint (read-only) on 2026-10-11 and reviewed against docs/VCN_Build_Brief.md and docs/DECISIONS.md. Edit this file, not the dashboard code, when a pipeline, stage, fiscal year, or semester changes.",
+ "_comment": "Generated from the live GHL pipelines endpoint (read-only) on 2026-10-11 (pipeline dump refreshed 2026-10-20 for the Spring Session 1 stages) and reviewed against docs/VCN_Build_Brief.md and docs/DECISIONS.md. Edit this file, not the dashboard code, when a pipeline, stage, fiscal year, or semester changes.",
  "timezone": "America/New_York",
  "programs": {
   "army": {
@@ -93,6 +93,36 @@
    "stageName": "Enrolled Won (FS2)",
    "reportingGroup": "FS2",
    "reportingGroupBasis": "stage_name"
+  },
+  {
+   "key": "vet_iau_app_submitted_ss1_2027",
+   "program": "veteran",
+   "label": "IAU App Submitted (Spring Session 1)",
+   "pipelineId": "d4EiaI9N258GlOTJNIhg",
+   "stageId": "598b9501-d10b-4212-a25d-d06c24b01b32",
+   "stageName": "IAU App Submitted (Spring Session 1)",
+   "reportingGroup": "SS1-2027",
+   "reportingGroupBasis": "stage_name"
+  },
+  {
+   "key": "vet_iau_app_accepted_ss1_2027",
+   "program": "veteran",
+   "label": "IAU App Accepted (Spring Session 1)",
+   "pipelineId": "d4EiaI9N258GlOTJNIhg",
+   "stageId": "29a4f06d-552b-4204-b733-8d40ab6a7d68",
+   "stageName": "IAU App Accepted (Spring Session 1)",
+   "reportingGroup": "SS1-2027",
+   "reportingGroupBasis": "stage_name"
+  },
+  {
+   "key": "vet_enrolled_won_ss1_2027",
+   "program": "veteran",
+   "label": "Enrolled Won (Spring Session 1)",
+   "pipelineId": "d4EiaI9N258GlOTJNIhg",
+   "stageId": "c994925d-81c0-4142-939d-d198afc758cc",
+   "stageName": "Enrolled Won (Spring Session 1)",
+   "reportingGroup": "SS1-2027",
+   "reportingGroupBasis": "stage_name"
   }
  ],
  "funnelOnlyStages": [
@@ -103,6 +133,14 @@
    "stageName": "IAU App Signed (FS2)",
    "reportingGroup": "FS2",
    "note": "Not a milestone metric. Shown in funnels and current-in-stage counts only (docs/DECISIONS.md 2026-10-11 #3)."
+  },
+  {
+   "program": "veteran",
+   "pipelineId": "d4EiaI9N258GlOTJNIhg",
+   "stageId": "aef4e006-98b6-42e2-a4a1-f2eb1815b69a",
+   "stageName": "IAU App Signed (Spring Session1)",
+   "reportingGroup": "SS1-2027",
+   "note": "Not a milestone metric. Shown in funnels and current-in-stage counts only (same rule as IAU App Signed (FS2), docs/DECISIONS.md 2026-10-11 #3)."
   }
  ],
  "kpiMilestones": [
@@ -156,6 +194,12 @@
    "status": "active",
    "relatedTag": "fall semester 2",
    "basis": "Stage name (FS2). Tag is informational."
+  },
+  "SS1-2027": {
+   "program": "veteran",
+   "label": "Spring Session 1 (2027)",
+   "status": "active",
+   "basis": "Stage name (Spring Session 1). Added 2026-10-20 (docs/DECISIONS.md #74)."
   },
   "FS1": {
    "program": "veteran",
@@ -549,8 +593,8 @@
      "position": 19
     },
     {
-     "id": "1b8e7741-68c4-43c8-9646-9b499cdd0eeb",
-     "name": "IAU App Submitted (FS2)",
+     "id": "598b9501-d10b-4212-a25d-d06c24b01b32",
+     "name": "IAU App Submitted (Spring Session 1)",
      "position": 20
     },
     {
@@ -559,18 +603,18 @@
      "position": 21
     },
     {
-     "id": "e73b05e2-0044-47b7-85c8-1050ce479ce2",
-     "name": "IAU App Accepted (FS2)",
+     "id": "29a4f06d-552b-4204-b733-8d40ab6a7d68",
+     "name": "IAU App Accepted (Spring Session 1)",
      "position": 22
     },
     {
-     "id": "0fe9e3a1-f809-43d6-93c5-7768e63597fc",
-     "name": "IAU App Signed (FS2)",
+     "id": "aef4e006-98b6-42e2-a4a1-f2eb1815b69a",
+     "name": "IAU App Signed (Spring Session1)",
      "position": 23
     },
     {
-     "id": "3292edc7-1888-473d-a4b4-69d36f36a4ad",
-     "name": "Enrolled Won (FS2)",
+     "id": "c994925d-81c0-4142-939d-d198afc758cc",
+     "name": "Enrolled Won (Spring Session 1)",
      "position": 24
     },
     {
@@ -664,46 +708,91 @@
      "position": 42
     },
     {
+     "id": "1b8e7741-68c4-43c8-9646-9b499cdd0eeb",
+     "name": "IAU App Submitted (FS2)",
+     "position": 43
+    },
+    {
+     "id": "e73b05e2-0044-47b7-85c8-1050ce479ce2",
+     "name": "IAU App Accepted (FS2)",
+     "position": 44
+    },
+    {
+     "id": "0fe9e3a1-f809-43d6-93c5-7768e63597fc",
+     "name": "IAU App Signed (FS2)",
+     "position": 45
+    },
+    {
+     "id": "3292edc7-1888-473d-a4b4-69d36f36a4ad",
+     "name": "Enrolled Won (FS2)",
+     "position": 46
+    },
+    {
      "id": "71732fff-7565-40bf-82bf-7b569ee1f917",
      "name": "Enrolled/ Won (FS1)",
-     "position": 43
+     "position": 47
     },
     {
      "id": "897f76bb-af90-4c8d-b46d-410f2cf74279",
      "name": "IAU APP Accepted (FS1)",
-     "position": 44
+     "position": 48
     },
     {
      "id": "047fb9cb-b597-4138-a664-b7e180812650",
      "name": "IAU App Signed (FS1)",
-     "position": 45
+     "position": 49
     },
     {
      "id": "d90b76f8-86d9-484f-b2a2-0de5fd8f8e96",
      "name": "IAU App Accepted (SS1 & SS2)",
-     "position": 46
+     "position": 50
     },
     {
      "id": "305d200d-b903-4b0f-82d5-9bc7168522b4",
      "name": "IAU App Submitted (FS 1)",
-     "position": 47
+     "position": 51
     },
     {
      "id": "ee48e56b-9b16-4b93-a530-cd8e4f350a61",
      "name": "IAU Application Submitted (SS1 & SS2)",
-     "position": 48
+     "position": 52
     },
     {
      "id": "ce32844d-c6db-4565-935c-74bf75ecf877",
      "name": "Enrolled/ Won (Summer Session 2)",
-     "position": 49
+     "position": 53
     },
     {
      "id": "1d2744d4-c4ca-4f49-bc31-5a5cb28c887f",
      "name": "Enrolled/ Won (Summer Session 1)",
-     "position": 50
+     "position": 54
     }
    ]
   }
- ]
+ ],
+ "semesters": {
+  "_comment": "Veteran G.I. Bill semesters the scorecard can switch between (Submissions section dropdown). Keys are reporting groups; milestone keys point at entries in milestones. The first entry with default: true is shown unless the URL names another (?semester=KEY).",
+  "list": [
+   {
+    "key": "FS2",
+    "label": "Fall Session 2",
+    "short": "FS2",
+    "submittedKey": "vet_iau_app_submitted",
+    "acceptedKey": "vet_iau_app_accepted",
+    "wonKey": "vet_enrolled_won",
+    "signedStageId": "0fe9e3a1-f809-43d6-93c5-7768e63597fc",
+    "default": true
+   },
+   {
+    "key": "SS1-2027",
+    "label": "Spring Session 1",
+    "short": "SS1 '27",
+    "submittedKey": "vet_iau_app_submitted_ss1_2027",
+    "acceptedKey": "vet_iau_app_accepted_ss1_2027",
+    "wonKey": "vet_enrolled_won_ss1_2027",
+    "signedStageId": "aef4e006-98b6-42e2-a4a1-f2eb1815b69a",
+    "default": false
+   }
+  ]
+ }
 }

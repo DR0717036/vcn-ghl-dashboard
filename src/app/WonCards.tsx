@@ -146,15 +146,14 @@ export function WonHeadlineCard({ h, mode, rangeQuery, rangeLabel, className = "
 
 export function CurrentProgramsCard({ c, mode, rangeQuery, rangeLabel, className = "" }: { c: CurrentProgramsResult; mode: WonMode; rangeQuery: string; rangeLabel: string; className?: string }) {
   const q = `kind=won&mode=${mode}&${rangeQuery}`;
-  const army = c.stages.find((s) => s.program === "army");
-  const vet = c.stages.find((s) => s.program === "veteran");
-  const bars = c.stages.map((s) => ({ label: s.program === "army" ? "Army · FY27" : "Veteran · FS2", value: s.totals.value, color: programColors[s.program], text: `${usd(s.totals.value)} · ${n(s.totals.count)} won`, detail: s.label }));
+  const programName = (p: "army" | "veteran") => (p === "army" ? "Army" : "Veteran");
+  const bars = c.stages.map((s) => ({ label: `${programName(s.program)} · ${s.short}`, value: s.totals.value, color: programColors[s.program], text: `${usd(s.totals.value)} · ${n(s.totals.count)} won`, detail: s.label }));
   return (
     <KpiShell
       id={`wonPrograms-${mode}`}
       className={`kpi-title-xl kpi-chart-fit ${className}`.trim()}
       title="Current Programs"
-      subtitle={`Won in Won/Submitted (Fy 27) + Enrolled Won (FS2) · ${MODE_LABEL[mode]}`}
+      subtitle={`Won in ${c.stages.map((s) => s.label).join(" + ")} · ${MODE_LABEL[mode]}`}
       value={
         <div className="stat-pair">
           <div>
@@ -170,14 +169,12 @@ export function CurrentProgramsCard({ c, mode, rangeQuery, rangeLabel, className
       pill={c.discrepancyCount > 0 ? <span className="pill pill-warn">{n(c.discrepancyCount)} not won</span> : <span className="pill pill-ok">No discrepancies</span>}
       goalLine={
         <span className="won-split">
-          <span>
-            <span className="stat-split-dot" style={{ background: programColors.army, marginRight: 4 }} />
-            Army · Won/Submitted (Fy 27): <b>{n(army?.totals.count ?? 0)}</b> · {usd(army?.totals.value ?? 0)}
-          </span>
-          <span>
-            <span className="stat-split-dot" style={{ background: programColors.veteran, marginRight: 4 }} />
-            Veteran · Enrolled Won (FS2): <b>{n(vet?.totals.count ?? 0)}</b> · {usd(vet?.totals.value ?? 0)}
-          </span>
+          {c.stages.map((s) => (
+            <span key={s.key}>
+              <span className="stat-split-dot" style={{ background: programColors[s.program], marginRight: 4 }} />
+              {programName(s.program)} · {s.label}: <b>{n(s.totals.count)}</b> · {usd(s.totals.value)}
+            </span>
+          ))}
         </span>
       }
       deltaLine={
@@ -187,12 +184,12 @@ export function CurrentProgramsCard({ c, mode, rangeQuery, rangeLabel, className
                 .filter((s) => s.discrepancies.length > 0)
                 .map((s) => `${s.label} ${s.discrepancies.map((d) => `${n(d.count)} ${d.status}`).join(", ")}`)
                 .join(" · ")} — in a won stage but status not won; counted in no won total.`
-            : "No opportunity sits in either stage with a status other than won."}
+            : "No opportunity sits in any of these stages with a status other than won."}
           {c.otherWonStages.length > 0 ? ` Other won stages in the program pipelines: ${c.otherWonStages.map((s) => `${s.stageName} ${n(s.count)}`).join(", ")}.` : ""}
         </span>
       }
       chart={<HBarChart rows={bars} height={84} emptyText="No won opportunities in these stages." />}
-      footer={<DrilldownButton spec={spec(`${q}&which=programs`, `Current programs · ${n(c.combined.count)} won`, `${MODE_LABEL[mode]} · ${modeSub(mode, rangeLabel)}`, c.combined.count, c.notes, `Current programs won ${mode} ${rangeLabel}`, { segments: c.stages.map((s) => ({ key: s.program, label: s.label, expected: s.totals.count })) })} label="View won opportunities" />}
+      footer={<DrilldownButton spec={spec(`${q}&which=programs`, `Current programs · ${n(c.combined.count)} won`, `${MODE_LABEL[mode]} · ${modeSub(mode, rangeLabel)}`, c.combined.count, c.notes, `Current programs won ${mode} ${rangeLabel}`, { segments: c.stages.map((s) => ({ key: `stage:${s.key}`, label: s.label, expected: s.totals.count })) })} label="View won opportunities" />}
       notes={c.notes}
     />
   );
@@ -204,7 +201,7 @@ export function PastSemestersCard({ p, mode, rangeQuery, rangeLabel, className =
   const q = `kind=won&mode=${mode}&${rangeQuery}`;
   const bars = [
     ...p.rows.map((r) => ({ label: r.best ? `${r.short} ★` : r.short, value: r.totals.value, color: r.best ? BEST_GOLD : programColors.veteran, text: `${usd(r.totals.value)} · ${n(r.totals.count)} won`, detail: r.best ? `${r.label} · best by won $ (rank ${r.rankCount} by count)` : `${r.label} · rank ${r.rankValue} by won $, ${r.rankCount} by count` })),
-    ...(p.fs2 ? [{ label: "FS2 (current)", value: p.fs2.totals.value, color: chartSeries[3], text: `${usd(p.fs2.totals.value)} · ${n(p.fs2.totals.count)} won`, detail: `${p.fs2.label} · for comparison` }] : []),
+    ...p.current.map((s) => ({ label: `${s.short} (current)`, value: s.totals.value, color: chartSeries[3], text: `${usd(s.totals.value)} · ${n(s.totals.count)} won`, detail: `${s.label} · for comparison` })),
   ];
   const table = (
     <div className="kpi-body">
@@ -281,7 +278,7 @@ export function PastSemestersCard({ p, mode, rangeQuery, rangeLabel, className =
           {p.rows.map((r) => `${r.short} ${n(r.totals.count)} · ${usd(r.totals.value)}`).join("   ")}
         </span>
       }
-      deltaLine={<span className="kpi-muted">Reached application is a snapshot assumption (no stage history for these semesters); FS2 is shown on the chart for comparison.</span>}
+      deltaLine={<span className="kpi-muted">Reached application is a snapshot assumption (no stage history for these semesters); the current semesters ({p.current.map((s) => s.short).join(", ")}) are shown on the chart for comparison.</span>}
       chart={<HBarChart rows={bars} height={150} emptyText="No won opportunities in past semesters." />}
       body={table}
       footer={<DrilldownButton spec={spec(`${q}&which=past`, `Past semesters · ${n(p.total.count)} won`, `${MODE_LABEL[mode]} · ${modeSub(mode, rangeLabel)}`, p.total.count, p.notes, `Past semesters won ${mode} ${rangeLabel}`)} label="View won opportunities" />}
@@ -467,7 +464,7 @@ export function CloseRateCard({ c, rangeQuery, className = "" }: { c: CloseRateR
       id="wonCloseRate"
       className={`kpi-title-xl ${className}`.trim()}
       title="Application → Close Rate"
-      subtitle="FS1 / SS based on current stage, assumed path · FS2 tracked · as of the last sync"
+      subtitle={`FS1 / SS based on current stage, assumed path · ${c.rows.filter((r) => r.basis === "tracked").map((r) => r.key).join(" and ")} tracked · as of the last sync`}
       value={
         <div className="stat-pair">
           <div>

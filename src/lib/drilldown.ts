@@ -20,7 +20,7 @@ import { getDb } from "@/lib/db";
 import type { DateRange } from "@/lib/dates";
 import { getEnv } from "@/lib/env";
 import { getContact } from "@/lib/ghl/read";
-import { mappingConfig, trackedMilestones, type MilestoneMapping } from "@/lib/mapping-config";
+import { defaultSemester, mappingConfig, trackedMilestones, type MilestoneMapping, type Semester } from "@/lib/mapping-config";
 import { firstEvents, userNames, type EventRow } from "@/lib/milestones";
 import { repRoster } from "@/lib/reps";
 
@@ -109,7 +109,6 @@ export interface DrillResult {
 
 const DETAILS_TTL_MS = 15 * 60 * 1000;
 const CA101_KEY = "army_ca101";
-const FS2_KEY = "vet_iau_app_submitted";
 
 /** One event to list, whatever table it came from. */
 interface EventLike {
@@ -260,7 +259,7 @@ async function enrich(events: EventLike[]): Promise<{ rows: DrillRow[]; detailsN
   return { rows, detailsNote };
 }
 
-/** Contacts counted by one KPI card (Army CA 101, Supervisor Approval, FS2) in the range. */
+/** Contacts counted by one KPI card (Army CA 101, Supervisor Approval, a semester's IAU App Submitted / Accepted) in the range. */
 export async function milestoneDrilldown(key: string, range: DateRange): Promise<DrillResult | null> {
   const m = trackedMilestones().find((x) => x.key === key);
   if (!m) return null;
@@ -270,14 +269,14 @@ export async function milestoneDrilldown(key: string, range: DateRange): Promise
 
 /**
  * Contacts credited to one user in Program Submissions (combined): CA 101 events
- * plus FS2 events whose owner at the event was that user, plus the won
- * opportunities credited to them in the current calendar month (`month`).
- * `user` is a GHL user id, or "others" for everyone who is not a configured
- * rep (including unassigned).
+ * plus the selected semester's IAU App Submitted events whose owner at the
+ * event was that user, plus the won opportunities credited to them in the
+ * current calendar month (`month`). `user` is a GHL user id, or "others" for
+ * everyone who is not a configured rep (including unassigned).
  */
-export async function repDrilldown(user: string, range: DateRange, month: DateRange): Promise<DrillResult | null> {
+export async function repDrilldown(user: string, range: DateRange, month: DateRange, semester: Semester = defaultSemester()): Promise<DrillResult | null> {
   const ca = trackedMilestones().find((x) => x.key === CA101_KEY);
-  const fs = trackedMilestones().find((x) => x.key === FS2_KEY);
+  const fs = trackedMilestones().find((x) => x.key === semester.submittedKey);
   if (!ca || !fs) return null;
   const roster = repRoster();
   const names = userNames();

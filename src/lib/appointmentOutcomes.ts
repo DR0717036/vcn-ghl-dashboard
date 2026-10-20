@@ -166,7 +166,8 @@ export function buildCohort(range: DateRange): CohortMember[] {
   const ngt = ngtEntries();
   const opps = oppsByContact();
   const ca101Key = cfg.outcomeMilestones[0];
-  const fs2Key = cfg.outcomeMilestones[1];
+  // Every IAU App Submitted key after CA 101 (one per tracked semester: FS2, Spring Session 1, ...).
+  const iauKeysCfg = cfg.outcomeMilestones.slice(1);
 
   const members: CohortMember[] = [];
   for (const [contactId, appts] of byContact) {
@@ -178,7 +179,7 @@ export function buildCohort(range: DateRange): CohortMember[] {
       return hit ? { label: hit.label, at: hit.at } : null;
     };
     const ca101 = firstOf(ca101Key);
-    const fs2 = firstOf(fs2Key);
+    const fs2 = iauKeysCfg.map((k) => firstOf(k)).filter((x): x is Reached => x !== null).sort((a, b) => (a.at < b.at ? -1 : 1))[0] ?? null;
     const ngtHit = (ngt.get(contactId) ?? []).find((e) => e.at >= since);
     const ngtReached = ngtHit ? { label: cfg.ngtStage.stageName, at: ngtHit.at } : null;
     const converted = [ca101, fs2, ngtReached].filter((x): x is Reached => x !== null).sort((a, b) => (a.at < b.at ? -1 : 1))[0] ?? null;
@@ -243,9 +244,9 @@ export function computeOutcome(range: DateRange): OutcomeResult {
       "Cohort — distinct contacts (by contact ID) with an appointment scheduled to start in the selected range, any calendar status; each contact is anchored to their earliest such appointment.",
       `As of — outcomes are judged as of the last sync (${fmtDay(new Date(asOf))}), not as of the end of the range, so a cohort keeps converting after its period ends.`,
       "Since — an outcome counts when it happened at or after the anchor appointment's start time; the first achievement per contact is used and a contact counts once per outcome.",
-      "CA 101 submitted / IAU App Submitted (FS2) — the contact's first entry into the stage, from the milestone events with GHL's own stage-entry time.",
+      "CA 101 submitted / IAU App Submitted (any tracked semester: FS2, Spring Session 1) — the contact's first entry into the stage, from the milestone events with GHL's own stage-entry time.",
       `${cfg.ngtStage.stageName} — entry into the stage, read from the stage history the sync observes every 15 minutes (time = when the sync saw it), or GHL's stage-entry time for opportunities already in the stage at the first sync.`,
-      "Converted — reached any of the three outcomes (CA 101, FS2, NGT); counts and the % use only cohort contacts whose appointment falls after the history start.",
+      "Converted — reached any of the three outcomes (CA 101, IAU App, NGT); counts and the % use only cohort contacts whose appointment falls after the history start.",
       "Won / Lost — the contact has an opportunity whose status is won / lost with GHL's status-change time at or after the appointment; always available, no history limit. Each funnel step counts cohort contacts on its own (a no-show can still convert), so steps are not strictly nested.",
       "Army / Veteran — the contact's current tags; Both and No tag count in Total only.",
       `Limitation: milestone and stage history only exist since the first sync (${historyStart ? fmtDay(new Date(historyStart)) : "not yet"}), so contacts whose appointment was before that date show "history unavailable" for the conversion step and are excluded from the conversion %.`,
@@ -293,7 +294,7 @@ export function buildNgt(range: DateRange): NgtMember[] {
   const start = iso(range.start);
   const end = iso(range.end);
   const entries = ngtEntries();
-  const milestones = milestoneTimes(cfg.outcomeMilestones.slice(1, 2));
+  const milestones = milestoneTimes(cfg.outcomeMilestones.slice(1));
   const opps = oppsByContact();
   const tags = new Map<string, string | null>();
   const ids = [...entries.keys()];
@@ -369,7 +370,7 @@ export function computeLosses(range: DateRange, outcome: OutcomeResult): LossesR
       "Showed contacts — distinct contacts with an appointment scheduled in the range and marked Showed.",
       "Lost after showing — of those, contacts with an opportunity whose status is lost and whose GHL status-change time is at or after the showed appointment's start; the stage shown is the stage the opportunity sits in now, which is where it was lost from (GHL keeps the stage when an opportunity is marked lost).",
       `${cfg.ngtStage.stageName} entries — contacts whose opportunity entered the stage during the range: stage changes the sync observed (time = when it was seen, within 15 minutes), plus opportunities already in the stage at the first sync and still there (GHL's own stage-entry time).`,
-      "Since became — IAU App Submitted (FS2) from the milestone events, won / lost from the opportunity status with GHL's status-change time, each at or after the NGT entry; a contact can appear under more than one. Still open = none of the three.",
+      "Since became — IAU App Submitted (FS2 or Spring Session 1) from the milestone events, won / lost from the opportunity status with GHL's status-change time, each at or after the NGT entry; a contact can appear under more than one. Still open = none of the three.",
       "Army / Veteran — the contact's current tags; Both and No tag count in Total only.",
       `Limitation: stage history exists only since the first sync (${historyStart ? fmtDay(new Date(historyStart)) : "not yet"}); an opportunity that entered and left the NGT stage before then cannot be dated and is not counted.`,
     ],
@@ -561,7 +562,7 @@ export function ngtDrilldown(range: DateRange): DrillResult {
       reachedOn: m.enteredAt,
       tagClass: TAG_CLASS_LABEL[m.cls],
       apptStatus: m.basis === "observed" ? "entry seen by sync" : "GHL stage-entry time",
-      outcomeStage: became ? [m.fs2 ? "IAU App Submitted (FS2)" : null, m.won ? "Won" : null, m.lost ? "Lost" : null].filter(Boolean).join(" + ") : null,
+      outcomeStage: became ? [m.fs2 ? m.fs2.label : null, m.won ? "Won" : null, m.lost ? "Lost" : null].filter(Boolean).join(" + ") : null,
       outcomeOn: became?.at ?? null,
       lostOn: m.lost?.at ?? null,
       segments: ["entered", ...(m.fs2 ? ["fs2"] : []), ...(m.won ? ["won"] : []), ...(m.lost ? ["lost"] : []), ...(!m.fs2 && !m.won && !m.lost ? ["open"] : [])],

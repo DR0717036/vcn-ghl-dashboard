@@ -15,8 +15,8 @@
 //   touched         — any outbound call (human), SMS, or email to the
 //                     contact within touchWindowDays before now;
 //   appointment     — any non-deleted appointment booked for the contact;
-//   submitted       — first CA 101 submitted or IAU App Submitted (FS2)
-//                     milestone event (events exist since the first sync, so
+//   submitted       — first CA 101 submitted or IAU App Submitted (any
+//                     configured semester) milestone event (events exist since the first sync, so
 //                     leads created before that are "history unavailable");
 //   won / lost      — opportunity status; still New Lead — stage is New Lead;
 //   stale           — still New Lead for more than staleAfterDays, measured
@@ -28,7 +28,7 @@ import { buckets, fill, type Grouping, type TimePoint } from "@/lib/charts";
 import { getDb } from "@/lib/db";
 import { fmtDay, type DateRange } from "@/lib/dates";
 import { contactUrl, type DrillResult, type DrillRow } from "@/lib/drilldown";
-import { mappingConfig } from "@/lib/mapping-config";
+import { mappingConfig, semesters, trackedMilestones } from "@/lib/mapping-config";
 import { classifyTags, coverage, kpiLeadsAssigned, kpiNewLeads, type KpiResult } from "@/lib/metrics";
 import { userNames } from "@/lib/milestones";
 import { repRoster } from "@/lib/reps";
@@ -205,15 +205,16 @@ export function buildLeads(range: DateRange): Lead[] {
   const appt = new Map<string, string>();
   for (const r of db.prepare(`SELECT contact_id, MIN(date_added) AS t FROM appointments WHERE deleted = 0 AND contact_id IS NOT NULL AND date_added >= ? GROUP BY contact_id`).all(start) as unknown as { contact_id: string; t: string }[]) appt.set(r.contact_id, r.t);
 
-  // submissions: first CA 101 / FS2 milestone event per contact
+  // submissions: first CA 101 / IAU App Submitted (any configured semester) milestone event per contact
   const sub = new Map<string, { label: string; at: string }>();
   const labels = new Map<string, string>([
     ["army_ca101", "CA 101 submitted"],
-    ["vet_iau_app_submitted", "IAU App Submitted (FS2)"],
+    ...semesters().map((s): [string, string] => [s.submittedKey, trackedMilestones().find((m) => m.key === s.submittedKey)?.label ?? s.submittedKey]),
   ]);
+  const subKeys = [...labels.keys()];
   for (const r of db
-    .prepare(`SELECT contact_id, milestone_key, MIN(event_time) AS t FROM milestone_events WHERE kind = 'milestone' AND contact_id IS NOT NULL AND milestone_key IN ('army_ca101', 'vet_iau_app_submitted') AND event_time >= ? GROUP BY contact_id, milestone_key`)
-    .all(start) as unknown as { contact_id: string; milestone_key: string; t: string }[]) {
+    .prepare(`SELECT contact_id, milestone_key, MIN(event_time) AS t FROM milestone_events WHERE kind = 'milestone' AND contact_id IS NOT NULL AND milestone_key IN (${subKeys.map(() => "?").join(",")}) AND event_time >= ? GROUP BY contact_id, milestone_key`)
+    .all(...subKeys, start) as unknown as { contact_id: string; milestone_key: string; t: string }[]) {
     const cur = sub.get(r.contact_id);
     if (!cur || r.t < cur.at) sub.set(r.contact_id, { label: labels.get(r.milestone_key) ?? r.milestone_key, at: r.t });
   }
@@ -447,7 +448,7 @@ export function computeOutcomes(leads: Lead[]): OutcomesResult {
       row("touched", `Touched in last ${cfg.touchWindowDays} days`, (l) => l.touched, `${n(humanTouched)} by a person (call or manually sent message)`),
       row("appointment", "Appointment booked", (l) => l.appointmentAt !== null),
       ...stageRows,
-      row("submitted", "Submitted (CA 101 or IAU App FS2)", (l) => l.submitted !== null, withHistory < leads.length ? `history unavailable for ${n(leads.length - withHistory)}` : undefined, withHistory),
+      row("submitted", "Submitted (CA 101 or IAU App, any semester)", (l) => l.submitted !== null, withHistory < leads.length ? `history unavailable for ${n(leads.length - withHistory)}` : undefined, withHistory),
       row("won", "Won", (l) => l.won),
       { ...row("lost", "Lost", (l) => l.lost), lowerIsBetter: true },
       { ...row("newLead", "Still in New Lead stage", (l) => l.stillNewLead), lowerIsBetter: true },
@@ -463,7 +464,7 @@ export function computeOutcomes(leads: Lead[]): OutcomesResult {
       `Touched — any outbound human call, SMS, or email to the contact in the ${cfg.touchWindowDays} days before now (workflow sends included; the detail shows how many were touched by a person).`,
       "Appointment booked — any non-deleted appointment for the contact, whatever its status.",
       `Stage rows (${cfg.outcomeStages.join(", ")}) — the lead's current opportunity sits in the stage now (snapshot), or the stage history recorded any of its opportunities there since tracking began (event); one count per lead, with the two bases in the row's tooltip.`,
-      "Submitted — the first CA 101 submitted or IAU App Submitted (FS2) milestone event for the contact; the % uses only leads created after milestone tracking began.",
+      "Submitted — the first CA 101 submitted or IAU App Submitted (FS2 or Spring Session 1) milestone event for the contact; the % uses only leads created after milestone tracking began.",
       "Won / Lost — the live opportunity's status. Still in New Lead — its stage is New Lead.",
       "Campaign columns — each row split by the contact's campaign tags: the count and its share of that campaign's own cohort (its Total created). A lead with two campaign tags appears in both columns but once in All. The best and worst campaign on each row are tinted (lower is better for Lost and Still in New Lead); columns with no leads are skipped.",
       `Limitation: milestone events exist only since the first sync (${coverage().firstCoreSyncAt ? fmtDay(new Date(coverage().firstCoreSyncAt as string)) : "not yet"}), so leads created before that show history unavailable on the Submitted step.`,
@@ -635,7 +636,7 @@ export function computeSourceReport(leads: Lead[], by: "source" | "campaign"): S
         ? [
             "Source — GHL's contact source field, trimmed and matched case-insensitively; blank = Unknown. Each lead has exactly one source, so the rows add up to the total.",
             "Appointment booked / won / lost — as on the New Lead Outcomes card, as of the last sync.",
-            "Submitted — first CA 101 submitted or IAU App Submitted (FS2) milestone; conversion % = submitted ÷ leads created after milestone tracking began (the count shown under it), or — when none has history.",
+            "Submitted — first CA 101 submitted or IAU App Submitted (FS2 or Spring Session 1) milestone; conversion % = submitted ÷ leads created after milestone tracking began (the count shown under it), or — when none has history.",
             `Donut — the top ${cfg.topSources} sources by leads, the rest as Other. Bar chart — conversion % per source, sources with at least one lead with history.`,
           ]
         : [

@@ -72,7 +72,7 @@ export function AppointmentOutcomeCard({ o, rangeQuery, rangeLabel, className = 
       { key: "cohort", label: "Cohort (booked)", expected: o.cohort.total },
       { key: "showed", label: "Showed", expected: o.showed.total },
       { key: "ca101", label: "CA 101 submitted", expected: o.ca101.total },
-      { key: "fs2", label: "IAU App (FS2)", expected: o.fs2.total },
+      { key: "fs2", label: "IAU App (any semester)", expected: o.fs2.total },
       { key: "ngt", label: o.ngtStageName, expected: o.ngt.total },
       { key: "converted", label: "Converted (any)", expected: o.converted.total },
       { key: "won", label: "Won", expected: o.won.total },
@@ -97,7 +97,7 @@ export function AppointmentOutcomeCard({ o, rangeQuery, rangeLabel, className = 
           <SplitRow label="Cohort: appointment scheduled in period" s={o.cohort} strong />
           <SplitRow label="…with milestone history (basis for %)" s={o.withHistory} base={o.cohort} muted />
           <SplitRow label="CA 101 submitted" s={o.ca101} base={o.withHistory} />
-          <SplitRow label="IAU App Submitted (FS2)" s={o.fs2} base={o.withHistory} />
+          <SplitRow label="IAU App Submitted (FS2 / Spring Session 1)" s={o.fs2} base={o.withHistory} />
           <SplitRow label={o.ngtStageName} s={o.ngt} base={o.withHistory} />
           <SplitRow label="Converted (any of the three)" s={o.converted} base={o.withHistory} strong />
         </tbody>
@@ -197,7 +197,7 @@ export function PostAppointmentLossesCard({ l, rangeQuery, rangeLabel, className
     columns: NGT_COLUMNS,
     segments: [
       { key: "entered", label: "Entered NGT", expected: l.ngt.entered.total },
-      { key: "fs2", label: "IAU App (FS2)", expected: l.ngt.fs2.total },
+      { key: "fs2", label: "IAU App (any semester)", expected: l.ngt.fs2.total },
       { key: "won", label: "Won", expected: l.ngt.won.total },
       { key: "lost", label: "Lost", expected: l.ngt.lost.total },
       { key: "open", label: "Still open", expected: l.ngt.open.total },
@@ -239,7 +239,7 @@ export function PostAppointmentLossesCard({ l, rangeQuery, rangeLabel, className
         <SplitHead first="Since entering NGT" />
         <tbody>
           <SplitRow label="Entered the stage in period" s={l.ngt.entered} strong />
-          <SplitRow label="→ IAU App Submitted (FS2)" s={l.ngt.fs2} base={l.ngt.entered} />
+          <SplitRow label="→ IAU App Submitted (FS2 / Spring Session 1)" s={l.ngt.fs2} base={l.ngt.entered} />
           <SplitRow label="→ Won" s={l.ngt.won} base={l.ngt.entered} />
           <SplitRow label="→ Lost" s={l.ngt.lost} base={l.ngt.entered} />
           <SplitRow label="Still open (none of the three)" s={l.ngt.open} base={l.ngt.entered} muted />
@@ -272,7 +272,7 @@ export function PostAppointmentLossesCard({ l, rangeQuery, rangeLabel, className
       }
       deltaLine={
         <span className="kpi-muted">
-          NGT: {n(l.ngt.entered.total)} entered · FS2 {n(l.ngt.fs2.total)} · won {n(l.ngt.won.total)} · lost {n(l.ngt.lost.total)} · open {n(l.ngt.open.total)}
+          NGT: {n(l.ngt.entered.total)} entered · IAU App {n(l.ngt.fs2.total)} · won {n(l.ngt.won.total)} · lost {n(l.ngt.lost.total)} · open {n(l.ngt.open.total)}
         </span>
       }
       body={body}

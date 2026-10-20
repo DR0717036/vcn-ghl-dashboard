@@ -950,3 +950,31 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     and GHL 5xx instead of one generic "network or GHL outage". 401/403
     and 429 were already reported as token permission and rate limit, not
     as outages; that order is unchanged.
+74. **Spring Session 1 (SS1-2027) added as a second Veteran semester
+    (2026-10-20, owner request).** GHL now has four Spring Session 1 stages
+    in the Veteran G.I. Bill pipeline: IAU App Submitted, IAU App Accepted,
+    IAU App Signed, and Enrolled Won. The first two and Enrolled Won are
+    milestones (`vet_iau_app_submitted_ss1_2027`,
+    `vet_iau_app_accepted_ss1_2027`, `vet_enrolled_won_ss1_2027`, reporting
+    group `SS1-2027`, grouped by stage name like FS2); Signed is funnel-only
+    like its FS2 twin. The sync records their events from this deploy on
+    (the existing "newly tracked stage" backfill writes baseline rows for
+    anything already sitting there; none were). The key `SS1-2027` was chosen
+    because `SS` / `ss1` already mean the historical Summer Sessions in
+    config/won.json. `config/ghl-mapping.json` gained a `semesters.list`
+    (FS2 default, SS1-2027) and its pipeline dump was refreshed from GHL.
+    Scorecard: a Semester dropdown above the two Veteran cards (URL
+    `?semester=SS1-2027`; Fall Session 2 is the default and keeps the URL
+    clean) drives those cards, the IAU column, chart, totals, goal status,
+    and drilldowns of Program Submissions. Monthly quota and commission
+    count every semester's IAU submissions whatever the dropdown shows (a
+    submission is a submission; the quota must not drop when the page shows
+    another semester). Won Opportunities: Enrolled Won (Spring Session 1) is
+    a third current-program stage, the Application → Close Rate card gets a
+    tracked SS1-2027 cohort, and the past-semesters chart compares against
+    both current semesters. Appointment outcomes, NGT follow-up, Leads
+    "submitted", and rep close rates treat an IAU App Submitted in any
+    configured semester as a submission. Reconciliation before the push:
+    GHL's opportunity search (read-only) returned 0 opportunities in each of
+    the four Spring Session 1 stages, matching the cache (0 / 0 / 0 / 0);
+    the FS2 control stages matched exactly (73 / 5 / 27).

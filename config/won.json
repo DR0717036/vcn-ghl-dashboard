@@ -1,39 +1,112 @@
 {
-  "_comment": "Won Opportunities row (owner request 2026-10-17). Won always means opportunity status = won, once per opportunity id; dollar figures are Opportunity Value, never cash. currentPrograms: the two live won stages (Army FY27 and Veteran FS2). pastSemesters: one row each with its won stage and the application-stage ids (submitted / accepted / signed) used to estimate how many contacts reached the application step; SS1 and SS2 share one application path. closeRateGroups: cohorts for the Application → Close Rate card; FS2 is tracked from milestone events (since the first sync) plus current stage, FS1 and SS are assumed from the current stage because no history exists for them. Stage ids come from config/ghl-mapping.json.",
+  "_comment": "Won Opportunities row (owner request 2026-10-17). Won always means opportunity status = won, once per opportunity id; dollar figures are Opportunity Value, never cash. currentPrograms: the live won stages (Army FY27, Veteran FS2, Veteran Spring Session 1 2027); short is the chart label. pastSemesters: one row each with its won stage and the application-stage ids (submitted / accepted / signed) used to estimate how many contacts reached the application step; SS1 and SS2 share one application path. closeRateGroups: cohorts for the Application → Close Rate card; FS2 and SS1-2027 are tracked from milestone events (since the first sync) plus current stage, FS1 and SS are assumed from the current stage because no history exists for them. Stage ids come from config/ghl-mapping.json.",
   "currentPrograms": [
-    { "key": "army_fy27", "label": "Won/Submitted (Fy 27)", "program": "army", "pipelineId": "e0i7pW6G6oMysgFvxuYY", "stageId": "3dc55f66-a7a0-472f-af25-73a350bc4202" },
-    { "key": "vet_fs2", "label": "Enrolled Won (FS2)", "program": "veteran", "pipelineId": "d4EiaI9N258GlOTJNIhg", "stageId": "3292edc7-1888-473d-a4b4-69d36f36a4ad" }
+    {
+      "key": "army_fy27",
+      "label": "Won/Submitted (Fy 27)",
+      "program": "army",
+      "pipelineId": "e0i7pW6G6oMysgFvxuYY",
+      "stageId": "3dc55f66-a7a0-472f-af25-73a350bc4202",
+      "short": "FY27"
+    },
+    {
+      "key": "vet_fs2",
+      "label": "Enrolled Won (FS2)",
+      "program": "veteran",
+      "pipelineId": "d4EiaI9N258GlOTJNIhg",
+      "stageId": "3292edc7-1888-473d-a4b4-69d36f36a4ad",
+      "short": "FS2"
+    },
+    {
+      "key": "vet_ss1_2027",
+      "label": "Enrolled Won (Spring Session 1)",
+      "short": "SS1 '27",
+      "program": "veteran",
+      "pipelineId": "d4EiaI9N258GlOTJNIhg",
+      "stageId": "c994925d-81c0-4142-939d-d198afc758cc"
+    }
   ],
   "pastSemesters": [
-    { "key": "fs1", "label": "Enrolled/ Won (FS1)", "short": "FS1", "wonStageId": "71732fff-7565-40bf-82bf-7b569ee1f917", "group": "FS1" },
-    { "key": "ss1", "label": "Enrolled/ Won (Summer Session 1)", "short": "SS1", "wonStageId": "1d2744d4-c4ca-4f49-bc31-5a5cb28c887f", "group": "SS" },
-    { "key": "ss2", "label": "Enrolled/ Won (Summer Session 2)", "short": "SS2", "wonStageId": "ce32844d-c6db-4565-935c-74bf75ecf877", "group": "SS" }
+    {
+      "key": "fs1",
+      "label": "Enrolled/ Won (FS1)",
+      "short": "FS1",
+      "wonStageId": "71732fff-7565-40bf-82bf-7b569ee1f917",
+      "group": "FS1"
+    },
+    {
+      "key": "ss1",
+      "label": "Enrolled/ Won (Summer Session 1)",
+      "short": "SS1",
+      "wonStageId": "1d2744d4-c4ca-4f49-bc31-5a5cb28c887f",
+      "group": "SS"
+    },
+    {
+      "key": "ss2",
+      "label": "Enrolled/ Won (Summer Session 2)",
+      "short": "SS2",
+      "wonStageId": "ce32844d-c6db-4565-935c-74bf75ecf877",
+      "group": "SS"
+    }
   ],
   "closeRateGroups": [
     {
       "key": "FS1",
       "label": "Fall Semester 1",
       "basis": "assumed",
-      "applicationStageIds": ["305d200d-b903-4b0f-82d5-9bc7168522b4", "897f76bb-af90-4c8d-b46d-410f2cf74279", "047fb9cb-b597-4138-a664-b7e180812650"],
+      "applicationStageIds": [
+        "305d200d-b903-4b0f-82d5-9bc7168522b4",
+        "897f76bb-af90-4c8d-b46d-410f2cf74279",
+        "047fb9cb-b597-4138-a664-b7e180812650"
+      ],
       "applicationStageName": "IAU App Submitted (FS 1)",
-      "wonStageIds": ["71732fff-7565-40bf-82bf-7b569ee1f917"]
+      "wonStageIds": [
+        "71732fff-7565-40bf-82bf-7b569ee1f917"
+      ]
     },
     {
       "key": "SS",
       "label": "Summer Sessions 1 & 2",
       "basis": "assumed",
-      "applicationStageIds": ["ee48e56b-9b16-4b93-a530-cd8e4f350a61", "d90b76f8-86d9-484f-b2a2-0de5fd8f8e96"],
+      "applicationStageIds": [
+        "ee48e56b-9b16-4b93-a530-cd8e4f350a61",
+        "d90b76f8-86d9-484f-b2a2-0de5fd8f8e96"
+      ],
       "applicationStageName": "IAU Application Submitted (SS1 & SS2)",
-      "wonStageIds": ["1d2744d4-c4ca-4f49-bc31-5a5cb28c887f", "ce32844d-c6db-4565-935c-74bf75ecf877"]
+      "wonStageIds": [
+        "1d2744d4-c4ca-4f49-bc31-5a5cb28c887f",
+        "ce32844d-c6db-4565-935c-74bf75ecf877"
+      ]
     },
     {
       "key": "FS2",
       "label": "Fall Semester 2",
       "basis": "tracked",
       "milestoneKey": "vet_iau_app_submitted",
-      "applicationStageIds": ["1b8e7741-68c4-43c8-9646-9b499cdd0eeb", "e73b05e2-0044-47b7-85c8-1050ce479ce2", "0fe9e3a1-f809-43d6-93c5-7768e63597fc"],
+      "applicationStageIds": [
+        "1b8e7741-68c4-43c8-9646-9b499cdd0eeb",
+        "e73b05e2-0044-47b7-85c8-1050ce479ce2",
+        "0fe9e3a1-f809-43d6-93c5-7768e63597fc"
+      ],
       "applicationStageName": "IAU App Submitted (FS2)",
-      "wonStageIds": ["3292edc7-1888-473d-a4b4-69d36f36a4ad"]
+      "wonStageIds": [
+        "3292edc7-1888-473d-a4b4-69d36f36a4ad"
+      ]
+    },
+    {
+      "key": "SS1-2027",
+      "label": "Spring Session 1 (2027)",
+      "basis": "tracked",
+      "milestoneKey": "vet_iau_app_submitted_ss1_2027",
+      "applicationStageIds": [
+        "598b9501-d10b-4212-a25d-d06c24b01b32",
+        "29a4f06d-552b-4204-b733-8d40ab6a7d68",
+        "aef4e006-98b6-42e2-a4a1-f2eb1815b69a"
+      ],
+      "applicationStageName": "IAU App Submitted (Spring Session 1)",
+      "wonStageIds": [
+        "c994925d-81c0-4142-939d-d198afc758cc"
+      ]
     }
   ],
   "monthsOfHistory": 12

@@ -24,7 +24,7 @@ import { userNames } from "@/lib/milestones";
 // ---- config ---------------------------------------------------------------------------
 
 export interface WonConfig {
-  currentPrograms: { key: string; label: string; program: "army" | "veteran"; pipelineId: string; stageId: string }[];
+  currentPrograms: { key: string; label: string; short: string; program: "army" | "veteran"; pipelineId: string; stageId: string }[];
   pastSemesters: { key: string; label: string; short: string; wonStageId: string; group: string }[];
   closeRateGroups: { key: string; label: string; basis: "tracked" | "assumed"; milestoneKey?: string; applicationStageIds: string[]; applicationStageName: string; wonStageIds: string[] }[];
   monthsOfHistory: number;
@@ -232,6 +232,8 @@ export function computeHeadline(opps: WonOpp[], mode: WonMode, range: DateRange)
 export interface ProgramStage {
   key: string;
   label: string;
+  /** Chart / split label, e.g. "FY27", "FS2", "SS1 '27". */
+  short: string;
   program: "army" | "veteran";
   stageId: string;
   totals: Totals;
@@ -255,7 +257,7 @@ export function computeCurrentPrograms(opps: WonOpp[], mode: WonMode): CurrentPr
   const stages: ProgramStage[] = cfg.currentPrograms.map((p) => {
     const list = opps.filter((o) => o.stageId === p.stageId);
     const disc = db.prepare(`SELECT status, COUNT(*) AS c FROM opportunities WHERE stage_id = ? AND missing_since IS NULL AND status != 'won' GROUP BY status`).all(p.stageId) as unknown as { status: string; c: number }[];
-    return { key: p.key, label: p.label, program: p.program, stageId: p.stageId, totals: totalsOf(list), discrepancies: disc.map((d) => ({ status: d.status, count: d.c })) };
+    return { key: p.key, label: p.label, short: p.short, program: p.program, stageId: p.stageId, totals: totalsOf(list), discrepancies: disc.map((d) => ({ status: d.status, count: d.c })) };
   });
   const liveIds = new Set(cfg.currentPrograms.map((p) => p.stageId));
   const other = new Map<string, { pipelineName: string; stageName: string; stageId: string; count: number; value: number }>();
@@ -274,8 +276,8 @@ export function computeCurrentPrograms(opps: WonOpp[], mode: WonMode): CurrentPr
     otherWonStages: [...other.values()].sort((a, b) => b.count - a.count),
     notes: [
       `Current programs — won opportunities sitting in ${cfg.currentPrograms.map((p) => `"${p.label}"`).join(" or ")}: ${mode === "current" ? "their current stage, as of the last sync" : "the stage they were in at the won event"}.`,
-      "Combined — the two stages added together; one opportunity sits in exactly one stage, so nothing is double counted.",
-      "Army / Veteran — by pipeline: Won/Submitted (Fy 27) is the Army CA Pipeline's won stage, Enrolled Won (FS2) the Veteran G.I. Bill's.",
+      "Combined — these stages added together; one opportunity sits in exactly one stage, so nothing is double counted.",
+      `Army / Veteran — by pipeline: ${cfg.currentPrograms.filter((p) => p.program === "army").map((p) => p.label).join(" and ")} is the Army CA Pipeline's won stage; ${cfg.currentPrograms.filter((p) => p.program === "veteran").map((p) => p.label).join(" and ")} are the Veteran G.I. Bill's (one per semester).`,
       "Discrepancies — opportunities sitting in one of these stages whose status is not won; they are listed here and counted in no won total (a snapshot check, whatever the mode).",
       "Other won stages — won opportunities in the two program pipelines that sit in a different stage (past semesters, or moved after winning); together with this card they add up to the pipeline totals on the headline.",
       "Chart — Won Opportunity Value per stage; the count is in the label.",
@@ -307,8 +309,8 @@ export interface PastSemestersResult {
   rows: SemesterRow[];
   total: Totals;
   reachedTotal: number;
-  /** FS2 for comparison on the chart. */
-  fs2: { label: string; totals: Totals } | null;
+  /** The current Veteran semesters (FS2, Spring Session 1) for comparison on the chart. */
+  current: { key: string; label: string; short: string; totals: Totals }[];
   notes: string[];
 }
 
@@ -353,19 +355,19 @@ export function computePastSemesters(opps: WonOpp[], mode: WonMode): PastSemeste
     r.best = r.rankValue === 1 && r.totals.value > 0;
   }
   const pastIds = new Set(cfg.pastSemesters.map((s) => s.wonStageId));
-  const fs2 = cfg.currentPrograms.find((p) => p.program === "veteran");
+  const current = cfg.currentPrograms.filter((p) => p.program === "veteran");
   const groupsCounted = [...new Set(cfg.pastSemesters.map((s) => s.group))];
   return {
     mode,
     rows,
     total: totalsOf(opps.filter((o) => pastIds.has(o.stageId))),
     reachedTotal: groupsCounted.reduce((s, g) => s + (reachedBy.get(g) ?? 0), 0),
-    fs2: fs2 ? { label: fs2.label, totals: totalsOf(opps.filter((o) => o.stageId === fs2.stageId)) } : null,
+    current: current.map((p) => ({ key: p.key, label: p.label, short: p.short, totals: totalsOf(opps.filter((o) => o.stageId === p.stageId)) })),
     notes: [
       `Past semesters — won opportunities sitting in ${cfg.pastSemesters.map((s) => `"${s.label}"`).join(", ")} (${mode === "current" ? "current stage" : "stage at the won event"}); won = status won.`,
       "Reached application stage — distinct contacts whose opportunity currently sits in that semester's application, accepted, signed, or enrolled/won stage, or was marked lost while in one of them. GHL keeps no stage history for these semesters, so this assumes the pipeline path (an enrolled contact must have applied) and is a snapshot, not an event count.",
       "SS1 & SS2 — the two summer sessions share one application stage (IAU Application Submitted (SS1 & SS2)), so the same reached figure is shown on both rows and counted once in the total.",
-      "Chart — Won Opportunity Value per semester, with Enrolled Won (FS2) alongside for comparison.",
+      `Chart — Won Opportunity Value per semester, with the current semesters (${current.map((p) => p.label).join(", ")}) alongside for comparison.`,
       "Best — the semester with the highest won Opportunity Value (gold border, Best badge, brighter bar); its tooltip also gives its rank by won count.",
       "Limitation: reached-application counts are assumed from current stages; a contact who applied and was then moved to an unrelated stage is not counted.",
     ],
@@ -493,12 +495,12 @@ export function computeCloseRates(): CloseRateResult {
     historyStart,
     notes: [
       "Cohort — opportunities that reached the group's application-submitted stage.",
-      `FS2 (tracked) — every opportunity with an IAU App Submitted (FS2) milestone event (tracked since the first sync${historyStart ? `, ${historyStart.slice(0, 10)}` : ""}, with GHL's stage-entry time for those already there) plus any opportunity currently in the FS2 application, accepted, signed, or Enrolled Won stage.`,
+      `${cfg.closeRateGroups.filter((g) => g.basis === "tracked").map((g) => g.key).join(" / ")} (tracked) — every opportunity with the group's IAU App Submitted milestone event (tracked since the first sync${historyStart ? `, ${historyStart.slice(0, 10)}` : ""}, with GHL's stage-entry time for those already there) plus any opportunity currently in that semester's application, accepted, signed, or Enrolled Won stage.`,
       "FS1 / SS (assumed path) — no stage history exists for these semesters, so the cohort is built from current stages: opportunities now in the group's application, accepted, or signed stage, plus those in its Enrolled/Won stage (the pipeline requires an application first), plus lost opportunities whose last stage was one of those.",
       "Won — status won and sitting in the group's Enrolled/Won stage. Lost — status lost. Still in application — status open and currently in the application, accepted, or signed stage. Other — open but moved to a stage outside the path.",
       "Close rate — Won ÷ cohort. All — every cohort opportunity once, whatever its group.",
-      "Lost reads low or zero — when an opportunity is marked lost, GHL moves it to Not Interested, DND, Unqualified, or Wrong Number, which takes it off the application path; the assumed-path cohorts cannot see those, and the tracked FS2 cohort only sees losses after the first sync.",
-      "Limitation: for FS1 and SS a contact who applied and was then moved to an unrelated stage, or reopened, is not in the cohort; for FS2 applications before the first sync are known only if the opportunity still sits in an FS2 stage.",
+      "Lost reads low or zero — when an opportunity is marked lost, GHL moves it to Not Interested, DND, Unqualified, or Wrong Number, which takes it off the application path; the assumed-path cohorts cannot see those, and the tracked cohorts only see losses after the first sync.",
+      "Limitation: for FS1 and SS a contact who applied and was then moved to an unrelated stage, or reopened, is not in the cohort; for the tracked semesters, applications before the first sync are known only if the opportunity still sits in one of that semester's stages.",
     ],
   };
 }
@@ -687,7 +689,13 @@ export function wonDrilldown(which: string, arg: string, mode: WonMode, range: D
     list = arg === "none" ? opps.filter((o) => o.campaigns.length === 0) : opps.filter((o) => o.campaigns.some((c) => c.toLowerCase() === arg));
     title = arg === "none" ? "Won · no campaign tag" : `Won · ${arg}`;
   } else return null;
-  const segs = (o: WonOpp) => [o.programKind, ...(cfg.currentPrograms.some((p) => p.stageId === o.stageId) ? ["programs"] : []), ...(cfg.pastSemesters.some((p) => p.wonStageId === o.stageId) ? ["past"] : [])];
+  const segs = (o: WonOpp) => [
+    o.programKind,
+    ...(cfg.currentPrograms.some((p) => p.stageId === o.stageId) ? ["programs"] : []),
+    // one segment per live won stage, so the Current Programs drilldown can filter by semester
+    ...cfg.currentPrograms.filter((p) => p.stageId === o.stageId).map((p) => `stage:${p.key}`),
+    ...(cfg.pastSemesters.some((p) => p.wonStageId === o.stageId) ? ["past"] : []),
+  ];
   const rows = list.map((o) => wonRow(o, names, segs(o)));
   return { ok: true, title, rows, count: rows.length, detailsNote: null, fetchedAt: new Date().toISOString() };
 }

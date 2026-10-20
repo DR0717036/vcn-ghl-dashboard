@@ -12,7 +12,7 @@ import { getState, latestSyncRuns } from "@/lib/db";
 import { explainSyncSummary } from "@/lib/syncStatus";
 import { fmtDateTime, fmtRange, isRangeKey, resolveRange, type RangeKey } from "@/lib/dates";
 import { chartSeries } from "@/lib/design";
-import { mappingConfig } from "@/lib/mapping-config";
+import { mappingConfig, semesterFor, semesterQuery, semesters } from "@/lib/mapping-config";
 import { computePrimaryKpis, coverage, kpiNewLeads } from "@/lib/metrics";
 import { computeMilestoneByKey } from "@/lib/milestones";
 import { computeCommission } from "@/lib/commission";
@@ -31,6 +31,7 @@ import LineChart from "./charts/LineChart";
 import KpiCard from "./KpiCard";
 import MilestoneKpiCard from "./MilestoneKpiCard";
 import RangePicker from "./RangePicker";
+import SemesterPicker from "./SemesterPicker";
 import RepCallsCard from "./RepCallsCard";
 import { AppointmentRatesCard, AppointmentStatusCard, BookedVsShowedCard, RepAppointmentsCard } from "./AppointmentCards";
 import { AppointmentOutcomeCard, ArmyVsVeteranCard, PostAppointmentLossesCard } from "./AppointmentOutcomeCards";
@@ -66,6 +67,8 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const key: RangeKey = isRangeKey(rangeParam) ? rangeParam : "this_month";
   const from = first(sp.from);
   const to = first(sp.to);
+  // Veteran semester shown on the two Veteran cards and in Program Submissions (?semester=KEY; Fall Session 2 by default).
+  const semester = semesterFor(first(sp.semester));
   const now = new Date();
   const range = resolveRange(key, now, { from, to });
   // The New Leads card defaults to Today (brief 3.2) unless a range was chosen explicitly.
@@ -93,11 +96,12 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const staleLeads = computeStaleLeads(leads);
   const leadsBySource = computeSourceReport(leads, "source");
   const leadsByCampaign = computeSourceReport(leads, "campaign");
-  // KPI-row milestone cards, in the owner's order: CA 101, Supervisor Approval, then IAU App Submitted (FS2), the
-  // current semester. FS1 stays tracked in config (kpiMilestones) as a historical group but has no card (round 3).
+  // KPI-row milestone cards, in the owner's order: CA 101, Supervisor Approval, then IAU App Submitted and Accepted
+  // for the selected semester (FS2 by default, Spring Session 1 via the dropdown). FS1 stays tracked in config
+  // (kpiMilestones) as a historical group but has no card (round 3).
   const kpiMilestoneRows = [
     ["army_ca101", "army_supervisor_approval"],
-    ["vet_iau_app_submitted", "vet_iau_app_accepted"],
+    [semester.submittedKey, semester.acceptedKey],
   ];
   const kpiMilestoneKeys = kpiMilestoneRows.flat();
   const kpiMilestones = kpiMilestoneKeys
@@ -107,7 +111,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
       return m && mapping ? { m, series: milestoneSeries(mapping, range) } : null;
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
-  const submissions = computeSubmissions(range);
+  const submissions = computeSubmissions(range, semester);
   const repCalls = computeRepCalls(range);
   const stale = computeStale(now);
   const responseTimes = computeResponseTimes(range);
@@ -151,23 +155,24 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const priorLabel = range.key === "this_week" || range.key === "last_week" ? "prior week" : "prior period";
   const alignedBy = calls.grouping === "hourly" ? "hour" : "day";
   // Names the selected range for drilldown requests (same keys the page itself reads).
-  const rangeQuery = new URLSearchParams({ range: key, ...(key === "custom" && from ? { from } : {}), ...(key === "custom" && to ? { to } : {}) }).toString();
+  const rangeQuery = new URLSearchParams({ range: key, ...(key === "custom" && from ? { from } : {}), ...(key === "custom" && to ? { to } : {}) }).toString() + semesterQuery(semester);
   const repPerf = computeRepPerformance({ range, now, repCalls, repAppts, submissions, commission, responseTimes, leadsByUser, rangeQuery, rangeLabel: range.label });
 
   const milestoneTitle: Record<string, string> = {
     army_ca101: "Army CA 101 Submissions",
     army_supervisor_approval: "Awaiting Supervisor Approval",
-    vet_iau_app_submitted: "FS2 Application Submissions",
-    vet_iau_app_accepted: "FS2 Accepted",
+    [semester.submittedKey]: `${semester.short} Application Submissions`,
+    [semester.acceptedKey]: `${semester.short} Accepted`,
   };
   const milestoneSubtitle = (k: string, m: { reportingGroup: string; stageName: string }) =>
     k === "army_ca101"
       ? `Army CA · ${m.reportingGroup} · "${m.stageName}" · reached in period`
       : k === "army_supervisor_approval"
         ? `Army CA · ${m.reportingGroup} · awaiting approval · entered in period`
-        : k === "vet_iau_app_accepted"
-          ? `Veteran G.I. Bill · ${m.reportingGroup}, current semester · accepted in period`
-          : `Veteran G.I. Bill · ${m.reportingGroup}, current semester · reached in period`;
+        : k === semester.acceptedKey
+          ? `Veteran G.I. Bill · ${semester.label} (${m.reportingGroup}) · accepted in period`
+          : `Veteran G.I. Bill · ${semester.label} (${m.reportingGroup}) · "${m.stageName}" · reached in period`;
+  const semesterOptions = semesters().map((s) => ({ key: s.key, label: s.label, isDefault: Boolean(s.default) }));
 
   return (
     <>
@@ -217,12 +222,20 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           <h1 className="page-title">Primary KPIs Overall</h1>
           <BandHeading s={SECTIONS[0]} />
           {kpiMilestoneRows.map((keys) => (
-            <div className="kpi-row cols-2" key={keys.join("+")}>
-              {kpiMilestones
-                .filter(({ m }) => keys.includes(m.key))
-                .map(({ m, series }) => (
-                  <MilestoneKpiCard key={m.key} m={m} series={series} title={milestoneTitle[m.key]} subtitle={milestoneSubtitle(m.key, m)} rangeQuery={rangeQuery} rangeLabel={range.label} />
-                ))}
+            <div key={keys.join("+")}>
+              {keys.includes(semester.submittedKey) ? (
+                <div className="semester-row">
+                  <span className="note">Veteran G.I. Bill: these two cards and the IAU part of Program Submissions show the selected semester. Fall Session 2 is the default.</span>
+                  <SemesterPicker options={semesterOptions} active={semester.key} />
+                </div>
+              ) : null}
+              <div className="kpi-row cols-2">
+                {kpiMilestones
+                  .filter(({ m }) => keys.includes(m.key))
+                  .map(({ m, series }) => (
+                    <MilestoneKpiCard key={m.key} m={m} series={series} title={milestoneTitle[m.key]} subtitle={milestoneSubtitle(m.key, m)} rangeQuery={rangeQuery} rangeLabel={range.label} />
+                  ))}
+              </div>
             </div>
           ))}
           <div className="kpi-row cols-1">

@@ -4636,3 +4636,42 @@ html.anim .anim-root:not(.chart-in) .heat-cell {
     display: none;
   }
 }
+
+/* ---- Semester dropdown (Submissions section, owner request 2026-10-20) ---- */
+.semester-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  margin: 0 0 var(--s-2);
+}
+.semester-row .note {
+  margin: 0;
+}
+.semester-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-body);
+}
+.semester-picker select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--surface-card) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23182536' stroke-width='2'/></svg>") no-repeat right 10px center;
+  color: #182536;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 6px 30px 6px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 200px;
+}
+.semester-picker select:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}

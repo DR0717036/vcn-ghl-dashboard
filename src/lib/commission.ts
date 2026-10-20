@@ -285,7 +285,8 @@ export function computeCommission(range: DateRange, now: Date): CommissionReport
   const month = resolveRange("this_month", now);
   const fullMs = month.fullEnd.getTime() - month.start.getTime();
   const monthElapsedFraction = fullMs > 0 ? Math.min(1, Math.max(0, (month.end.getTime() - month.start.getTime()) / fullMs)) : 1;
-  const subs = computeSubmissions(month);
+  // Quota counts every semester's IAU submissions, whatever semester the page is showing.
+  const subs = computeSubmissions(month, "all");
   const subsByUser = new Map(subs.rows.map((r) => [r.userId, r.total]));
   const won = wonEvents(month);
   const wonByUser = new Map<string | null, WonLine[]>();

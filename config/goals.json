@@ -1,5 +1,5 @@
 {
-  "_comment": "Goals for the executive scorecard (owner decisions 2026-10-13, revised in edits round 6). Rates, not totals. Per-rep rates apply to each rep in config/sales-reps.json scaled by that rep's kpiMultiplier (or replaced by a goalOverrides entry), and the team-wide goal is the SUM of every rep's goal, so it updates automatically when reps or multipliers change. The dashboard then multiplies by the length of the selected period and scales to the elapsed portion for the Met / On Track / Missed pill. Talk time is in minutes. programSubmissions (CA 101 submitted + IAU App Submitted FS2) is the ONLY submissions goal: the individual Army CA 101, Awaiting Supervisor Approval, and FS2 cards never carry a goal. A KPI missing from every list shows 'Goal not set' and no pill.",
+  "_comment": "Goals for the executive scorecard (owner decisions 2026-10-13, revised in edits round 6). Rates, not totals. Per-rep rates apply to each rep in config/sales-reps.json scaled by that rep's kpiMultiplier (or replaced by a goalOverrides entry), and the team-wide goal is the SUM of every rep's goal, so it updates automatically when reps or multipliers change. The dashboard then multiplies by the length of the selected period and scales to the elapsed portion for the Met / On Track / Missed pill. Talk time is in minutes. programSubmissions (CA 101 submitted + IAU App Submitted for the selected semester, FS2 or Spring Session 1) is the ONLY submissions goal: the individual Army CA 101, Awaiting Supervisor Approval, and FS2 cards never carry a goal. A KPI missing from every list shows 'Goal not set' and no pill.",
   "perRepPerDay": {
     "callsMade": 100,
     "talkTimeMinutes": 120
@@ -24,7 +24,9 @@
     "endHour": 20,
     "minDials": 5
   },
-  "snapshotKpis": ["appointmentsConfirmed"],
+  "snapshotKpis": [
+    "appointmentsConfirmed"
+  ],
   "noGoal": [
     "appointmentsCancelled",
     "vet_iau_app_submitted_fs1",
@@ -37,6 +39,9 @@
     "wonArmy",
     "wonArmyFy27",
     "wonVeteran",
-    "wonEntireCrm"
+    "wonEntireCrm",
+    "vet_iau_app_submitted_ss1_2027",
+    "vet_iau_app_accepted_ss1_2027",
+    "vet_enrolled_won_ss1_2027"
   ]
 }

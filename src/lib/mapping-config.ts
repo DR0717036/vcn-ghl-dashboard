@@ -67,6 +67,46 @@ export interface MappingConfig {
   valueLabel: string;
   /** Live dump of every pipeline and stage at generation time. */
   pipelines: { id: string; name: string; stages: { id: string; name: string; position?: number }[] }[];
+  /** Veteran semesters the Submissions section can switch between. */
+  semesters: { _comment?: string; list: Semester[] };
+}
+
+/** One Veteran G.I. Bill semester: its reporting group and the milestone keys of its application path. */
+export interface Semester {
+  /** Reporting group key, e.g. "FS2" or "SS1-2027". Also the ?semester= URL value. */
+  key: string;
+  label: string;
+  /** Short label for column headers and chart bars. */
+  short: string;
+  submittedKey: string;
+  acceptedKey: string;
+  wonKey: string;
+  signedStageId: string;
+  default?: boolean;
+}
+
+/** Every configured semester, default first. */
+export function semesters(): Semester[] {
+  const list = mappingConfig.semesters?.list ?? [];
+  return [...list].sort((a, b) => Number(Boolean(b.default)) - Number(Boolean(a.default)));
+}
+
+export function defaultSemester(): Semester {
+  const list = semesters();
+  if (list.length === 0) throw new Error("config/ghl-mapping.json has no semesters.list entry.");
+  return list[0];
+}
+
+/** The semester named by a ?semester= value, or the default when missing or unknown. */
+export function semesterFor(key: string | undefined | null): Semester {
+  if (!key) return defaultSemester();
+  const k = key.trim().toLowerCase();
+  return semesters().find((s) => s.key.toLowerCase() === k) ?? defaultSemester();
+}
+
+/** Query-string fragment naming a semester, empty for the default (keeps default URLs clean). */
+export function semesterQuery(s: Semester): string {
+  return s.default ? "" : `&semester=${encodeURIComponent(s.key)}`;
 }
 
 /** Every contact tag the dashboard relies on, with what it is used for. */

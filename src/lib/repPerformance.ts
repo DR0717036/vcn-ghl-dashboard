@@ -3,7 +3,7 @@
 // every number on a card equals the rep's row in the band it came from:
 //   dials, conversations, connected, talk time, first call  — Rep Call Activity
 //   booked, show rate, calls per booking                      — Rep Appointments
-//   CA 101, IAU App FS2, combined (+ weekly goal)              — Program Submissions
+//   CA 101, IAU App (semester shown), combined (+ weekly goal) — Program Submissions
 //   monthly quota pacing, est. commission                      — Program Submissions (month-to-date columns)
 //   new leads assigned                                         — New Leads Assigned by User
 //   median response time                                       — Response Time card
@@ -31,7 +31,7 @@ import type { RepApptsResult } from "@/lib/appointments";
 import type { RepCallsResult } from "@/lib/repCalls";
 import { fmtDuration } from "@/lib/repCalls";
 import { salesReps } from "@/lib/reps";
-import { submissionEvents, type SubmissionsResult } from "@/lib/submissions";
+import { iauKeys, submissionEvents, type SubmissionsResult } from "@/lib/submissions";
 import { wonOpps } from "@/lib/wonRow";
 
 const n = (v: number) => v.toLocaleString("en-US");
@@ -61,7 +61,7 @@ export const METRIC_DEFS: MetricDef[] = [
   { key: "showRate", label: "Show rate", kind: "pct", source: "Rep Appointments" },
   { key: "callsPerBooking", label: "Calls per booking", kind: "ratio", lowerIsBetter: true, source: "Rep Appointments" },
   { key: "ca101", label: "CA 101 submissions", kind: "count", source: "Program Submissions" },
-  { key: "fs2", label: "IAU App FS2 submissions", kind: "count", source: "Program Submissions" },
+  { key: "iau", label: "IAU App submissions (semester shown)", kind: "count", source: "Program Submissions" },
   { key: "combined", label: "Combined submissions", kind: "count", source: "Program Submissions (vs weekly goal)" },
   { key: "quota", label: "Monthly quota pacing", kind: "pct", source: "Program Submissions (month to date)" },
   { key: "won", label: "Won", kind: "count", source: "Won Opportunities (became won in range, credited to the rep)" },
@@ -127,11 +127,11 @@ function leadsAssignedBy(range: DateRange): Map<string, number> | null {
   return new Map(rows.map((r) => [r.to_user, r.c]));
 }
 
-/** Per credited user: contacts submitted in the range (CA 101 or FS2 first events) and how many of them have a won live opportunity now. */
+/** Per credited user: contacts submitted in the range (CA 101 or any semester's IAU App Submitted first events) and how many of them have a won live opportunity now. */
 function closeRates(range: DateRange): Map<string, { submitted: number; won: number }> {
   const start = range.start.toISOString();
   const end = range.end.toISOString();
-  const keys = ["army_ca101", "vet_iau_app_submitted"];
+  const keys = ["army_ca101", ...iauKeys("all")];
   const byUser = new Map<string, Set<string>>();
   for (const key of keys) {
     const m = trackedMilestones().find((x) => x.key === key);
@@ -202,11 +202,11 @@ export function computeRepPerformance(input: {
       showRate: { value: appt && appt.showRate !== null ? appt.showRate : null, text: appt && appt.showRate !== null ? `${Math.round(appt.showRate * 100)}%` : DASH, status: completedStatus, sub: marked > 0 ? `${n(appt?.showed ?? 0)} of ${n(marked)} marked` : "none marked yet", title: completedGoal && userId && completedGoal.perRep[userId] ? `Showed goal ${Math.round(completedGoal.perRep[userId].full)}` : undefined },
       callsPerBooking: { value: appt && appt.callsPerBooking !== null ? appt.callsPerBooking : null, text: appt && appt.callsPerBooking !== null ? appt.callsPerBooking.toFixed(1) : DASH, title: `Host dials to the contact in the ${repAppts.windowDays} days before each booking ÷ bookings.` },
       ca101: { value: sub?.ca101 ?? 0, text: n(sub?.ca101 ?? 0) },
-      fs2: { value: sub?.fs2 ?? 0, text: n(sub?.fs2 ?? 0) },
+      iau: { value: sub?.iau ?? 0, text: n(sub?.iau ?? 0), title: `IAU App Submitted (${submissions.semester.label}) contacts credited to this user; switch semesters with the dropdown in the Submissions section.` },
       combined: { value: sub?.total ?? 0, text: n(sub?.total ?? 0), status: combinedStatus, sub: combinedGoal ? `goal ${Math.round(combinedGoal.full)}${submissions.goal?.partial && Math.round(combinedGoal.scaled) !== Math.round(combinedGoal.full) ? ` · ${Math.round(combinedGoal.scaled)} by now` : ""}` : undefined },
       quota: mtd ? { value: mtd.monthlyQuota > 0 ? mtd.submissionsMtd / mtd.monthlyQuota : null, text: `${n(mtd.submissionsMtd)}/${n(mtd.monthlyQuota)}`, sub: `${Math.round(mtd.quotaPct * 100)}% · ${commission.monthLabel}`, status: mtd.quotaStatus === "good" ? "met" : mtd.quotaStatus === "warn" ? "on_track" : mtd.quotaStatus === "bad" ? "missed" : null, title: "Combined submissions this calendar month over the monthly quota." } : { value: null, text: DASH },
       won: { value: won.length, text: `${n(won.length)} · ${usd(wonValue)}`, title: "Opportunities that first became won during the range, credited to the owner at the won event; Opportunity Value, not cash." },
-      closeRate: { value: cr && cr.submitted > 0 ? cr.won / cr.submitted : null, text: cr && cr.submitted > 0 ? pct(cr.won, cr.submitted) : DASH, sub: cr ? `${n(cr.won)} won of ${n(cr.submitted)} submitted` : undefined, title: "Of the contacts this rep submitted in the range (CA 101 or FS2), the share whose opportunity is won now." },
+      closeRate: { value: cr && cr.submitted > 0 ? cr.won / cr.submitted : null, text: cr && cr.submitted > 0 ? pct(cr.won, cr.submitted) : DASH, sub: cr ? `${n(cr.won)} won of ${n(cr.submitted)} submitted` : undefined, title: "Of the contacts this rep submitted in the range (CA 101 or IAU App, any semester), the share whose opportunity is won now." },
       medianResponse: { value: resp?.medianMinutes ?? null, text: resp && resp.medianMinutes !== null ? fmtMinutes(Math.round(resp.medianMinutes)) : DASH, sub: resp ? `${n(resp.replied)} of ${n(resp.episodes)} replied` : undefined, title: `Median business-time response to inbound messages (${responseTimes.windowLabel}).` },
       commission: mtd ? { value: mtd.commission.amount, text: mtd.commission.amount === null ? DASH : usd(mtd.commission.amount), sub: mtd.commission.label, title: `Plan ${mtd.planKey}; estimated from dashboard counts for the selected range.` } : { value: null, text: DASH },
     };
@@ -225,7 +225,7 @@ export function computeRepPerformance(input: {
 
     const notesCommon = [`Source — every figure equals this rep's row in the band it comes from (${rangeLabel}).`];
     const tabs: RepScore["tabs"] = [
-      { key: "submissions", label: "Submissions", spec: { query: `kind=rep&user=${encodeURIComponent(key)}&${rangeQuery}`, title: `${name} · submissions`, subtitle: `CA 101 and IAU App (FS2) contacts credited to this user · ${rangeLabel}`, expected: sub?.total ?? 0, columns: REP_COLUMNS, notes: notesCommon, csvName: `${name} submissions ${rangeLabel}` } },
+      { key: "submissions", label: "Submissions", spec: { query: `kind=rep&user=${encodeURIComponent(key)}&${rangeQuery}`, title: `${name} · submissions`, subtitle: `CA 101 and IAU App (${submissions.semester.short}) contacts credited to this user · ${rangeLabel}`, expected: sub?.total ?? 0, columns: REP_COLUMNS, notes: notesCommon, csvName: `${name} submissions ${rangeLabel}` } },
       { key: "calls", label: "Calls", spec: { query: `kind=calls&user=${encodeURIComponent(key)}&${rangeQuery}`, title: `${name} · calls`, subtitle: `Calls in the selected range · ${rangeLabel}`, columns: CALL_COLUMNS, perDayTable: { title: "Per day: dials, talk time, and first outbound call" }, heatmap: true, outcomeFilter: true, expectedConversations: calls?.conversations ?? 0, notes: notesCommon, csvName: `${name} calls ${rangeLabel}` } },
       { key: "appointments", label: "Appointments", spec: { query: `kind=apptRep&user=${encodeURIComponent(key)}&${rangeQuery}`, title: `${name} · appointments`, subtitle: `Appointments counted on this rep's row · ${rangeLabel}`, columns: APPT_COLUMNS, segments: [{ key: "booked", label: "Booked (as host)", expected: appt?.booked ?? 0 }, { key: "bookedBy", label: "Booked by them", expected: appt?.bookedBy ?? 0 }, { key: "showed", label: "Showed", expected: appt?.showed ?? 0 }, { key: "noshow", label: "No-show", expected: appt?.noshow ?? 0 }, { key: "cancelled", label: "Cancelled", expected: appt?.cancelled ?? 0 }], notes: notesCommon, csvName: `${name} appointments ${rangeLabel}` } },
       { key: "won", label: "Won", spec: { query: `kind=won&which=user&arg=${encodeURIComponent(key)}&mode=period&${rangeQuery}`, title: `${name} · won`, subtitle: `Became won during ${rangeLabel}, credited to this user`, expected: won.length, columns: WON_COLUMNS, notes: notesCommon, csvName: `${name} won ${rangeLabel}` } },
@@ -258,7 +258,7 @@ export function computeRepPerformance(input: {
       "Cards — one per sales rep in config/sales-reps.json, including reps with no activity; every figure equals the rep's row in the band it comes from for the selected range.",
       "Leads assigned — unique contacts assigned to the rep during the range (assignment events the sync observed; unavailable for ranges before tracking began). New leads assigned — contacts created in the range whose current owner is the rep.",
       "Dials, conversations, talk time, first call — Rep Call Activity. Bookings, show rate, calls per booking — Rep Appointments (as host).",
-      "CA 101, IAU App FS2, combined — Program Submissions (first entry per contact, credited to the owner at the event); the combined goal is the rep's own weekly rate pro-rated to the range. Quota pacing and est. commission — the month-to-date and selected-range columns of the same table.",
+      `CA 101, IAU App (${submissions.semester.label}), combined — Program Submissions (first entry per contact, credited to the owner at the event); the combined goal is the rep's own weekly rate pro-rated to the range. Quota pacing and est. commission — the month-to-date and selected-range columns of the same table, counting every semester.`,
       "Won — opportunities that first became won during the range, credited to the owner at the won event; Opportunity Value, never cash. Close rate — of the contacts the rep submitted in the range, the share whose opportunity is won now (as of the last sync).",
       "Median response time — the Response Time card's median for the rep.",
       "Goals met — KPIs with a per-rep goal (dials, talk time, bookings, showed, combined submissions, quota pacing) that are Met or On Track.",
