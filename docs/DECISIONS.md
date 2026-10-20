@@ -933,3 +933,20 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     `first_core_sync_at` moves back to the PC's date so "history available
     since" matches. Nothing touches GHL. A dry run against the PC itself
     reported every row as already present (427 / 509 / 13,960 skipped).
+73. **"GHL could not be reached" now names the real cause (2026-10-20,
+    owner request).** The owner saw every phase fail with "could not be
+    reached" after the 1:44 AM run. Diagnosis: that was the dashboard on
+    the owner's PC, not the host. Windows put the PC to sleep at 1:50 AM
+    and woke it at 9:45 AM; the first sync fired 9 seconds after wake,
+    before Wi-Fi was back, and every GHL request failed with "fetch
+    failed" until the network returned at 9:49 AM. The live site never
+    failed (every host run through 9:53 AM completed), the token worked
+    from the PC (one read-only `GET /locations/{id}` returned 200), and no
+    401/403/429 appeared anywhere. Two changes so this is obvious next
+    time: `src/lib/ghl/http.ts` appends Node's hidden `err.cause` code
+    (ENOTFOUND, ECONNRESET, certificate errors) or "timed out" to the
+    error text, and `explainError` in `src/lib/syncStatus.ts` gives
+    separate sentences for DNS/no-internet, TLS, timeout, refused/dropped,
+    and GHL 5xx instead of one generic "network or GHL outage". 401/403
+    and 429 were already reported as token permission and rate limit, not
+    as outages; that order is unchanged.

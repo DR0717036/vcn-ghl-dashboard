@@ -64,6 +64,18 @@ function backoffMs(attempt: number): number {
   return Math.min(8000, 500 * 2 ** attempt);
 }
 
+/**
+ * Node's fetch reports every connection problem as "fetch failed" and hides
+ * the real reason in err.cause (ENOTFOUND = DNS lookup failed, usually no
+ * internet; ECONNREFUSED/ECONNRESET; ETIMEDOUT; certificate errors). Surface it.
+ */
+function describeFetchError(err: unknown): string {
+  const e = err as { name?: string; message?: string; cause?: { code?: string; message?: string } };
+  const cause = e.cause?.code ?? e.cause?.message;
+  if (e.name === "TimeoutError" || e.name === "AbortError") return "timed out waiting for GHL to respond";
+  return cause ? `${e.message} (${cause})` : String(e.message ?? err);
+}
+
 function classify(status: number): ErrorKind {
   if (status === 401 || status === 403) return "permission";
   if (status === 404) return "not_found";
@@ -128,7 +140,7 @@ export async function ghlGet<T>(
         ok: false,
         status: null,
         kind: "network",
-        error: `Could not reach GHL: ${(err as Error).message}`,
+        error: `Could not reach GHL: ${describeFetchError(err)}`,
       };
     }
 
@@ -172,7 +184,7 @@ export async function ghlGetStream(path: string, version: ApiVersion): Promise<G
   try {
     res = await fetch(url, { method: "GET", headers: { Authorization: `Bearer ${token}`, Version: version, Accept: "*/*" }, cache: "no-store", signal: AbortSignal.timeout(120_000) });
   } catch (err) {
-    return { ok: false, status: null, kind: "network", error: `Could not reach GHL: ${(err as Error).message}` };
+    return { ok: false, status: null, kind: "network", error: `Could not reach GHL: ${describeFetchError(err)}` };
   }
   if (res.ok) return { ok: true, status: res.status, body: res.body, contentType: res.headers.get("content-type") };
   const body = summarizeBody(await res.text());

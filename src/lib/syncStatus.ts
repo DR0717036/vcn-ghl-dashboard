@@ -35,8 +35,15 @@ export function explainError(raw: string): string {
   }
   if (/rate limit|too many requests|\b429\b/.test(s)) return "GHL's rate limit was reached; the next cycle retries.";
   if (/bad_request|\b400\b|\b422\b/.test(s)) return "GHL rejected one request (a transient error on its side); the next cycle retries.";
-  if (/fetch failed|econn|etimedout|enotfound|timeout|network|socket|\b5\d\d\b/.test(s)) {
-    return "GHL could not be reached (network or GHL outage); the next cycle retries.";
+  if (/enotfound|eai_again|getaddrinfo/.test(s)) {
+    return "this computer could not look up GHL's address, so it had no working internet connection at that moment (common right after waking from sleep); the next cycle retries.";
+  }
+  if (/certificate|cert_|\btls\b|\bssl\b/.test(s)) return "the secure connection to GHL could not be verified (TLS certificate problem on the network path); the next cycle retries.";
+  if (/timed out|etimedout|timeout|aborted/.test(s)) return "GHL did not answer within the time limit (slow network or GHL outage); the next cycle retries.";
+  if (/econnrefused|econnreset|epipe|socket hang up/.test(s)) return "the connection to GHL was refused or dropped (network problem or GHL outage); the next cycle retries.";
+  if (/\b5\d\d\b/.test(s)) return "GHL answered with a server error on its side after retries; the next cycle retries.";
+  if (/fetch failed|econn|network|socket/.test(s)) {
+    return "GHL could not be reached (network problem on this machine or a GHL outage); the next cycle retries.";
   }
   return `the sync reported "${raw}".`;
 }
