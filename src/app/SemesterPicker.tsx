@@ -1,11 +1,13 @@
 "use client";
 
 // Semester dropdown for the Submissions section (owner request 2026-10-20).
-// Switches the two Veteran milestone cards and the IAU part of Program
-// Submissions between the configured semesters (config/ghl-mapping.json
-// semesters.list). The choice lives in the URL (?semester=KEY) so the page,
-// its drilldowns, and CSV exports all agree; the default semester keeps the
-// URL clean.
+// Sits in the title row of the first Veteran milestone card and switches
+// both Veteran cards and the IAU part of Program Submissions between the
+// configured semesters (config/ghl-mapping.json semesters.list). The choice
+// lives in the URL (?semester=KEY) so the page, its drilldowns, and CSV
+// exports all agree; the default semester keeps the URL clean. The card it
+// sits in opens a drilldown on click, so the picker stops its own clicks
+// from bubbling up to the card.
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -15,7 +17,7 @@ export interface SemesterOption {
   isDefault: boolean;
 }
 
-export default function SemesterPicker({ options, active }: { options: SemesterOption[]; active: string }) {
+export default function SemesterPicker({ options, active, hint }: { options: SemesterOption[]; active: string; hint: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const choose = (key: string) => {
@@ -27,9 +29,9 @@ export default function SemesterPicker({ options, active }: { options: SemesterO
     router.push(qs ? `/?${qs}#sec-submissions` : "/#sec-submissions");
   };
   return (
-    <label className="semester-picker">
+    <label className="semester-picker" title={hint} onClick={(e) => e.stopPropagation()}>
       <span className="semester-picker-label">Semester</span>
-      <select value={active} onChange={(e) => choose(e.target.value)} aria-label="Semester shown on the Veteran cards and Program Submissions">
+      <select value={active} onChange={(e) => choose(e.target.value)} aria-label="Semester shown on the Veteran cards and Program Submissions" aria-description={hint}>
         {options.map((o) => (
           <option key={o.key} value={o.key}>
             {o.label}

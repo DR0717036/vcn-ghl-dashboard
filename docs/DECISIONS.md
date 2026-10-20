@@ -978,3 +978,19 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     GHL's opportunity search (read-only) returned 0 opportunities in each of
     the four Spring Session 1 stages, matching the cache (0 / 0 / 0 / 0);
     the FS2 control stages matched exactly (73 / 5 / 27).
+
+75. **Semester dropdown moved into the first Veteran card (2026-10-20, owner
+    request).** The standalone row between the Army and Veteran cards (note
+    plus select) is gone. The dropdown now sits at the right end of the title
+    row of the Veteran "Application Submissions" card, level with the yellow
+    heading, as a small "Semester" label and a dark glass select that matches
+    the card. The Goal badge stays where it was. The explanatory sentence
+    became the dropdown's tooltip (also exposed to screen readers). Behaviour
+    is unchanged: the choice still lives in the URL and still drives both
+    Veteran cards, the IAU part of Program Submissions, and the drilldowns.
+    Because the card opens a drilldown on click, the picker stops its own
+    clicks from bubbling to the card (verified with real mouse events). The
+    KPI shell gained an optional title-row slot (headRight) so other cards
+    can take a small control the same way; every card's title row has the
+    same minimum height so neighbouring cards still line up. On phone widths
+    the dropdown wraps under the title at full width.

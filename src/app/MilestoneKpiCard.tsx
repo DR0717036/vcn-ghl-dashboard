@@ -9,6 +9,7 @@
 // modal with the same chart at full width and the contacts counted. The
 // inline Details expander is gone, so the card never changes height.
 
+import type { ReactNode } from "react";
 import type { TimeSeries } from "@/lib/charts";
 import { chartSeries } from "@/lib/design";
 import { fmtUsd, type MilestoneResult } from "@/lib/milestones";
@@ -47,6 +48,7 @@ export default function MilestoneKpiCard({
   subtitle,
   rangeQuery,
   rangeLabel,
+  headRight,
   className = "",
 }: {
   m: MilestoneResult;
@@ -56,6 +58,8 @@ export default function MilestoneKpiCard({
   /** Query string naming the selected range, e.g. "range=this_month" or "range=custom&from=…&to=…". */
   rangeQuery: string;
   rangeLabel: string;
+  /** Control shown at the right end of the title row (the semester dropdown on the Veteran submissions card). */
+  headRight?: ReactNode;
   className?: string;
 }) {
   const unavailable = m.achieved === null;
@@ -126,6 +130,7 @@ export default function MilestoneKpiCard({
         className={`kpi-clickable kpi-tall ${className}`.trim()}
         title={cardTitle}
         subtitle={cardSubtitle}
+        headRight={headRight}
         value={headline}
         pill={pill}
         goalLine={<span className="kpi-muted">Goal not set</span>}

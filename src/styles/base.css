@@ -4637,41 +4637,78 @@ html.anim .anim-root:not(.chart-in) .heat-cell {
   }
 }
 
-/* ---- Semester dropdown (Submissions section, owner request 2026-10-20) ---- */
-.semester-row {
+/* ---- Title row of a KPI card: title at the left, an optional small control at the right ---- */
+.kpi-head-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-2);
+  gap: var(--s-3);
   flex-wrap: wrap;
-  margin: 0 0 var(--s-2);
+  min-height: 26px;
 }
-.semester-row .note {
-  margin: 0;
+.kpi-head-row .label {
+  flex: 1 1 auto;
+  min-width: 0;
 }
+.kpi-head-right {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* ---- Semester dropdown: dark glass select in the title row of the first Veteran card (owner request 2026-10-20) ---- */
 .semester-picker {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-body);
+  cursor: default;
+}
+.semester-picker-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  white-space: nowrap;
 }
 .semester-picker select {
   appearance: none;
   -webkit-appearance: none;
-  background: var(--surface-card) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23182536' stroke-width='2'/></svg>") no-repeat right 10px center;
-  color: #182536;
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  padding: 6px 30px 6px 12px;
-  font-family: inherit;
-  font-size: 13px;
+  font: inherit;
+  font-size: 12px;
   font-weight: 700;
+  line-height: 24px;
+  height: 26px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23ffffff' stroke-opacity='0.75' stroke-width='2'/></svg>") no-repeat right 10px center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  padding: 0 28px 0 10px;
   cursor: pointer;
-  min-width: 200px;
+  min-width: 150px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.semester-picker select:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.12);
+}
+.semester-picker select option {
+  color: #0b1626;
+  background: #ffffff;
 }
 .semester-picker select:focus-visible {
-  outline: 2px solid var(--accent-blue);
+  outline: 2px solid var(--accent-yellow);
   outline-offset: 2px;
+}
+@media (max-width: 640px) {
+  .kpi-head-right {
+    width: 100%;
+    margin-left: 0;
+  }
+  .semester-picker {
+    width: 100%;
+  }
+  .semester-picker select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
 }

@@ -12,7 +12,7 @@ import { getState, latestSyncRuns } from "@/lib/db";
 import { explainSyncSummary } from "@/lib/syncStatus";
 import { fmtDateTime, fmtRange, isRangeKey, resolveRange, type RangeKey } from "@/lib/dates";
 import { chartSeries } from "@/lib/design";
-import { mappingConfig, semesterFor, semesterQuery, semesters } from "@/lib/mapping-config";
+import { defaultSemester, mappingConfig, semesterFor, semesterQuery, semesters } from "@/lib/mapping-config";
 import { computePrimaryKpis, coverage, kpiNewLeads } from "@/lib/metrics";
 import { computeMilestoneByKey } from "@/lib/milestones";
 import { computeCommission } from "@/lib/commission";
@@ -173,6 +173,10 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           ? `Veteran G.I. Bill · ${semester.label} (${m.reportingGroup}) · accepted in period`
           : `Veteran G.I. Bill · ${semester.label} (${m.reportingGroup}) · "${m.stageName}" · reached in period`;
   const semesterOptions = semesters().map((s) => ({ key: s.key, label: s.label, isDefault: Boolean(s.default) }));
+  const semesterHint =
+    "Switches both Veteran G.I. Bill cards, the IAU column of Program Submissions, and their drilldowns to the chosen semester. " +
+    defaultSemester().label +
+    " is the default; the choice is kept in the page address, so a shared link opens on the same semester.";
 
   return (
     <>
@@ -222,20 +226,21 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           <h1 className="page-title">Primary KPIs Overall</h1>
           <BandHeading s={SECTIONS[0]} />
           {kpiMilestoneRows.map((keys) => (
-            <div key={keys.join("+")}>
-              {keys.includes(semester.submittedKey) ? (
-                <div className="semester-row">
-                  <span className="note">Veteran G.I. Bill: these two cards and the IAU part of Program Submissions show the selected semester. Fall Session 2 is the default.</span>
-                  <SemesterPicker options={semesterOptions} active={semester.key} />
-                </div>
-              ) : null}
-              <div className="kpi-row cols-2">
-                {kpiMilestones
-                  .filter(({ m }) => keys.includes(m.key))
-                  .map(({ m, series }) => (
-                    <MilestoneKpiCard key={m.key} m={m} series={series} title={milestoneTitle[m.key]} subtitle={milestoneSubtitle(m.key, m)} rangeQuery={rangeQuery} rangeLabel={range.label} />
-                  ))}
-              </div>
+            <div key={keys.join("+")} className="kpi-row cols-2">
+              {kpiMilestones
+                .filter(({ m }) => keys.includes(m.key))
+                .map(({ m, series }) => (
+                  <MilestoneKpiCard
+                    key={m.key}
+                    m={m}
+                    series={series}
+                    title={milestoneTitle[m.key]}
+                    subtitle={milestoneSubtitle(m.key, m)}
+                    rangeQuery={rangeQuery}
+                    rangeLabel={range.label}
+                    headRight={m.key === semester.submittedKey ? <SemesterPicker options={semesterOptions} active={semester.key} hint={semesterHint} /> : undefined}
+                  />
+                ))}
             </div>
           ))}
           <div className="kpi-row cols-1">
