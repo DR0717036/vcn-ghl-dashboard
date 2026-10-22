@@ -1037,3 +1037,30 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     "/login" is the owner's choice. Event history recorded on the old host
     is carried over through the import-history route after Render's first
     sync, then the Railway service is deleted.
+
+78. **Mapping page sync times and honest phase counts (2026-10-22, owner
+    request).** (a) The Mapping page's top bar said "Last successful sync:
+    Oct 20, 10:47 AM" while its Automatic data sync section said Oct 22. The
+    top bar was reading the last successful *account check* (the manual
+    "Sync from GHL now" run, kind "mapping"); the section and the scorecard
+    read the automatic core sync (sync_state last_core_sync_ok_at). The top
+    bar now reads that same state, and the manual check is shown separately
+    as "Account check (this page)" with its own attempt status. The coverage
+    table's "Milestone achievements" row likewise now uses the first
+    automatic sync, not the account check. (b) "calls 0" in a completed run
+    summary did not mean "zero new calls since the last run". Calls and
+    messages are read from one day before the previous run onward, so a
+    normal run reported about 330 for calls even with nothing new, and a 0
+    meant GHL's export answered with nothing for a window the cache already
+    held records in (seen on local runs 465 and 472 for calls and 467 for
+    messages, each between runs that returned ~334). The phase had not
+    failed; the next run's overlap re-read filled the gap. Summaries now
+    say "calls +N new (M re-checked)" for the incremental phases, and when
+    the export returns nothing for a window with cached records the summary
+    says so explicitly, the phase stays successful, and the cursor is held
+    so the next run re-reads the window instead of assuming it was synced.
+    The Mapping page explains how to read the counts and that pre-2026-10-22
+    rows show the old plain count. (c) Bug fixed on the way: the sync's
+    rollback helper called itself instead of SQLite's ROLLBACK, so an error
+    inside a transaction would have left the transaction open; it now
+    issues ROLLBACK.

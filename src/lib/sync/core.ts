@@ -27,9 +27,26 @@ export const HISTORY_START = "2026-01-01T00:00:00.000Z";
 export interface PhaseResult {
   phase: string;
   ok: boolean;
+  /** Records read this run. Full-read phases: the total. Incremental phases (calls, messages): the window read, overlap included. */
   count: number;
+  /** Incremental phases only: records first seen this run; count minus added were re-checked. */
+  added?: number;
+  /** Set when GHL's export answered with nothing for a window the cache already holds records in (an intermittent empty response). The cursor is held so the next run re-reads the window. Holds the cached count. */
+  emptyWindow?: number;
   error?: string;
   warnings: string[];
+}
+
+/**
+ * One token per phase for the run summary and the server log:
+ * "contacts 15273" (full re-read), "calls +3 new (331 re-checked)" (incremental),
+ * or the empty-window note. Owner request 2026-10-22: a plain "calls 0" read as
+ * "no new calls" when it actually meant the export returned nothing.
+ */
+export function describePhase(p: PhaseResult): string {
+  if (p.emptyWindow !== undefined) return `${p.phase}: GHL returned no records for the window this run (${p.emptyWindow} cached there; re-read next cycle)`;
+  if (p.added !== undefined) return `${p.phase} +${p.added} new (${p.count - p.added} re-checked)`;
+  return `${p.phase} ${p.count}`;
 }
 
 // Next.js bundles the scheduler (instrumentation) and API routes separately,
@@ -97,7 +114,7 @@ function reportingGroupFor(m: MilestoneMapping, contactTags: string[] | undefine
  */
 function rollback(db: DatabaseSync): void {
   try {
-    if (db.isTransaction) rollback(db);
+    if (db.isTransaction) db.exec("ROLLBACK");
   } catch {
     // already rolled back by SQLite
   }
@@ -134,7 +151,7 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
     const run = async (fn: () => Promise<PhaseResult>) => {
       const t0 = Date.now();
       const r = await fn();
-      console.log(`[sync] phase ${r.phase}: ${r.ok ? r.count : "FAILED " + r.error} (${Math.round((Date.now() - t0) / 1000)}s)`);
+      console.log(`[sync] phase ${r.ok ? describePhase(r) : r.phase + ": FAILED " + r.error} (${Math.round((Date.now() - t0) / 1000)}s)`);
       phases.push(r);
     };
     await run(() => syncUsers(runStart));
@@ -158,7 +175,7 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
     const okCount = phases.filter((p) => p.ok).length;
     const ok = phases.length === PHASES && okCount === PHASES;
     const summary = ok
-      ? `All ${PHASES} phases succeeded (${phases.map((p) => `${p.phase} ${p.count}`).join(", ")}).`
+      ? `All ${PHASES} phases succeeded (${phases.map(describePhase).join(", ")}).`
       : `${okCount} of ${phases.length} phases succeeded. ` + phases.filter((p) => !p.ok).map((p) => `${p.phase}: ${p.error}`).join("; ");
     finishSyncRun(runId, ok, PHASES, okCount, summary);
     // The scorecard's core numbers need only the five core phases. If those
@@ -431,6 +448,9 @@ async function syncMessages(now: string): Promise<PhaseResult> {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET status = excluded.status, user_id = excluded.user_id, source = excluded.source, body = excluded.body, body_key = excluded.body_key`);
   const contactName = db.prepare(`SELECT name FROM contacts WHERE id = ?`);
+  const exists = db.prepare(`SELECT 1 FROM messages WHERE id = ?`);
+  const cachedSince = db.prepare(`SELECT count(*) AS n FROM messages WHERE channel = ? AND date_added >= ?`);
+  let firstSeen = 0;
   try {
     for (const channel of ["SMS", "Email"] as const) {
       const key = `messages_${channel.toLowerCase()}_synced_through`;
@@ -438,6 +458,7 @@ async function syncMessages(now: string): Promise<PhaseResult> {
       const overlapStart = through ? new Date(Date.parse(through) - 86400000).toISOString() : HISTORY_START;
       const start = overlapStart < HISTORY_START ? HISTORY_START : overlapStart;
       let cursor: string | undefined;
+      const countBefore = res.count;
       for (let page = 0; page < 5000; page++) {
         const r = await ghl.exportMessages({ channel, limit: 500, startDate: start, endDate: now, sortBy: "createdAt", sortOrder: "asc", cursor });
         if (!r.ok) throw new Error(`${channel}: ${r.kind}: ${r.error}`);
@@ -451,6 +472,7 @@ async function syncMessages(now: string): Promise<PhaseResult> {
             if (!newest || added > newest) newest = added;
             const dir = m.direction === "inbound" ? "inbound" : "outbound";
             const name = m.contactId ? ((contactName.get(m.contactId) as { name: string | null } | undefined)?.name ?? null) : null;
+            if (!exists.get(m.id)) firstSeen += 1;
             up.run(m.id, m.altId ?? null, m.conversationId, m.contactId ?? null, dir, channel.toLowerCase(), m.messageType ?? null, m.status ?? null, added,
               m.userId ?? null, m.source ?? null, m.body ?? null, dir === "outbound" ? bodyKey(m.body, name) : null, now);
             res.count += 1;
@@ -465,8 +487,18 @@ async function syncMessages(now: string): Promise<PhaseResult> {
         if (msgs.length === 0 || !r.data.nextCursor) break;
         cursor = r.data.nextCursor;
       }
+      if (res.count - countBefore === 0 && through) {
+        const cached = (cachedSince.get(channel.toLowerCase(), start) as { n: number }).n;
+        if (cached > 0) {
+          // GHL answered with nothing for a window we know has records: keep the cursor so the next run re-reads it.
+          res.emptyWindow = (res.emptyWindow ?? 0) + cached;
+          res.warnings.push(`${channel} export returned no records from ${start} although ${cached} are cached for that window; cursor held.`);
+          continue;
+        }
+      }
       setState(key, now);
     }
+    res.added = firstSeen;
     res.ok = true;
   } catch (e) {
     res.error = (e as Error).message;
@@ -710,6 +742,9 @@ function isAutomatedCall(messageType: string | undefined, source: string | undef
 async function syncCalls(now: string): Promise<PhaseResult> {
   const db = getDb();
   const res: PhaseResult = { phase: "calls", ok: false, count: 0, warnings: [] };
+  const exists = db.prepare(`SELECT 1 FROM calls WHERE id = ?`);
+  const cachedSince = db.prepare(`SELECT count(*) AS n FROM calls WHERE date_added >= ?`);
+  let firstSeen = 0;
   const up = db.prepare(`
     INSERT INTO calls (id, alt_id, date_added, direction, status, call_status, duration, user_id, contact_id, source, message_type, automated)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -739,6 +774,7 @@ async function syncCalls(now: string): Promise<PhaseResult> {
           const rawDur = m.meta?.call?.duration ?? m.meta?.callDuration;
           const duration = rawDur === undefined || rawDur === null || rawDur === "" ? null : Math.round(Number(rawDur));
           const altId = (m as { altId?: string }).altId ?? null;
+          if (!exists.get(m.id)) firstSeen += 1;
           up.run(m.id, altId, added, m.direction ?? null, m.status ?? null, callStatus, Number.isFinite(duration as number) ? duration : null,
             m.userId ?? null, m.contactId ?? null, m.source ?? null, m.messageType ?? null, isAutomatedCall(m.messageType, m.source) ? 1 : 0);
           res.count += 1;
@@ -753,7 +789,16 @@ async function syncCalls(now: string): Promise<PhaseResult> {
       if (msgs.length === 0 || !r.data.nextCursor) break;
       cursor = r.data.nextCursor;
     }
-    setState("calls_synced_through", now);
+    if (res.count === 0 && through) {
+      const cached = (cachedSince.get(start) as { n: number }).n;
+      if (cached > 0) {
+        // GHL answered with nothing for a window we know has records: keep the cursor so the next run re-reads it.
+        res.emptyWindow = cached;
+        res.warnings.push(`Call export returned no records from ${start} although ${cached} are cached for that window; cursor held.`);
+      }
+    }
+    if (res.emptyWindow === undefined) setState("calls_synced_through", now);
+    res.added = firstSeen;
     res.ok = true;
   } catch (e) {
     res.error = (e as Error).message;

@@ -120,6 +120,7 @@ export default async function MappingPage() {
   const coreRuns = latestSyncRuns(CORE_SYNC_KIND, 6);
   const coreLast = coreRuns[0];
   const coreOkAt = getState("last_core_sync_ok_at");
+  const firstCoreAt = getState("first_core_sync_at");
   const coreCompleteAt = getState("last_core_sync_complete_at") ?? lastSuccessfulSync(CORE_SYNC_KIND)?.started_at;
   const health = cacheHealth();
   const diskWarning = getState("disk_warning");
@@ -178,11 +179,14 @@ export default async function MappingPage() {
 
       <div className="status-bar">
         <span>
-          <b>Last successful sync:</b> {lastOk ? when(lastOk.finished_at) : "never"}
+          <b>Last successful sync:</b> {coreOkAt ? when(coreOkAt) : "never"}
+        </span>
+        <span>
+          <b>Account check (this page):</b> {lastOk ? when(lastOk.finished_at) : "never"}
         </span>
         {lastRun ? (
           <span>
-            <b>Last attempt:</b> {when(lastRun.finished_at ?? lastRun.started_at)}{" "}
+            <b>Last check attempt:</b> {when(lastRun.finished_at ?? lastRun.started_at)}{" "}
             {lastRun.ok === 1 ? (
               <span className="pill pill-ok">complete</span>
             ) : lastRun.ok === 0 ? (
@@ -302,6 +306,14 @@ export default async function MappingPage() {
         ) : (
           <p className="note">No automatic sync has started yet.</p>
         )}
+        <p className="note">
+          How to read a completed run: users, contacts, opportunities, appointments, conversations, workflows, and email templates are
+          re-read in full each run, so their numbers are totals. Calls and messages are read from one day before the previous run onward,
+          so they show &quot;+N new&quot; (records first seen this run) and how many were re-checked. &quot;GHL returned no records&quot;
+          means the export answered with nothing for a window the cache already has records in; the phase did not fail, the cursor is
+          held, and the next run re-reads that window. Runs before 2026-10-22 show a plain count for calls and messages, which was the
+          number of records read including the one-day overlap, not the number of new calls.
+        </p>
       </section>
 
       {/* ---- Endpoint access ---- */}
@@ -857,8 +869,8 @@ export default async function MappingPage() {
             ))}
             <tr>
               <td>Milestone achievements (event-based)</td>
-              <td>{lastOk ? day(lastOk.finished_at) : "not started"}</td>
-              <td className="note">Reliable activity tracking begins at the first successful milestone sync. Not yet running.</td>
+              <td>{firstCoreAt ? day(firstCoreAt) : "not started"}</td>
+              <td className="note">Recorded by the automatic data sync. Reliable activity tracking begins at the first automatic sync.</td>
             </tr>
             <tr>
               <td>Appointments</td>
