@@ -201,10 +201,12 @@ export function renderHtml(d: WeeklyReportData, narrative: Narrative | null): st
     [tile(H("talk"), `last week ${fmtValue("minutes", H("talk").prev)}`), tile(H("booked"), `last week ${fmtValue("count", H("booked").prev)}`)],
     [tile(H("completed"), `show rate ${fmtValue("pct", showRate.value)}${showRate.prev !== null ? ` (last week ${fmtValue("pct", showRate.prev)})` : ""}`), tile(H("dials"), `last week ${fmtValue("count", H("dials").prev)}`)],
   ];
-  const tilesHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${tileRows.map((r) => `<tr>${r.map((t, i) => `<td width="50%" valign="top" style="padding:0 ${i === 0 ? "5px" : "0"} 10px ${i === 0 ? "0" : "5px"}">${t}</td>`).join("")}</tr>`).join("")}</table>`;
-  const mixHtml = `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:0 0 8px">Submissions by program</div>` + mixBars(H("combined")) + `<div style="height:14px;font-size:0;line-height:0">&nbsp;</div>`;
+  const tileTable = (rows: string[][]) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows.map((r) => `<tr>${r.map((t, i) => `<td width="50%" valign="top" style="padding:0 ${i === 0 ? "5px" : "0"} 10px ${i === 0 ? "0" : "5px"}">${t}</td>`).join("")}</tr>`).join("")}</table>`;
+  const firstRowHtml = tileTable(tileRows.slice(0, 1));
+  const otherRowsHtml = tileTable(tileRows.slice(1));
+  const mixHtml = `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:4px 0 8px">Submissions by program</div>` + mixBars(H("combined")) + `<div style="height:14px;font-size:0;line-height:0">&nbsp;</div>`;
   const leadsHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px"><tr><td width="50%" valign="top" style="padding:0 5px 0 0">${tile(H("newLeads"), `last week ${fmtValue("count", H("newLeads").prev)}`, true)}</td><td width="50%" valign="top" style="padding:0 0 0 5px">${tile(H("assigned"), H("assigned").prevUnavailable && H("assigned").prev === null ? "no comparison: assignment tracking is newer than last week" : `last week ${fmtValue("count", H("assigned").prev)}`, true)}</td></tr></table>`;
-  parts.push(section("1 · Headline numbers", `${d.rangeText} vs ${d.prevRangeText}`, briefHtml + mixHtml + tilesHtml + leadsHtml + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`)));
+  parts.push(section("1 · Headline numbers", `${d.rangeText} vs ${d.prevRangeText}`, briefHtml + firstRowHtml + mixHtml + otherRowsHtml + leadsHtml + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`)));
 
   // 2. leaderboard
   const callouts: string[] = [];
