@@ -172,12 +172,17 @@ function mixBars(h: Headline): string {
   const row = (label: string, pick: (p: NonNullable<Headline["parts"]>[number]) => number | null, total: number) => {
     const segs = parts.map((p, i) => ({ v: pick(p) ?? 0, color: colors[i % colors.length], short: p.short })).filter((s) => s.v > 0);
     const used = segs.reduce((s, x) => s + Math.round((x.v / scale) * 100), 0);
-    const cells = segs.map((s) => `<td width="${Math.round((s.v / scale) * 100)}%" bgcolor="${s.color}" style="height:20px;font:700 11px/20px ${FONT};color:#ffffff;text-align:center;white-space:nowrap;overflow:hidden">${n(s.v)}</td>`).join("");
+    const cells = segs.map((s) => { const w = Math.round((s.v / scale) * 100); return `<td width="${w}%" bgcolor="${s.color}" style="height:20px;font:700 11px/20px ${FONT};color:#ffffff;text-align:center;white-space:nowrap;overflow:hidden">${w >= 30 ? esc(s.short) + " " : ""}${n(s.v)}</td>`; }).join("");
     const rest = used < 100 ? `<td bgcolor="#eef2f6" style="height:20px;font-size:0;line-height:0">&nbsp;</td>` : "";
     return `<tr><td width="76" style="font:600 12px/1.3 ${FONT};color:${C.secondary};padding:0 8px 6px 0;white-space:nowrap">${esc(label)}</td><td style="padding:0 0 6px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-radius:4px;overflow:hidden">${segs.length ? `<tr>${cells}${rest}</tr>` : `<tr><td bgcolor="#eef2f6" style="height:20px;font:600 11px/20px ${FONT};color:${C.muted};text-align:center">none</td></tr>`}</table></td><td width="34" align="right" style="font:800 13px/1.3 ${FONT};color:${C.ink};padding:0 0 6px 8px">${n(total)}</td></tr>`;
   };
   const legend = parts.map((p, i) => `<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[i % colors.length]};vertical-align:-1px"></span> ${esc(p.short)} <b style="color:${C.ink}">${esc(fmtValue("count", p.value))}</b> <span style="color:${C.muted}">(last week ${esc(fmtValue("count", p.prev))})</span></span>`).join("");
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${row("This week", (p) => p.value, totals[0])}${row("Last week", (p) => p.prev, totals[1])}</table><div style="font:500 12px/1.6 ${FONT};color:${C.secondary};margin-top:2px">${legend}</div>`;
+  // Army = the CA 101 part; Veteran = every IAU part (one per semester).
+  const army = parts.filter((p) => /CA 101/.test(p.short));
+  const vet = parts.filter((p) => !/CA 101/.test(p.short));
+  const sum = (list: typeof parts, pick: (p: (typeof parts)[number]) => number | null) => (list.some((p) => pick(p) === null) ? null : list.reduce((s, p) => s + (pick(p) ?? 0), 0));
+  const split = `<div style="font:800 14px/1.5 ${FONT};color:${C.ink};margin-top:4px">Army ${esc(fmtValue("count", sum(army, (p) => p.value)))} · Veteran ${esc(fmtValue("count", sum(vet, (p) => p.value)))} <span style="font:500 12px/1.5 ${FONT};color:${C.muted}">(last week Army ${esc(fmtValue("count", sum(army, (p) => p.prev)))} · Veteran ${esc(fmtValue("count", sum(vet, (p) => p.prev)))})</span></div>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${row("This week", (p) => p.value, totals[0])}${row("Last week", (p) => p.prev, totals[1])}</table><div style="font:500 12px/1.6 ${FONT};color:${C.secondary};margin-top:2px">${legend}</div>${split}`;
 }
 
 export function renderHtml(d: WeeklyReportData, narrative: Narrative | null): string {
@@ -192,14 +197,14 @@ export function renderHtml(d: WeeklyReportData, narrative: Narrative | null): st
   const showRate = H("showRate");
   const wonValue = H("wonValue");
   const tileRows = [
-    [tile(H("combined"), `last week ${fmtValue("count", H("combined").prev)}`), tile(H("dials"), `last week ${fmtValue("count", H("dials").prev)}`)],
+    [tile(H("combined"), `last week ${fmtValue("count", H("combined").prev)}`), tile(H("won"), `${fmtValue("usd", wonValue.value)} Opportunity Value${wonValue.prev !== null ? ` (last week ${fmtValue("usd", wonValue.prev)})` : ""}`)],
     [tile(H("talk"), `last week ${fmtValue("minutes", H("talk").prev)}`), tile(H("booked"), `last week ${fmtValue("count", H("booked").prev)}`)],
-    [tile(H("completed"), `show rate ${fmtValue("pct", showRate.value)}${showRate.prev !== null ? ` (last week ${fmtValue("pct", showRate.prev)})` : ""}`), tile(H("won"), `${fmtValue("usd", wonValue.value)} Opportunity Value${wonValue.prev !== null ? ` (last week ${fmtValue("usd", wonValue.prev)})` : ""}`)],
+    [tile(H("completed"), `show rate ${fmtValue("pct", showRate.value)}${showRate.prev !== null ? ` (last week ${fmtValue("pct", showRate.prev)})` : ""}`), tile(H("dials"), `last week ${fmtValue("count", H("dials").prev)}`)],
   ];
   const tilesHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${tileRows.map((r) => `<tr>${r.map((t, i) => `<td width="50%" valign="top" style="padding:0 ${i === 0 ? "5px" : "0"} 10px ${i === 0 ? "0" : "5px"}">${t}</td>`).join("")}</tr>`).join("")}</table>`;
-  const mixHtml = `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:6px 0 8px">Submissions mix</div>` + mixBars(H("combined"));
+  const mixHtml = `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:0 0 8px">Submissions by program</div>` + mixBars(H("combined")) + `<div style="height:14px;font-size:0;line-height:0">&nbsp;</div>`;
   const leadsHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px"><tr><td width="50%" valign="top" style="padding:0 5px 0 0">${tile(H("newLeads"), `last week ${fmtValue("count", H("newLeads").prev)}`, true)}</td><td width="50%" valign="top" style="padding:0 0 0 5px">${tile(H("assigned"), H("assigned").prevUnavailable && H("assigned").prev === null ? "no comparison: assignment tracking is newer than last week" : `last week ${fmtValue("count", H("assigned").prev)}`, true)}</td></tr></table>`;
-  parts.push(section("1 · Headline numbers", `${d.rangeText} vs ${d.prevRangeText}`, briefHtml + tilesHtml + mixHtml + leadsHtml + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`)));
+  parts.push(section("1 · Headline numbers", `${d.rangeText} vs ${d.prevRangeText}`, briefHtml + mixHtml + tilesHtml + leadsHtml + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`)));
 
   // 2. leaderboard
   const callouts: string[] = [];

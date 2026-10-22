@@ -234,8 +234,8 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
       prevUnavailable: subs.prevUnavailableReason,
       goal: subs.goal?.full ?? null,
       parts: [
-        { label: "CA 101 (Army)", short: "CA 101", value: subs.parts?.ca101.achieved ?? null, prev: subs.parts?.ca101.prev ?? null },
-        ...(subs.parts?.iau ?? []).map((p) => ({ label: p.label, short: `IAU ${semesters().find((s) => s.submittedKey === p.key)?.short ?? p.reportingGroup}`, value: p.achieved, prev: p.prev })),
+        { label: "CA 101 (Army)", short: "Army CA 101", value: subs.parts?.ca101.achieved ?? null, prev: subs.parts?.ca101.prev ?? null },
+        ...(subs.parts?.iau ?? []).map((p) => ({ label: p.label, short: `Veteran IAU (${semesters().find((s) => s.submittedKey === p.key)?.short ?? p.reportingGroup})`, value: p.achieved, prev: p.prev })),
       ],
       source: "Program Submissions (combined), every semester",
     },
