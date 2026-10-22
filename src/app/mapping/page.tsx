@@ -4,7 +4,7 @@
 
 import { cacheHealth, getState, lastSuccessfulSync, latestSyncRuns, readSnapshots, type SnapshotRow } from "@/lib/db";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
-import { explainSyncSummary, fmtBytes } from "@/lib/syncStatus";
+import { explainSyncSummary, fmtBytes, runningTooLong } from "@/lib/syncStatus";
 import { funnelOnlyForStage, mappedTags, mappingConfig, milestoneForStage } from "@/lib/mapping-config";
 import {
   KEY_PREFIX,
@@ -243,6 +243,8 @@ export default async function MappingPage() {
                 <span className="pill pill-ok">complete</span>
               ) : coreLast.ok === 0 ? (
                 <span className="pill pill-warn">{/interrupted/i.test(coreLast.summary ?? "") ? "interrupted" : "partial"}</span>
+              ) : runningTooLong(coreLast.started_at, coreLast.ok) ? (
+                <span className="pill pill-warn">running over 30 min</span>
               ) : (
                 <span className="pill pill-info">running</span>
               )}
@@ -298,7 +300,7 @@ export default async function MappingPage() {
                   <td>
                     {r.ok === 1 ? <span className="pill pill-ok">complete</span> : r.ok === 0 ? <span className="pill pill-warn">partial</span> : <span className="pill pill-info">running</span>}
                   </td>
-                  <td className="note">{r.ok === 1 ? r.summary : r.ok === 0 ? explainSyncSummary(r.summary) : "In progress."}</td>
+                  <td className="note">{r.ok === 1 ? r.summary : r.ok === 0 ? explainSyncSummary(r.summary) : runningTooLong(r.started_at, r.ok) ? "In progress, and running longer than the 20-minute budget — the server looks wedged. It clears on the next deploy or within the hour, then the next cycle resumes." : "In progress."}</td>
                 </tr>
               ))}
             </tbody>

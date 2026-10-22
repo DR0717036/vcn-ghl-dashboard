@@ -9,7 +9,7 @@
 
 import { callsSeries, milestoneSeries, talkTimeSeries } from "@/lib/charts";
 import { getState, latestSyncRuns } from "@/lib/db";
-import { explainSyncSummary } from "@/lib/syncStatus";
+import { explainSyncSummary, runningTooLong } from "@/lib/syncStatus";
 import { fmtDateTime, fmtRange, isRangeKey, resolveRange, type RangeKey } from "@/lib/dates";
 import { chartSeries } from "@/lib/design";
 import { defaultSemester, mappingConfig, semesterFor, semesterQuery, semesters } from "@/lib/mapping-config";
@@ -194,7 +194,16 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
               <span title={lastRun.summary ?? undefined}>{explainSyncSummary(lastRun.summary)} Details on the Mapping page.</span>
             </span>
           ) : null}
-          {lastRun && lastRun.ok === null ? <span className="pill pill-info">sync running</span> : null}
+          {lastRun && lastRun.ok === null ? (
+            runningTooLong(lastRun.started_at, lastRun.ok) ? (
+              <span>
+                <span className="pill pill-warn">sync running over 30 min</span>{" "}
+                <span title="A run normally finishes in a few minutes and self-stops at 20. Still running past 30 minutes means the server is wedged; it clears on the next deploy or within the hour. See the Mapping page.">taking longer than expected</span>
+              </span>
+            ) : (
+              <span className="pill pill-info">sync running</span>
+            )
+          ) : null}
           {diskWarning ? (
             <span>
               <span className="pill pill-warn">low disk space</span> <span title={diskWarning}>see mapping page</span>

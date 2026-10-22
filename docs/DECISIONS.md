@@ -1064,3 +1064,38 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     rollback helper called itself instead of SQLite's ROLLBACK, so an error
     inside a transaction would have left the transaction open; it now
     issues ROLLBACK.
+
+79. **Sync run time budget, over-long warning, and a call/message re-pull
+    route (2026-10-22, owner request after the host hung and dropped Oct 21
+    calls).** Two problems on the live host at 11:30 AM. (a) A run that
+    started 10:24 was still "running" at 11:42 (78 min for a normally
+    6-minute job). The database lock treated any unfinished run younger than
+    90 minutes as still running, so the 15-minute scheduler skipped every
+    tick and no sync ran, with no warning until the 90-minute stale mark.
+    There was no overall time budget on a run, so a phase looping against a
+    flaky GHL (that morning GHL also threw 401s during the secret rotation
+    window and returned empty call exports) could run far past the cycle.
+    Fix: a run now self-stops after 20 minutes (RUN_BUDGET_MS) — the current
+    phase returns what it has (incremental phases keep their per-page
+    checkpoint and resume; full-read phases re-read next run), later phases
+    are skipped, and the run finishes as partial, releasing the lock. The
+    stale lock dropped from 90 to 30 minutes as a crash backstop. Both the
+    scorecard and the Mapping page now flag a run still running past 30
+    minutes (runningTooLong) instead of showing a plain "running" pill.
+    (b) Oct 21 reconciled: GHL's Outgoing report (322 outbound calls; Sam R.
+    76, Michael Nieves 61, Isabela Estrada 56, William Bobier 51, Miguel
+    Torres 47, Anthony N. 31) matches a complete cache and a fresh read-only
+    GHL export exactly, per rep. The counting rule is correct (outbound,
+    non-automated, distinct call id, attributed to the owning user). The
+    host showed only 148 because its calls cursor had advanced past Oct 21
+    during empty-window runs (the bug fixed in #78/fc20495) compounded by
+    the morning 401s, so the window was skipped. The time column differs by
+    design: the dashboard sums connected talk time from each call's duration
+    (8h 58m here) while GHL's report total includes ring/setup time (9h
+    58m); the call counts are identical. To recover a skipped window, a new
+    admin-only route POST /api/admin/resync (same auth as import-history,
+    writes only the local cache's sync_state, never GHL) moves the calls
+    and/or message cursors back to a date so the next automatic sync
+    re-reads from one day earlier; the re-read upserts by id, so nothing
+    duplicates. After deploy it is called once with from=2026-10-20 for
+    calls and messages to re-pull the host.

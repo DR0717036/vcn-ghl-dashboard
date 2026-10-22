@@ -86,6 +86,18 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// A run that is still "running" past this is flagged on both pages. The run
+// itself self-stops at 20 minutes (RUN_BUDGET_MS); this longer threshold only
+// fires if the process is wedged so hard the deadline code never runs.
+export const LONG_RUN_MS = 30 * 60 * 1000;
+
+/** True when a still-running sync started more than LONG_RUN_MS ago. */
+export function runningTooLong(startedAt: string | null | undefined, ok: number | null): boolean {
+  if (ok !== null || !startedAt) return false;
+  const t = Date.parse(startedAt);
+  return !Number.isNaN(t) && Date.now() - t > LONG_RUN_MS;
+}
+
 export const LOW_DISK_BYTES = 1_000_000_000; // warn below 1 GB free
 
 export function fmtBytes(b: number | null | undefined): string {

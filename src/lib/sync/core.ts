@@ -52,7 +52,17 @@ export function describePhase(p: PhaseResult): string {
 // Next.js bundles the scheduler (instrumentation) and API routes separately,
 // so a module-level flag is not shared between them. The lock therefore lives
 // in the database: an unfinished core run younger than STALE_MS means running.
-const STALE_MS = 90 * 60 * 1000;
+const STALE_MS = 30 * 60 * 1000;
+// A single run self-stops after this long so a flaky GHL phase can't hang the
+// scheduler: the current phase returns what it has (incremental phases keep
+// their per-page checkpoint), later phases are skipped, and the run finishes
+// as partial, releasing the lock for the next cycle (owner request 2026-10-22).
+const RUN_BUDGET_MS = 20 * 60 * 1000;
+const DEADLINE_NOTE = "Stopped at the 20-minute run budget; the next cycle resumes where this left off.";
+let deadlineAt = 0;
+function pastDeadline(): boolean {
+  return deadlineAt > 0 && Date.now() > deadlineAt;
+}
 let running = false;
 
 export function isCoreSyncRunning(): boolean {
@@ -133,9 +143,26 @@ function checkDisk(): void {
   }
 }
 
+/**
+ * Moves the incremental sync cursors back to `fromIso` so the next automatic
+ * sync re-reads calls and/or messages from there (one day earlier, with the
+ * usual overlap). Writes only to the local cache's sync_state; GHL is untouched
+ * and the re-read upserts by id, so no row is duplicated. Used by the admin
+ * re-pull route to recover a window the host skipped. Returns the keys reset.
+ */
+export function resetIncrementalCursors(fromIso: string, what: { calls: boolean; messages: boolean }): string[] {
+  if (Number.isNaN(Date.parse(fromIso))) throw new Error("from must be an ISO-8601 date-time");
+  const keys: string[] = [];
+  if (what.calls) keys.push("calls_synced_through");
+  if (what.messages) keys.push("messages_sms_synced_through", "messages_email_synced_through");
+  for (const k of keys) setState(k, fromIso);
+  return keys;
+}
+
 export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phases: PhaseResult[] }> {
   if (isCoreSyncRunning()) throw new Error("A core sync is already running.");
   running = true;
+  deadlineAt = Date.now() + RUN_BUDGET_MS;
   const db = getDb();
   const interrupted = markInterruptedRuns(CORE_SYNC_KIND);
   if (interrupted) console.warn(`[sync] ${interrupted} earlier run(s) never finished (server restarted); marked interrupted.`);
@@ -148,17 +175,22 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
   const PHASES = 10;
   try {
     // One log line per phase so a stalled run can be located from the server log.
-    const run = async (fn: () => Promise<PhaseResult>) => {
+    const run = async (label: string, fn: () => Promise<PhaseResult>) => {
+      if (pastDeadline()) {
+        phases.push({ phase: label, ok: false, count: 0, warnings: [], error: DEADLINE_NOTE });
+        console.warn(`[sync] phase ${label}: skipped (past the 20-minute run budget)`);
+        return;
+      }
       const t0 = Date.now();
       const r = await fn();
       console.log(`[sync] phase ${r.ok ? describePhase(r) : r.phase + ": FAILED " + r.error} (${Math.round((Date.now() - t0) / 1000)}s)`);
       phases.push(r);
     };
-    await run(() => syncUsers(runStart));
-    await run(() => syncContacts(runStart, firstSyncDone));
-    await run(() => syncOpportunities(runStart, firstSyncDone));
-    await run(() => syncCalls(runStart));
-    await run(() => syncAppointments(runStart));
+    await run("users", () => syncUsers(runStart));
+    await run("contacts", () => syncContacts(runStart, firstSyncDone));
+    await run("opportunities", () => syncOpportunities(runStart, firstSyncDone));
+    await run("calls", () => syncCalls(runStart));
+    await run("appointments", () => syncAppointments(runStart));
     // The scorecard's core numbers are complete at this point: record the
     // success now so a long first messages backfill does not keep the
     // dashboard on "never" for half an hour.
@@ -166,11 +198,11 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
       if (!firstSyncDone) setState("first_core_sync_at", runStart);
       setState("last_core_sync_ok_at", runStart);
     }
-    await run(() => syncMessages(runStart));
-    await run(() => syncConversations(runStart));
-    await run(() => syncWorkflows(runStart));
-    await run(() => syncEmailTemplates(runStart));
-    await run(() => syncEmailStatus(runStart));
+    await run("messages", () => syncMessages(runStart));
+    await run("conversations", () => syncConversations(runStart));
+    await run("workflows", () => syncWorkflows(runStart));
+    await run("emailTemplates", () => syncEmailTemplates(runStart));
+    await run("emailStatus", () => syncEmailStatus(runStart));
   } finally {
     const okCount = phases.filter((p) => p.ok).length;
     const ok = phases.length === PHASES && okCount === PHASES;
@@ -188,6 +220,7 @@ export async function runCoreSync(): Promise<{ runId: number; ok: boolean; phase
       setState("last_core_sync_ok_at", runStart);
     }
     if (ok) setState("last_core_sync_complete_at", runStart);
+    deadlineAt = 0;
     running = false;
   }
   return { runId, ok: phases.every((p) => p.ok), phases };
@@ -242,6 +275,7 @@ async function syncContacts(now: string, firstSyncDone: boolean): Promise<PhaseR
   try {
     let cursor: { startAfterId: string; startAfter: number } | undefined;
     for (let page = 0; page < 5000; page++) {
+      if (pastDeadline()) { res.error = DEADLINE_NOTE; return res; }
       const r = await ghl.listContacts(cursor);
       if (!r.ok) throw new Error(`${r.kind}: ${r.error}`);
       const contacts = r.data.contacts ?? [];
@@ -310,6 +344,7 @@ async function syncOpportunities(now: string, firstSyncDone: boolean): Promise<P
     for (const pipelineId of pipelineIds) {
       let cursor: { startAfterId: string; startAfter: string } | undefined;
       for (let page = 0; page < 5000; page++) {
+        if (pastDeadline()) { res.error = DEADLINE_NOTE; return res; }
         const r = await ghl.searchOpportunities({ pipelineId, status: "all", limit: 100, startAfterId: cursor?.startAfterId, startAfter: cursor?.startAfter });
         if (!r.ok) throw new Error(`${r.kind}: ${r.error}`);
         const opps = r.data.opportunities ?? [];
@@ -460,6 +495,7 @@ async function syncMessages(now: string): Promise<PhaseResult> {
       let cursor: string | undefined;
       const countBefore = res.count;
       for (let page = 0; page < 5000; page++) {
+        if (pastDeadline()) { res.error = DEADLINE_NOTE; return res; }
         const r = await ghl.exportMessages({ channel, limit: 500, startDate: start, endDate: now, sortBy: "createdAt", sortOrder: "asc", cursor });
         if (!r.ok) throw new Error(`${channel}: ${r.kind}: ${r.error}`);
         const msgs = r.data.messages ?? [];
@@ -678,6 +714,7 @@ async function syncEmailStatus(now: string): Promise<PhaseResult> {
       const sel = db.prepare(`SELECT id, date_added FROM messages WHERE channel = 'email' AND direction = 'outbound' AND date_added >= ? AND date_added > ? ORDER BY date_added ASC LIMIT 200`);
       let processed = 0;
       while (budget > 0) {
+        if (pastDeadline()) { res.warnings.push(DEADLINE_NOTE); break; }
         const rows = sel.all(lookbackIso, cursor) as { id: string; date_added: string }[];
         if (rows.length === 0) {
           setState("email_status_recent_done_at", now);
@@ -707,6 +744,7 @@ async function syncEmailStatus(now: string): Promise<PhaseResult> {
           WHERE m.channel = 'email' AND m.direction = 'outbound' AND m.date_added < ? AND s.id IS NULL ORDER BY m.date_added DESC LIMIT 200`);
         let processed = 0;
         while (budget > 0) {
+          if (pastDeadline()) { res.warnings.push(DEADLINE_NOTE); break; }
           const rows = sel.all(back) as { id: string; date_added: string }[];
           if (rows.length === 0) {
             setState("email_status_backfill_cursor", "done");
@@ -760,6 +798,7 @@ async function syncCalls(now: string): Promise<PhaseResult> {
     const start = overlapStart < HISTORY_START ? HISTORY_START : overlapStart;
     let cursor: string | undefined;
     for (let page = 0; page < 5000; page++) {
+      if (pastDeadline()) { res.error = DEADLINE_NOTE; return res; }
       const r = await ghl.exportMessages({ channel: "Call", limit: 500, startDate: start, endDate: now, sortBy: "createdAt", sortOrder: "asc", cursor });
       if (!r.ok) throw new Error(`${r.kind}: ${r.error}`);
       const msgs = r.data.messages ?? [];
@@ -834,6 +873,7 @@ async function syncAppointments(now: string): Promise<PhaseResult> {
       if (excluded.has(cal.id)) continue;
       for (let s = windowStart; s < windowEnd; s += chunkMs) {
         const e = Math.min(s + chunkMs, windowEnd);
+        if (pastDeadline()) { res.error = DEADLINE_NOTE; return res; }
         const r = await ghl.getCalendarEvents(cal.id, s, e);
         if (!r.ok) {
           res.warnings.push(`${cal.name}: ${r.error}`);
