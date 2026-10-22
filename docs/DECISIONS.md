@@ -1015,3 +1015,25 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     Railway and, per the owner, stays off it for now. Old values should be
     revoked at their sources (GHL token deleted, old Google secret removed)
     once the new ones are confirmed working.
+
+77. **Hosting moves from Railway to Render (2026-10-22, owner decision after
+    Railway's environment-variable breach).** The repo now carries a Render
+    Blueprint, render.yaml: one Node web service named vcn-ghl-dashboard in
+    Ohio on branch main, build "npm ci && npm run build", start "npm start",
+    Starter plan, health check on "/", Node 24 pinned (NODE_VERSION, plus
+    the existing .node-version and package.json engines), a 5 GB persistent
+    disk at /data, and DATA_DIR=/data, TZ=America/New_York, PORT=3000 set in
+    the file. The six secrets and host-specific values (GHL_PRIVATE_TOKEN,
+    GHL_LOCATION_ID, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AUTH_SECRET,
+    AUTH_URL) are declared with sync:false so they are typed into Render's
+    dashboard and never live in the repo. railway.json was deleted and
+    .env.example now describes Render; docs/DEPLOY.md holds the deploy
+    steps. No app behaviour changed: the server already read PORT (Next
+    reads it at start) and DATA_DIR (src/lib/db.ts), and a production build
+    started against an empty data folder on a custom port created the cache
+    in WAL mode, answered / with a redirect to /login (Render counts 2xx
+    and 3xx as healthy, checked against its docs), and ran the scheduler's
+    first sync five seconds after boot. Health check on "/" rather than
+    "/login" is the owner's choice. Event history recorded on the old host
+    is carried over through the import-history route after Render's first
+    sync, then the Railway service is deleted.
