@@ -994,3 +994,24 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     can take a small control the same way; every card's title row has the
     same minimum height so neighbouring cards still line up. On phone widths
     the dropdown wraps under the title at full width.
+
+76. **All Railway secrets rotated on 2026-10-21 after Railway's
+    environment-variable breach (owner).** Railway reported a breach of
+    stored environment variables, so every secret the host held was treated
+    as exposed and replaced: the GHL Private Integration token
+    (GHL_PRIVATE_TOKEN), the Google OAuth client secret
+    (GOOGLE_CLIENT_SECRET), and the host session secret (AUTH_SECRET on
+    Railway, kept locally as AUTH_SECRET_PRODUCTION). The owner rotated the
+    GHL token and Google secret at their sources and updated both .env and
+    Railway Variables; the session secret was regenerated locally (32 random
+    bytes, base64) and copied to Railway, which signs out every existing
+    live session. Local verification after the rotation, with no secret
+    printed: one read-only GET /locations/{id} with the new token returned
+    200; Google's token endpoint accepted the new client id and secret
+    (a deliberately fake authorization code was rejected as invalid_grant,
+    not invalid_client); .env holds exactly one line per variable with no
+    commented-out or duplicate old values. GHL_LOCATION_ID is an identifier,
+    not a secret, and was not changed. ANTHROPIC_API_KEY is not stored on
+    Railway and, per the owner, stays off it for now. Old values should be
+    revoked at their sources (GHL token deleted, old Google secret removed)
+    once the new ones are confirmed working.
