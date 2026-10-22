@@ -11,6 +11,8 @@ import path from "node:path";
 import { fmtValue, type WeeklyReportData } from "./data";
 
 export interface Narrative {
+  /** One sentence "week in brief" at the top of the email. */
+  brief: string;
   trend: string;
   projections: string;
   tips: string[];
@@ -116,7 +118,7 @@ Hard rules:
 - Say "estimated" when mentioning commission.
 - Dollar figures are Opportunity Value, never revenue or cash.
 - Reply with JSON only, no markdown fences, in this shape:
-  {"trend": "<2-3 sentences on the four-week trend and this week vs last week>", "projections": "<2-3 sentences on month-to-date pace: who is on track, what the team needs per working day>", "tips": ["<tip 1>", "<tip 2>", "<tip 3>"]}
+  {"brief": "<ONE sentence, under 30 words, summing up the week: the combined submissions result against goal and the one other number that matters most>", "trend": "<2-3 sentences on the four-week trend and this week vs last week>", "projections": "<2-3 sentences on month-to-date pace: who is on track, what the team needs per working day>", "tips": ["<tip 1>", "<tip 2>", "<tip 3>"]}
 - Each tip is one or two sentences, actionable for the coming week, grounded in a specific number from the data. Do not number the tips.`;
 
 /** Every number token in a text, normalised (commas removed). */
@@ -161,19 +163,19 @@ export async function generateNarrative(d: WeeklyReportData, fetchImpl: typeof f
   const last = text.lastIndexOf("}");
   // Raw line breaks inside a JSON string are the usual reason a model reply fails to parse.
   const stripped = (first >= 0 && last > first ? text.slice(first, last + 1) : text).replace(/[\u0000-\u001f]+/g, " ");
-  let parsed: { trend?: unknown; projections?: unknown; tips?: unknown };
+  let parsed: { brief?: unknown; trend?: unknown; projections?: unknown; tips?: unknown };
   try {
     parsed = JSON.parse(stripped) as typeof parsed;
   } catch {
     return { narrative: null, skipped: `The model's reply was not valid JSON (starts "${text.slice(0, 120).replace(/\s+/g, " ")}"); numbers-only email.`, durationMs: Date.now() - t0 };
   }
   const tips = Array.isArray(parsed.tips) ? parsed.tips.filter((t): t is string => typeof t === "string" && t.trim().length > 0).map((t) => t.trim()) : [];
-  if (typeof parsed.trend !== "string" || typeof parsed.projections !== "string" || tips.length !== 3) {
-    return { narrative: null, skipped: "The model's reply did not have trend, projections, and exactly three tips; numbers-only email.", durationMs: Date.now() - t0 };
+  if (typeof parsed.brief !== "string" || typeof parsed.trend !== "string" || typeof parsed.projections !== "string" || tips.length !== 3) {
+    return { narrative: null, skipped: "The model's reply did not have brief, trend, projections, and exactly three tips; numbers-only email.", durationMs: Date.now() - t0 };
   }
-  const check = numbersAreGrounded([parsed.trend, parsed.projections, ...tips].join("\n"), allowed);
+  const check = numbersAreGrounded([parsed.brief, parsed.trend, parsed.projections, ...tips].join("\n"), allowed);
   if (!check.ok) {
     return { narrative: null, skipped: `The model used numbers that are not in the data (${check.offending.slice(0, 5).join(", ")}); numbers-only email.`, durationMs: Date.now() - t0 };
   }
-  return { narrative: { trend: parsed.trend.trim(), projections: parsed.projections.trim(), tips: tips.map((t) => t.slice(0, 400)), model: cfg.model }, durationMs: Date.now() - t0 };
+  return { narrative: { brief: parsed.brief.trim().slice(0, 300), trend: parsed.trend.trim(), projections: parsed.projections.trim(), tips: tips.map((t) => t.slice(0, 400)), model: cfg.model }, durationMs: Date.now() - t0 };
 }

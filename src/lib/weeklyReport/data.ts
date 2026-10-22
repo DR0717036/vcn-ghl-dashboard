@@ -42,8 +42,8 @@ export interface Headline {
   prevUnavailable?: string;
   goal: number | null;
   lowerIsBetter?: boolean;
-  /** Smaller lines under the figure (e.g. CA 101 and each semester's IAU part). */
-  parts?: { label: string; value: number | null; prev: number | null }[];
+  /** Smaller lines under the figure (e.g. CA 101 and each semester's IAU part); `short` is the label for tight spaces. */
+  parts?: { label: string; short: string; value: number | null; prev: number | null }[];
   /** Where the figure comes from on the dashboard. */
   source: string;
 }
@@ -234,8 +234,8 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
       prevUnavailable: subs.prevUnavailableReason,
       goal: subs.goal?.full ?? null,
       parts: [
-        { label: "CA 101 (Army)", value: subs.parts?.ca101.achieved ?? null, prev: subs.parts?.ca101.prev ?? null },
-        ...(subs.parts?.iau ?? []).map((p) => ({ label: p.label, value: p.achieved, prev: p.prev })),
+        { label: "CA 101 (Army)", short: "CA 101", value: subs.parts?.ca101.achieved ?? null, prev: subs.parts?.ca101.prev ?? null },
+        ...(subs.parts?.iau ?? []).map((p) => ({ label: p.label, short: `IAU ${semesters().find((s) => s.submittedKey === p.key)?.short ?? p.reportingGroup}`, value: p.achieved, prev: p.prev })),
       ],
       source: "Program Submissions (combined), every semester",
     },

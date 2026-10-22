@@ -14,7 +14,7 @@ export const LOGO_CID = "vcn-logo";
 // blue #1677ff, yellow #ffd51f, status good #15803d / warn #8a5b00 / bad #c62828 on light surfaces.
 const C = {
   page: "#e4eaf1",
-  dark: "#05080d",
+  dark: "#0c1d33",
   card: "#ffffff",
   inset: "#f4f7fb",
   border: "#d0d9e4",
@@ -120,27 +120,86 @@ function paragraph(text: string): string {
   return `<p style="font:400 14px/1.55 ${FONT};color:${C.body};margin:0 0 10px">${esc(text)}</p>`;
 }
 
+/** A numbers-only "week in brief" for when the narrative is unavailable; every figure is copied from the data. */
+export function briefFallback(d: WeeklyReportData): string {
+  const h = (key: string) => d.headlines.find((x) => x.key === key)!;
+  const c = h("combined");
+  const goal = c.goal === null ? "" : ` of a ${n(Math.round(c.goal))} goal`;
+  return `${fmtValue("count", c.value)} combined submissions${goal}, ${fmtValue("count", h("dials").value)} dials, ${fmtValue("count", h("booked").value)} appointments booked, ${fmtValue("count", h("won").value)} won.`;
+}
+
+/** Small green / red / gray change pill vs last week. */
+function changePill(h: Headline): string {
+  const c = change(h.kind, h.value, h.prev, h.lowerIsBetter);
+  if (!c) return `<span style="display:inline-block;font:700 11px/1 ${FONT};color:${C.muted};background:#eef2f6;border-radius:999px;padding:4px 8px;white-space:nowrap">no comparison</span>`;
+  const bg = c.arrow === "■" ? "#eef2f6" : c.color === C.good ? C.goodBg : C.badBg;
+  return `<span style="display:inline-block;font:700 11px/1 ${FONT};color:${c.color};background:${bg};border-radius:999px;padding:4px 8px;white-space:nowrap">${c.arrow} ${esc(c.text)}</span>`;
+}
+
+/** Thin goal-progress bar (table cells, no images) with "x of goal · y%" under it. */
+function goalBar(h: Headline): string {
+  if (h.goal === null || h.goal <= 0) return `<div style="font:500 11px/1.4 ${FONT};color:${C.muted};margin-top:8px">no goal</div>`;
+  const v = h.value ?? 0;
+  const pct = Math.round((v / h.goal) * 100);
+  const fill = Math.max(v > 0 ? 2 : 0, Math.min(100, Math.round((v / h.goal) * 100)));
+  const color = v >= h.goal - 1e-9 ? C.good : C.blue;
+  const goalText = h.kind === "count" ? n(Math.round(h.goal)) : fmtValue(h.kind, h.goal);
+  const bar =
+    fill >= 100
+      ? `<td height="6" bgcolor="${color}" style="height:6px;font-size:0;line-height:0;border-radius:3px">&nbsp;</td>`
+      : `<td height="6" width="${fill}%" bgcolor="${color}" style="height:6px;font-size:0;line-height:0;border-radius:3px 0 0 3px">&nbsp;</td><td height="6" bgcolor="${C.border}" style="height:6px;font-size:0;line-height:0;border-radius:0 3px 3px 0">&nbsp;</td>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px"><tr>${fill === 0 ? `<td height="6" bgcolor="${C.border}" style="height:6px;font-size:0;line-height:0;border-radius:3px">&nbsp;</td>` : bar}</tr></table><div style="font:500 11px/1.4 ${FONT};color:${C.muted};margin-top:4px">${esc(fmtValue(h.kind, h.value))} of ${esc(goalText)} goal · ${n(pct)}%</div>`;
+}
+
+/** One KPI tile: label, big number, change pill, sub-line, goal bar. */
+function tile(h: Headline, sub: string, small = false): string {
+  const big = small ? "22px" : "28px";
+  const value = h.value === null ? `<span style="font:800 ${small ? "16px" : "18px"}/1.2 ${FONT};color:${C.muted}" title="${esc(h.unavailable ?? "")}">unavailable</span>` : `<span style="font:800 ${big}/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${esc(fmtValue(h.kind, h.value))}</span>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px"><tr><td style="padding:12px 14px">
+<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">${esc(h.label)}</div>
+<div>${value} &nbsp;${changePill(h)}</div>
+<div style="font:500 12px/1.4 ${FONT};color:${C.secondary};margin-top:4px">${esc(sub)}</div>
+${goalBar(h)}
+</td></tr></table>`;
+}
+
+/** Two stacked segment bars (this week, last week) of the submissions parts on one shared scale, with a legend. */
+function mixBars(h: Headline): string {
+  const parts = h.parts ?? [];
+  const colors = [C.blue, "#0a8db4", "#a88900", "#d55181", "#8178e0"];
+  const totals = [parts.reduce((s, p) => s + (p.value ?? 0), 0), parts.reduce((s, p) => s + (p.prev ?? 0), 0)];
+  const scale = Math.max(1, ...totals);
+  const row = (label: string, pick: (p: NonNullable<Headline["parts"]>[number]) => number | null, total: number) => {
+    const segs = parts.map((p, i) => ({ v: pick(p) ?? 0, color: colors[i % colors.length], short: p.short })).filter((s) => s.v > 0);
+    const used = segs.reduce((s, x) => s + Math.round((x.v / scale) * 100), 0);
+    const cells = segs.map((s) => `<td width="${Math.round((s.v / scale) * 100)}%" bgcolor="${s.color}" style="height:20px;font:700 11px/20px ${FONT};color:#ffffff;text-align:center;white-space:nowrap;overflow:hidden">${n(s.v)}</td>`).join("");
+    const rest = used < 100 ? `<td bgcolor="#eef2f6" style="height:20px;font-size:0;line-height:0">&nbsp;</td>` : "";
+    return `<tr><td width="76" style="font:600 12px/1.3 ${FONT};color:${C.secondary};padding:0 8px 6px 0;white-space:nowrap">${esc(label)}</td><td style="padding:0 0 6px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-radius:4px;overflow:hidden">${segs.length ? `<tr>${cells}${rest}</tr>` : `<tr><td bgcolor="#eef2f6" style="height:20px;font:600 11px/20px ${FONT};color:${C.muted};text-align:center">none</td></tr>`}</table></td><td width="34" align="right" style="font:800 13px/1.3 ${FONT};color:${C.ink};padding:0 0 6px 8px">${n(total)}</td></tr>`;
+  };
+  const legend = parts.map((p, i) => `<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[i % colors.length]};vertical-align:-1px"></span> ${esc(p.short)} <b style="color:${C.ink}">${esc(fmtValue("count", p.value))}</b> <span style="color:${C.muted}">(last week ${esc(fmtValue("count", p.prev))})</span></span>`).join("");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${row("This week", (p) => p.value, totals[0])}${row("Last week", (p) => p.prev, totals[1])}</table><div style="font:500 12px/1.6 ${FONT};color:${C.secondary};margin-top:2px">${legend}</div>`;
+}
+
 export function renderHtml(d: WeeklyReportData, narrative: Narrative | null): string {
   const dash = d.dashboardUrl;
   const link = (path: string, label: string) => (dash ? `<a href="${esc(dash + path)}" style="color:${C.blueText};font-weight:700">${esc(label)}</a>` : esc(label));
   const parts: string[] = [];
 
-  // 1. headline numbers
-  const headRows: string[][] = [];
-  for (const h of d.headlines) {
-    const g = goalCell(h);
-    headRows.push([
-      `<span style="font-weight:700;color:${C.ink}">${esc(h.label)}</span>`,
-      `<span style="font-weight:800;color:${C.ink}">${esc(fmtValue(h.kind, h.value))}</span>`,
-      esc(h.prevUnavailable && h.prev === null ? "unavailable" : fmtValue(h.kind, h.prev)),
-      changeHtml(change(h.kind, h.value, h.prev, h.lowerIsBetter), h.prevUnavailable ?? h.unavailable),
-      `<span style="color:${g.color};font-weight:700">${esc(g.text)}</span>`,
-    ]);
-    for (const p of h.parts ?? []) {
-      headRows.push([`<span style="color:${C.secondary};padding-left:14px">↳ ${esc(p.label)}</span>`, esc(fmtValue(h.kind, p.value)), esc(fmtValue(h.kind, p.prev)), changeHtml(change(h.kind, p.value, p.prev)), ""]);
-    }
-  }
-  parts.push(section("1 · Headline numbers", `${d.rangeText} vs ${d.prevRangeText}`, table(["Metric", "This week", "Last week", "Change", "Goal · attainment"], headRows) + note(`Goals are the dashboard's weekly rates (per rep, summed for the team), pro-rated to the week${d.partial ? " so far" : ""}. Change compares this week with the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}.`)));
+  // 1. headline numbers: week in brief, six KPI tiles, submissions mix, leads tiles, one-line note
+  const H = (key: string) => d.headlines.find((x) => x.key === key)!;
+  const brief = narrative?.brief ?? briefFallback(d);
+  const briefHtml = `<div style="border-left:4px solid ${C.yellow};background:${C.inset};border-radius:0 10px 10px 0;padding:10px 14px;margin:0 0 14px;font:600 15px/1.45 ${FONT};color:${C.ink}">${esc(brief)}</div>`;
+  const showRate = H("showRate");
+  const wonValue = H("wonValue");
+  const tileRows = [
+    [tile(H("combined"), `last week ${fmtValue("count", H("combined").prev)}`), tile(H("dials"), `last week ${fmtValue("count", H("dials").prev)}`)],
+    [tile(H("talk"), `last week ${fmtValue("minutes", H("talk").prev)}`), tile(H("booked"), `last week ${fmtValue("count", H("booked").prev)}`)],
+    [tile(H("completed"), `show rate ${fmtValue("pct", showRate.value)}${showRate.prev !== null ? ` (last week ${fmtValue("pct", showRate.prev)})` : ""}`), tile(H("won"), `${fmtValue("usd", wonValue.value)} Opportunity Value${wonValue.prev !== null ? ` (last week ${fmtValue("usd", wonValue.prev)})` : ""}`)],
+  ];
+  const tilesHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${tileRows.map((r) => `<tr>${r.map((t, i) => `<td width="50%" valign="top" style="padding:0 ${i === 0 ? "5px" : "0"} 10px ${i === 0 ? "0" : "5px"}">${t}</td>`).join("")}</tr>`).join("")}</table>`;
+  const mixHtml = `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:6px 0 8px">Submissions mix</div>` + mixBars(H("combined"));
+  const leadsHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px"><tr><td width="50%" valign="top" style="padding:0 5px 0 0">${tile(H("newLeads"), `last week ${fmtValue("count", H("newLeads").prev)}`, true)}</td><td width="50%" valign="top" style="padding:0 0 0 5px">${tile(H("assigned"), H("assigned").prevUnavailable && H("assigned").prev === null ? "no comparison: assignment tracking is newer than last week" : `last week ${fmtValue("count", H("assigned").prev)}`, true)}</td></tr></table>`;
+  parts.push(section("1 · Headline numbers", `${d.rangeText} vs ${d.prevRangeText}`, briefHtml + tilesHtml + mixHtml + leadsHtml + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`)));
 
   // 2. leaderboard
   const callouts: string[] = [];
@@ -299,6 +358,7 @@ export function renderText(d: WeeklyReportData, narrative: Narrative | null): st
   out.push(`VCN WEEKLY SALES REPORT`, `${d.rangeText} (Monday to Sunday, America/New_York)${d.partial ? ", week in progress" : ""}`, `Compared with ${d.prevRangeText}. Data as of ${d.dataAsOf ? fmtDateTime(d.dataAsOf) : "no completed sync"}.`);
 
   H("1. Headline numbers");
+  out.push(narrative?.brief ?? briefFallback(d), "");
   const chg = (kind: Kind, v: number | null, p: number | null, lower?: boolean) => {
     const c = change(kind, v, p, lower);
     return c ? `${c.arrow === "■" ? "=" : c.arrow === "▲" ? "+" : "-"} ${c.text.replace(/^[+−]/, "")}` : "n/a";
