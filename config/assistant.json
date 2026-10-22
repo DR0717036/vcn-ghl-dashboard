@@ -1,0 +1,6 @@
+{
+  "_comment": "Settings for the Anthropic Messages API calls the dashboard makes (owner request 2026-10-22). Today only the weekly report's narrative uses it: the trend commentary, the projections wording, and the three tips. The model is handed the computed numbers and may not compute or invent any; every number in its text must appear in the data it was given, or the email falls back to numbers only. The key is ANTHROPIC_API_KEY in .env (never in this file). maxTokens caps one reply; timeoutSeconds aborts a slow call so the email still goes out.",
+  "model": "claude-sonnet-5-5",
+  "maxTokens": 2000,
+  "timeoutSeconds": 60
+}

@@ -411,6 +411,8 @@ export interface OutcomesResult {
   historyStart: string | undefined;
   asOf: string;
   touchWindowDays: number;
+  /** Cohort contacts whose live opportunity is open but parked in a dead-end stage (the figure in the working-stage row's detail). */
+  deadEnd: number;
   notes: string[];
 }
 
@@ -458,6 +460,7 @@ export function computeOutcomes(leads: Lead[]): OutcomesResult {
     historyStart: coverage().firstCoreSyncAt,
     asOf,
     touchWindowDays: cfg.touchWindowDays,
+    deadEnd,
     notes: [
       "Cohort — contacts created in the period; every row counts cohort contacts on its own as of the last sync, so rows overlap and are not nested.",
       `In a working stage — the contact's live opportunity is open and its stage is neither ${cfg.newLeadStageName} nor a dead-end stage (${cfg.deadEndStages.join(", ")}); program pipelines are preferred when a contact has several opportunities.`,

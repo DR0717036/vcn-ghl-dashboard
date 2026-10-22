@@ -2,7 +2,9 @@
 // brief's labels map onto it, and which endpoints the token may read.
 // Everything shown comes from the local cache; nothing here calls GHL.
 
-import { cacheHealth, getState, lastSuccessfulSync, latestSyncRuns, readSnapshots, type SnapshotRow } from "@/lib/db";
+import { cacheHealth, getState, lastSuccessfulSync, latestSyncRuns, latestWeeklyReportSends, readSnapshots, type SnapshotRow } from "@/lib/db";
+import { scheduleLabel, weeklyReportConfig } from "@/lib/weeklyReport/config";
+import { gmailConfigured } from "@/lib/mailer";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { explainSyncSummary, fmtBytes, runningTooLong } from "@/lib/syncStatus";
 import { funnelOnlyForStage, mappedTags, mappingConfig, milestoneForStage } from "@/lib/mapping-config";
@@ -124,6 +126,11 @@ export default async function MappingPage() {
   const coreCompleteAt = getState("last_core_sync_complete_at") ?? lastSuccessfulSync(CORE_SYNC_KIND)?.started_at;
   const health = cacheHealth();
   const diskWarning = getState("disk_warning");
+  // Weekly sales report email: schedule and the send log
+  const reportCfg = weeklyReportConfig();
+  const reportSends = latestWeeklyReportSends(8);
+  const gmail = gmailConfigured();
+  const anthropicKeySet = Boolean(process.env.ANTHROPIC_API_KEY?.trim());
   const duration = (a: string, b: string | null) => (b ? `${Math.max(1, Math.round((Date.parse(b) - Date.parse(a)) / 60000))} min` : "running");
 
   const location = pick<LocationSnapshot>(rows, "location");
@@ -316,6 +323,68 @@ export default async function MappingPage() {
           held, and the next run re-reads that window. Runs before 2026-10-22 show a plain count for calls and messages, which was the
           number of records read including the one-day overlap, not the number of new calls.
         </p>
+      </section>
+
+      {/* ---- Weekly sales report email ---- */}
+      <section className="card">
+        <h2>Weekly sales report email</h2>
+        <p className="note">
+          A Monday-to-Sunday summary (headline numbers, rep leaderboard, month-to-date pace, funnel, pipeline health, four-week trend,
+          flags, and three tips) built from the same figures as the scorecard and emailed from the server scheduler. Each report week is
+          sent at most once, whatever restarts or redeploys happen; one SMTP failure is retried once, then logged here. Settings live in
+          config/weekly-report.json.
+        </p>
+        <div className="status-bar">
+          <span>
+            <b>Schedule:</b> {scheduleLabel(reportCfg)}{" "}
+            {reportCfg.enabled ? <span className="pill pill-ok">enabled</span> : <span className="pill pill-warn">off (enabled: false)</span>}
+          </span>
+          <span>
+            <b>Recipients:</b> {reportCfg.recipients.length ? reportCfg.recipients.join(", ") : "none configured"}
+          </span>
+          <span>
+            <b>From:</b> {reportCfg.from.address}{" "}
+            {gmail.ok ? <span className="pill pill-ok">Gmail credentials set</span> : <span className="pill pill-bad">{gmail.reason}</span>}
+          </span>
+          <span>
+            <b>Narrative:</b> {anthropicKeySet ? <span className="pill pill-ok">ANTHROPIC_API_KEY set</span> : <span className="pill pill-warn">no ANTHROPIC_API_KEY, numbers only</span>}
+          </span>
+        </div>
+        {reportSends.length > 0 ? (
+          <table>
+            <thead>
+              <tr>
+                <th>Report week</th>
+                <th>Kind</th>
+                <th>Started</th>
+                <th>Result</th>
+                <th>To</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reportSends.map((r) => (
+                <tr key={r.id}>
+                  <td>Week of {day(r.week_start + "T12:00:00")}</td>
+                  <td>{r.kind === "test" ? <span className="pill pill-info">test</span> : "scheduled"}</td>
+                  <td>{when(r.started_at)}</td>
+                  <td>
+                    {r.ok === 1 ? <span className="pill pill-ok">sent</span> : r.ok === 0 ? <span className="pill pill-bad">failed</span> : <span className="pill pill-info">sending</span>}
+                  </td>
+                  <td>{r.recipients}</td>
+                  <td className="note">
+                    {r.attempts > 0 ? `${r.attempts} attempt${r.attempts === 1 ? "" : "s"}` : ""}
+                    {r.ok === 1 ? ` · narrative ${r.narrative ? "included" : "omitted"}` : ""}
+                    {r.error ? ` · ${r.error}` : ""}
+                    {r.triggered_by && r.triggered_by !== "scheduler" ? ` · by ${r.triggered_by}` : ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="note">No report has been sent yet.</p>
+        )}
       </section>
 
       {/* ---- Endpoint access ---- */}

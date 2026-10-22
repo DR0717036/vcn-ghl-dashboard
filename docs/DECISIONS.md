@@ -1099,3 +1099,59 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     re-reads from one day earlier; the re-read upserts by id, so nothing
     duplicates. After deploy it is called once with from=2026-10-20 for
     calls and messages to re-pull the host.
+
+80. **Weekly sales report email (owner request 2026-10-22).** A Monday-to-Sunday
+    summary emailed every Sunday at 5:00 PM America/New_York from
+    info@intelagentmedia.com over Gmail SMTP (GMAIL_USER / GMAIL_APP_PASSWORD
+    in .env; smtp.gmail.com:465, a small SMTP client on Node's tls module so
+    no mail library was added) to the recipients in config/weekly-report.json
+    (diego@, dante@, tonyn@). Sections, in order: headline numbers this week
+    vs last week vs goal with change arrows (combined submissions with CA 101
+    and each semester's IAU part, dials, talk time, booked / completed / show
+    rate, leads created / assigned, won count and Opportunity Value); the rep
+    leaderboard ranked by combined submissions with goal attainment, week-
+    over-week change, top performer and biggest improver; month-to-date pace
+    (per rep and team submissions vs quota, projected month end at the
+    current pace, needed per working day on a Monday-to-Friday calendar,
+    semester totals for FS2 and Spring Session 1, estimated commission);
+    funnel leads -> appointments -> submissions -> accepted -> won this week
+    vs last plus the matched-cohort lines from Lead Outcomes; pipeline health
+    (stale leads under the configured rule, untouched leads, Awaiting
+    Supervisor Approval with aging buckets from GHL's stage-entry time,
+    unassigned leads, dead-end / lost counts, stale conversations); a four-
+    week trend table; flags (reps under 50% of goal, show-rate drops of 10+
+    points, opt-outs and email bounces, past appointments still unmarked,
+    sync problems, anything unavailable); three tips; a footer with the date
+    range, data-as-of sync time, and links to the dashboard and Mapping page.
+    Every number comes from the same functions the scorecard calls
+    (src/lib/weeklyReport/data.ts reuses metrics, submissions, repCalls,
+    appointments, leads, wonRow, commission, conversations, messaging, and
+    repPerformance for the report week, the prior week, the four trend
+    weeks, and the current month); nothing is re-implemented or estimated,
+    and "unavailable" appears wherever the dashboard would show it. Two
+    notes: submissions count every semester (the quota rule) rather than the
+    semester chosen on the page, and the stale-lead rule is the dashboard's
+    configured staleAfterDays (2 days in config/leads.json), with a separate
+    "not touched in 7 days" line, so the owner's "7-day rule" is reported
+    under its own label rather than silently redefining the card.
+    Narrative: only the trend commentary, the projections wording, and the
+    three tips come from the Anthropic Messages API (ANTHROPIC_API_KEY,
+    model claude-sonnet-5-5 in config/assistant.json). The model receives
+    the computed numbers as pre-formatted strings and may not compute or
+    invent any; every number in its reply is checked against that payload
+    and the whole narrative is dropped (numbers-only email, reason logged)
+    if a number is new, the call fails, times out, is cut off, or is not
+    valid JSON. Delivery: a one-minute scheduler tick (src/instrumentation.ts)
+    sends when the week's send time has arrived and config enabled is true;
+    the cache's weekly_report_sends table holds exactly one scheduled row per
+    report week (partial unique index) claimed before the send starts, so a
+    restart or redeploy can never send a week twice, and a server that was
+    down at 5 PM still sends when it comes back within catchUpHours (48).
+    One SMTP failure is retried once after 20 seconds; the result (scheduled
+    or test, attempts, narrative included or why not, errors) is logged on
+    the Mapping page. Testing: GET /api/admin/weekly-report?week=YYYY-MM-DD
+    renders any week in the browser (format=html|text|json, narrative=0 to
+    skip the API call); POST with {week, to} sends a [TEST] copy to one
+    address, which must be a configured recipient or an allowed sign-in
+    address; both require a historyImportAdmins user. The schedule ships
+    with enabled: false until the owner approves the test send.

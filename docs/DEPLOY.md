@@ -36,7 +36,19 @@ when the Blueprint is first created and never reads them from the repo:
 | `AUTH_SECRET` | the value of `AUTH_SECRET_PRODUCTION` in `.env` (never the local `AUTH_SECRET`) |
 | `AUTH_URL` | the service's public address, e.g. `https://vcn-ghl-dashboard.onrender.com`, no trailing slash |
 
-Do not add `ANTHROPIC_API_KEY` to Render (owner instruction, 2026-10-21).
+Three more are read from the environment for the weekly sales report email
+(decision 80, 2026-10-22) and are not in the Blueprint; add them in the host's
+Variables panel (Railway today, Render after the move):
+
+| Variable | Where the value comes from |
+|---|---|
+| `GMAIL_USER` | the Gmail account that sends the report (`info@intelagentmedia.com`), from `.env` |
+| `GMAIL_APP_PASSWORD` | that account's app password (Google Account > Security > 2-Step Verification > App passwords), from `.env` |
+| `ANTHROPIC_API_KEY` | the Anthropic key for the report's narrative, from `.env`; optional, the email goes out numbers-only without it |
+
+The Sunday schedule stays off until `enabled` is set to true in
+`config/weekly-report.json`; test sends and previews work as soon as the
+two Gmail variables exist (`/api/admin/weekly-report`, signed in as the owner).
 
 ## First deploy, step by step
 

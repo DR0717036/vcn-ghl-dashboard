@@ -322,6 +322,25 @@ export function getDb(): DatabaseSync {
     );
     CREATE INDEX IF NOT EXISTS appts_added ON appointments(date_added);
     CREATE INDEX IF NOT EXISTS appts_start ON appointments(start_time);
+
+    -- Weekly sales report emails: one row per send attempt. The partial unique
+    -- index allows exactly one scheduled row per report week, which is what
+    -- makes the Sunday send idempotent across restarts and redeploys.
+    CREATE TABLE IF NOT EXISTS weekly_report_sends (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_start   TEXT NOT NULL,      -- Monday of the report week, YYYY-MM-DD (America/New_York)
+      kind         TEXT NOT NULL,      -- scheduled | test
+      recipients   TEXT NOT NULL,      -- comma-separated addresses
+      started_at   TEXT NOT NULL,
+      finished_at  TEXT,
+      ok           INTEGER,            -- NULL = in progress
+      attempts     INTEGER NOT NULL DEFAULT 0,
+      narrative    INTEGER NOT NULL DEFAULT 0,   -- 1 when the AI narrative was included
+      message_id   TEXT,
+      error        TEXT,
+      triggered_by TEXT                -- scheduler | the admin's email
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS weekly_report_scheduled_once ON weekly_report_sends(week_start) WHERE kind = 'scheduled';
   `);
   return db;
 }
@@ -433,6 +452,57 @@ export function lastSuccessfulSync(kind: string): SyncRunRow | undefined {
   return getDb()
     .prepare(`SELECT * FROM sync_runs WHERE kind = ? AND ok = 1 ORDER BY id DESC LIMIT 1`)
     .get(kind) as unknown as SyncRunRow | undefined;
+}
+
+export interface WeeklyReportSendRow {
+  id: number;
+  week_start: string;
+  kind: string;
+  recipients: string;
+  started_at: string;
+  finished_at: string | null;
+  ok: number | null;
+  attempts: number;
+  narrative: number;
+  message_id: string | null;
+  error: string | null;
+  triggered_by: string | null;
+}
+
+/**
+ * Claims the scheduled send for a report week. Returns the new row id, or
+ * null when a scheduled row for that week already exists (sent, failed, or
+ * in progress), so a restart or redeploy can never send the same week twice.
+ */
+export function claimWeeklyReportSend(weekStart: string, kind: "scheduled" | "test", recipients: string[], triggeredBy: string): number | null {
+  try {
+    const res = getDb()
+      .prepare(`INSERT INTO weekly_report_sends (week_start, kind, recipients, started_at, triggered_by) VALUES (?, ?, ?, ?, ?)`)
+      .run(weekStart, kind, recipients.join(", "), new Date().toISOString(), triggeredBy);
+    return Number(res.lastInsertRowid);
+  } catch (e) {
+    if (/UNIQUE constraint failed/i.test((e as Error).message)) return null;
+    throw e;
+  }
+}
+
+export function finishWeeklyReportSend(id: number, r: { ok: boolean; attempts: number; narrative: boolean; messageId: string | null; error: string | null }): void {
+  getDb()
+    .prepare(`UPDATE weekly_report_sends SET finished_at = ?, ok = ?, attempts = ?, narrative = ?, message_id = ?, error = ? WHERE id = ?`)
+    .run(new Date().toISOString(), r.ok ? 1 : 0, r.attempts, r.narrative ? 1 : 0, r.messageId, r.error, id);
+}
+
+/** Sends still marked in progress after the given age are closed as abandoned (the server stopped mid-send). Never re-sent automatically. */
+export function abandonStaleWeeklyReportSends(olderThanMs: number): number {
+  const cutoff = new Date(Date.now() - olderThanMs).toISOString();
+  const r = getDb()
+    .prepare(`UPDATE weekly_report_sends SET finished_at = ?, ok = 0, error = 'Abandoned: the server stopped before the send finished. Not re-sent automatically; use the admin preview route to send it by hand.' WHERE ok IS NULL AND started_at < ?`)
+    .run(new Date().toISOString(), cutoff);
+  return Number(r.changes);
+}
+
+export function latestWeeklyReportSends(limit = 8): WeeklyReportSendRow[] {
+  return getDb().prepare(`SELECT * FROM weekly_report_sends ORDER BY id DESC LIMIT ?`).all(limit) as unknown as WeeklyReportSendRow[];
 }
 
 export function getState(key: string): string | undefined {
