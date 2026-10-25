@@ -1212,3 +1212,10 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     report=weekly|midweek, a preview-only asOf instant, and action=check,
     which proves Gmail authentication, the Anthropic key, and the once-per-
     week guard (a rolled-back double insert) on the host without sending.
+
+82. **Midweek check-in enabled (owner approval 2026-10-25).** After reviewing the
+    test send and the Wednesday-3PM-as-of preview, the owner approved the
+    check-in. config/weekly-report.json now has midweek.enabled true; the first
+    scheduled send is Wednesday 2026-10-28 at 3:00 PM New York to the same three
+    recipients, dark theme. Verified on the host with
+    /api/admin/weekly-report?action=check after the deploy.

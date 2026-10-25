@@ -48,7 +48,7 @@ Variables panel (Railway today, Render after the move):
 
 Two schedules live in `config/weekly-report.json`: the Sunday report
 (`enabled`, on since 2026-10-24) and the Wednesday midweek check-in
-(`midweek.enabled`). Previews and test sends work as soon as the two Gmail
+(`midweek.enabled`, on since 2026-10-25). Previews and test sends work as soon as the two Gmail
 variables exist (`/api/admin/weekly-report`, signed in as the owner), and
 `/api/admin/weekly-report?action=check` confirms on the host, without sending
 anything, that Gmail accepts the credentials, the Anthropic key answers, both

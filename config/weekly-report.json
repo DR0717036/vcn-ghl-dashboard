@@ -9,7 +9,7 @@
   },
   "catchUpHours": 48,
   "midweek": {
-    "enabled": false,
+    "enabled": true,
     "sendTime": {
       "weekday": 3,
       "hour": 15,
