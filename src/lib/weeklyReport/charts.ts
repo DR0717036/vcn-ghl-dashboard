@@ -41,8 +41,10 @@ interface Panel {
 
 const SCALE = 2;
 const WIDTH = 560;
-const PAD_X = 48;
-const AXIS_H = 26;
+const PAD_X = 56;
+const AXIS_H = 28;
+/** Title line and legend row above the plot. */
+const TITLE_H = 54;
 
 const THEMES = {
   light: { bg: "#ffffff", grid: "#dde5ee", axis: "#c3cfdd", ink: "#182536", muted: "#5b6b7f", series: ["#1677ff", "#0a8db4"], highlight: "#ffd51f", highlightText: "#7a6200", band: "rgba(255, 213, 31, 0.16)" },
@@ -107,11 +109,10 @@ function smoothPath(pts: { x: number; y: number }[]): string {
  * highlighted with a band, a yellow dot, and yellow labels. Each panel has its own y scale
  * from zero to its largest value (two panels, not two axes, when the units differ).
  */
-async function chartPng(opts: { cid: string; alt: string; panels: Panel[]; labels: string[]; highlight: number; theme: ReportTheme }): Promise<ChartImage> {
+async function chartPng(opts: { cid: string; title: string; alt: string; panels: Panel[]; labels: string[]; highlight: number; theme: ReportTheme }): Promise<ChartImage> {
   const T = THEMES[opts.theme];
   const count = opts.labels.length;
-  const legendH = 0;
-  const height = legendH + opts.panels.reduce((s, p) => s + p.height, 0) + AXIS_H;
+  const height = TITLE_H + opts.panels.reduce((s, p) => s + p.height, 0) + AXIS_H;
   const xAt = (i: number) => (count <= 1 ? WIDTH / 2 : PAD_X + (i * (WIDTH - 2 * PAD_X)) / (count - 1));
   const s = (v: number) => v * SCALE;
 
@@ -120,25 +121,27 @@ async function chartPng(opts: { cid: string; alt: string; panels: Panel[]; label
   const texts: ReactElement[] = [];
   if (opts.highlight >= 0 && opts.highlight < count) {
     const bx = xAt(opts.highlight) - 34;
-    svg.push(`<rect x="${bx}" y="0" width="68" height="${height - AXIS_H + 4}" rx="8" fill="${T.band}"/>`);
+    svg.push(`<rect x="${bx}" y="${TITLE_H - 8}" width="68" height="${height - AXIS_H - TITLE_H + 12}" rx="8" fill="${T.band}"/>`);
   }
-  let top = legendH;
+  // title, then the legend row under it
+  texts.push(h("div", { key: "title", style: { position: "absolute", left: s(PAD_X - 16), top: s(6), fontSize: s(17), fontWeight: 700, color: T.ink } }, opts.title));
+  let top = TITLE_H;
   opts.panels.forEach((panel, pi) => {
-    const labelsTop = 18; // room for the series legend inside the panel
-    const plotTop = top + labelsTop + 16;
-    const plotBottom = top + panel.height - 14;
+    // room above the top dot and below the bottom dot for their value labels
+    const plotTop = top + 26;
+    const plotBottom = top + panel.height - 26;
     const plotH = plotBottom - plotTop;
     const max = Math.max(1, ...panel.series.flatMap((se) => se.values.filter((v): v is number => v !== null)));
     const yAt = (v: number) => plotBottom - (v / max) * plotH;
     // grid: baseline plus two light lines
-    svg.push(`<line x1="${PAD_X - 10}" y1="${plotBottom}" x2="${WIDTH - PAD_X + 10}" y2="${plotBottom}" stroke="${T.axis}" stroke-width="1"/>`);
-    for (const f of [0.5, 1]) svg.push(`<line x1="${PAD_X - 10}" y1="${yAt(max * f).toFixed(1)}" x2="${WIDTH - PAD_X + 10}" y2="${yAt(max * f).toFixed(1)}" stroke="${T.grid}" stroke-width="1" stroke-dasharray="3 4"/>`);
+    svg.push(`<line x1="${PAD_X - 16}" y1="${plotBottom}" x2="${WIDTH - PAD_X + 16}" y2="${plotBottom}" stroke="${T.axis}" stroke-width="1"/>`);
+    for (const f of [0.5, 1]) svg.push(`<line x1="${PAD_X - 16}" y1="${yAt(max * f).toFixed(1)}" x2="${WIDTH - PAD_X + 16}" y2="${yAt(max * f).toFixed(1)}" stroke="${T.grid}" stroke-width="1" stroke-dasharray="3 4"/>`);
     // legend row for the panel
-    let lx = PAD_X - 10;
+    let lx = PAD_X - 16;
     panel.series.forEach((se, si) => {
       const color = se.color || T.series[si % T.series.length];
       texts.push(
-        h("div", { key: `lg${pi}${si}`, style: { position: "absolute", left: s(lx), top: s(top + 2), display: "flex", alignItems: "center", fontSize: s(11), fontWeight: 700, color: T.muted } }, h("div", { style: { width: s(9), height: s(9), borderRadius: s(5), background: color, marginRight: s(6) } }), se.name),
+        h("div", { key: `lg${pi}${si}`, style: { position: "absolute", left: s(lx), top: s(pi === 0 ? 32 : top + 2), display: "flex", alignItems: "center", fontSize: s(11), fontWeight: 700, color: T.muted } }, h("div", { style: { width: s(9), height: s(9), borderRadius: s(5), background: color, marginRight: s(6) } }), se.name),
       );
       lx += 14 + se.name.length * 7.2 + 18;
     });
@@ -192,7 +195,7 @@ async function chartPng(opts: { cid: string; alt: string; panels: Panel[]; label
   return { cid: opts.cid, filename: `${opts.cid}.png`, contentType: "image/png", data, width: WIDTH, height, alt: opts.alt };
 }
 
-/** The two trend charts for section 6: submissions and won on one panel; dials and appointments booked as two panels. */
+/** The three trend charts for section 6: submissions and won together; dials; appointments booked. */
 export async function renderTrendCharts(d: WeeklyReportData, theme: ReportTheme): Promise<ChartImage[]> {
   const weeks: TrendWeek[] = d.trend;
   const labels = weeks.map((w) => w.shortLabel);
@@ -201,22 +204,30 @@ export async function renderTrendCharts(d: WeeklyReportData, theme: ReportTheme)
   const count = (v: number) => n(v);
   const subsWon = await chartPng({
     cid: "trend-submissions-won",
+    title: "Combined Submissions & Won Opportunities",
     alt: `Combined submissions and won opportunities per week: ${weeks.map((w) => `${w.shortLabel} ${w.combined === null ? "n/a" : n(w.combined)} submissions, ${n(w.won)} won`).join("; ")}`,
-    panels: [{ height: 170, series: [{ name: "Combined submissions", color: T.series[0], values: weeks.map((w) => w.combined), fmt: count }, { name: "Won opportunities", color: T.series[1], values: weeks.map((w) => w.won), fmt: count }] }],
+    panels: [{ height: 190, series: [{ name: "Combined submissions", color: T.series[0], values: weeks.map((w) => w.combined), fmt: count }, { name: "Won opportunities", color: T.series[1], values: weeks.map((w) => w.won), fmt: count }] }],
     labels,
     highlight,
     theme,
   });
-  const activity = await chartPng({
-    cid: "trend-dials-booked",
-    alt: `Dials and appointments booked per week: ${weeks.map((w) => `${w.shortLabel} ${n(w.dials)} dials, ${w.booked === null ? "n/a" : n(w.booked)} booked`).join("; ")}`,
-    panels: [
-      { height: 120, series: [{ name: "Dials", color: T.series[0], values: weeks.map((w) => w.dials), fmt: count }] },
-      { height: 120, series: [{ name: "Appointments booked", color: T.series[1], values: weeks.map((w) => w.booked), fmt: count }] },
-    ],
+  const dials = await chartPng({
+    cid: "trend-dials",
+    title: "Dials",
+    alt: `Dials per week: ${weeks.map((w) => `${w.shortLabel} ${n(w.dials)}`).join("; ")}`,
+    panels: [{ height: 150, series: [{ name: "Dials", color: T.series[0], values: weeks.map((w) => w.dials), fmt: count }] }],
     labels,
     highlight,
     theme,
   });
-  return [subsWon, activity];
+  const booked = await chartPng({
+    cid: "trend-booked",
+    title: "Appointments Booked",
+    alt: `Appointments booked per week: ${weeks.map((w) => `${w.shortLabel} ${w.booked === null ? "n/a" : n(w.booked)}`).join("; ")}`,
+    panels: [{ height: 150, series: [{ name: "Appointments booked", color: T.series[1], values: weeks.map((w) => w.booked), fmt: count }] }],
+    labels,
+    highlight,
+    theme,
+  });
+  return [subsWon, dials, booked];
 }

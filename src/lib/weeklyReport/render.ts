@@ -598,7 +598,7 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null, charts
   );
 
   // 6. trend: the narrative, two PNG charts (inline cid images rendered in charts.ts), then one compact caption row per week
-  const chartsHtml = charts.map((c) => `<img src="cid:${c.cid}" width="${c.width}" height="${c.height}" alt="${esc(c.alt)}" style="display:block;width:100%;max-width:${c.width}px;height:auto;border-radius:8px;margin:0 0 10px">`).join("");
+  const chartsHtml = charts.map((c) => `<img src="cid:${c.cid}" width="${c.width}" height="${c.height}" alt="${esc(c.alt)}" style="display:block;width:100%;max-width:${c.width}px;height:auto;border-radius:8px;margin:0 0 20px">`).join("");
   const captionRows = d.trend.map((w, i) => {
     const last = i === d.trend.length - 1;
     return `<tr><td style="padding:4px 0;border-top:1px solid ${C.rowLine};font:500 11px/1.4 ${FONT};color:${last ? C.ink : C.muted}"><b style="color:${C.ink}">${esc(w.shortLabel)}${last ? " (this week)" : ""}</b> · ${esc(fmtValue("count", w.combined))} subs · ${n(w.dials)} dials · ${esc(fmtValue("minutes", w.talkMinutes))} talk · ${esc(fmtValue("count", w.booked))} booked · ${esc(fmtValue("pct", w.showRate))} show · ${esc(fmtValue("count", w.newLeads))} leads · ${n(w.won)} won${w.wonValue > 0 ? ` (${esc(fmtValue("usd", w.wonValue))})` : ""}</td></tr>`;
@@ -608,7 +608,7 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null, charts
     section(
       "6 · Four-week trend",
       "Headline metrics by week",
-      (narrative ? paragraph(narrative.trend) : "") + (chartsHtml || note("The charts could not be rendered for this email; the figures are in the rows below.")) + captionHtml + note("Each line runs on its own scale from zero (dials and bookings are separate panels); the rows carry the exact figures. Submissions count CA 101 plus IAU App for every semester; won is by opportunity status."),
+      (narrative ? paragraph(narrative.trend) : "") + (chartsHtml || note("The charts could not be rendered for this email; the figures are in the rows below.")) + captionHtml + note("Each line runs on its own scale from zero (three separate charts); the rows carry the exact figures. Submissions count CA 101 plus IAU App for every semester; won is by opportunity status."),
     ),
   );
 
