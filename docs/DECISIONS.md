@@ -1190,3 +1190,25 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     highlighted, and a compact caption row per week keeps the exact figures.
     Flags carry a short label and sort red, yellow, note; tips are numbered in
     the accent color; the footer has two buttons and one muted paragraph.
+
+81. **Midweek check-in and the live schedule (owner approval 2026-10-24).**
+    The Sunday report goes out at 5:00 PM New York in the dark theme to diego@,
+    dante@, and tonyn@intelagentmedia.com (config/weekly-report.json:
+    enabled true, theme dark). A second email, the Wednesday 3:00 PM midweek
+    check-in (config midweek block, shipped with enabled false until the
+    owner approves the test), covers Monday through the send time against the
+    same Monday-to-Wednesday window last week, built by the same data module
+    (buildWeeklyReport for the week so far) and rendered from the same pieces:
+    the brief sentence, the six headline tiles with goal bars against the FULL
+    weekly goal (not pro-rated), a "to finish the week" row (the gap to each
+    weekly goal spread over the working days left, team and per rep, with
+    "below pace" when a rep's submissions trail the goal spread evenly over the
+    working days done), compact rep cards, the flags that need action before
+    Friday (unmarked appointments, stale conversations, reps below pace, plus
+    any sync or data flag), two model-written tips with the same grounding
+    check, and the footer buttons. Same idempotency (a second unique index on
+    kind = 'midweek'), the same single retry, and the same Mapping-page log,
+    where both schedules show their next send time. The admin route takes
+    report=weekly|midweek, a preview-only asOf instant, and action=check,
+    which proves Gmail authentication, the Anthropic key, and the once-per-
+    week guard (a rolled-back double insert) on the host without sending.

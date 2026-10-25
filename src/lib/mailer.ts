@@ -176,22 +176,25 @@ class SmtpError extends Error {
   }
 }
 
-/** One SMTP session: connect, EHLO, AUTH PLAIN, MAIL, RCPT, DATA, QUIT. */
-export async function sendGmail(msg: MailMessage, opts: { host?: string; port?: number; timeoutMs?: number } = {}): Promise<MailResult> {
-  const user = process.env.GMAIL_USER?.trim() ?? "";
-  const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, "") ?? "";
-  const configured = gmailConfigured();
-  if (!configured.ok) throw new Error(configured.reason);
-  if (msg.to.length === 0) throw new Error("no recipients");
-  const host = opts.host ?? "smtp.gmail.com";
-  const port = opts.port ?? 465;
-  const timeoutMs = opts.timeoutMs ?? 30_000;
-  const messageId = randomUUID();
+interface SmtpReply {
+  code: number;
+  text: string;
+}
 
+interface SmtpSession {
+  expect: (step: string, ok: (code: number) => boolean, send?: string) => Promise<SmtpReply>;
+  write: (line: string) => void;
+  close: () => void;
+}
+
+const is2xx = (c: number) => c >= 200 && c < 300;
+
+/** Opens a TLS connection and reads the greeting; the caller drives the rest of the conversation. */
+async function openSmtp(host: string, port: number, timeoutMs: number): Promise<SmtpSession> {
   const socket = tls.connect({ host, port, servername: host });
   socket.setEncoding("utf8");
   let buffer = "";
-  let waiter: { resolve: (r: { code: number; text: string }) => void; reject: (e: Error) => void } | null = null;
+  let waiter: { resolve: (r: SmtpReply) => void; reject: (e: Error) => void } | null = null;
   const fail = (e: Error) => {
     const w = waiter;
     waiter = null;
@@ -212,8 +215,7 @@ export async function sendGmail(msg: MailMessage, opts: { host?: string; port?: 
   });
   socket.on("error", (e) => fail(e));
   socket.on("close", () => fail(new Error("SMTP connection closed")));
-
-  const read = (step: string): Promise<{ code: number; text: string }> =>
+  const read = (step: string): Promise<SmtpReply> =>
     new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         waiter = null;
@@ -236,8 +238,6 @@ export async function sendGmail(msg: MailMessage, opts: { host?: string; port?: 
     if (!ok(r.code)) throw new SmtpError(step, r.code, r.text);
     return r;
   };
-  const is2xx = (c: number) => c >= 200 && c < 300;
-
   try {
     await new Promise<void>((resolve, reject) => {
       socket.once("secureConnect", () => resolve());
@@ -245,25 +245,80 @@ export async function sendGmail(msg: MailMessage, opts: { host?: string; port?: 
       setTimeout(() => reject(new Error(`SMTP connect: no TLS handshake within ${timeoutMs / 1000}s`)), timeoutMs);
     });
     await expect("greeting", (c) => c === 220);
-    const ehlo = await expect("EHLO", is2xx, `EHLO ${msg.from.address.split("@")[1] || "localhost"}`);
+  } catch (e) {
+    socket.destroy();
+    throw e;
+  }
+  return {
+    expect,
+    write: (line) => {
+      try {
+        socket.write(line + CRLF);
+      } catch {
+        // best effort (QUIT after the message is accepted)
+      }
+    },
+    close: () => socket.destroy(),
+  };
+}
+
+function credentials(): { user: string; plain: string } {
+  const user = process.env.GMAIL_USER?.trim() ?? "";
+  const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, "") ?? "";
+  return { user, plain: Buffer.from(`\u0000${user}\u0000${pass}`, "utf8").toString("base64") };
+}
+
+/** One SMTP session: connect, EHLO, AUTH PLAIN, MAIL, RCPT, DATA, QUIT. */
+export async function sendGmail(msg: MailMessage, opts: { host?: string; port?: number; timeoutMs?: number } = {}): Promise<MailResult> {
+  const configured = gmailConfigured();
+  if (!configured.ok) throw new Error(configured.reason);
+  if (msg.to.length === 0) throw new Error("no recipients");
+  const host = opts.host ?? "smtp.gmail.com";
+  const port = opts.port ?? 465;
+  const timeoutMs = opts.timeoutMs ?? 30_000;
+  const messageId = randomUUID();
+  const { plain } = credentials();
+  const s = await openSmtp(host, port, timeoutMs);
+  try {
+    const ehlo = await s.expect("EHLO", is2xx, `EHLO ${msg.from.address.split("@")[1] || "localhost"}`);
     // Gmail advertises 8BITMIME; with it the text parts go unencoded, which keeps the HTML part at its real size.
     const eightBit = /^8BITMIME$/im.test(ehlo.text);
     const raw = buildMime(msg, messageId, { eightBit });
-    const plain = Buffer.from(`\u0000${user}\u0000${pass}`, "utf8").toString("base64");
-    await expect("AUTH", (c) => c === 235, `AUTH PLAIN ${plain}`);
-    await expect("MAIL FROM", is2xx, `MAIL FROM:<${msg.from.address}>${eightBit ? " BODY=8BITMIME" : ""}`);
-    for (const to of msg.to) await expect(`RCPT TO ${to}`, is2xx, `RCPT TO:<${to}>`);
-    await expect("DATA", (c) => c === 354, "DATA");
+    await s.expect("AUTH", (c) => c === 235, `AUTH PLAIN ${plain}`);
+    await s.expect("MAIL FROM", is2xx, `MAIL FROM:<${msg.from.address}>${eightBit ? " BODY=8BITMIME" : ""}`);
+    for (const to of msg.to) await s.expect(`RCPT TO ${to}`, is2xx, `RCPT TO:<${to}>`);
+    await s.expect("DATA", (c) => c === 354, "DATA");
     // Dot-stuffing: a line starting with "." must be sent as "..".
     const body = raw.replace(/\r\n\./g, "\r\n..");
-    const final = await expect("message", is2xx, body + CRLF + ".");
-    try {
-      socket.write("QUIT" + CRLF);
-    } catch {
-      // the message is already accepted
-    }
+    const final = await s.expect("message", is2xx, body + CRLF + ".");
+    s.write("QUIT");
     return { messageId, response: final.text.split("\n")[0] };
   } finally {
-    socket.destroy();
+    s.close();
+  }
+}
+
+/** Connects, says hello, and authenticates with the Gmail credentials, then quits: proves this host can send, without sending anything. */
+export async function verifyGmail(opts: { host?: string; port?: number; timeoutMs?: number } = {}): Promise<{ ok: boolean; detail: string; eightBit: boolean; durationMs: number }> {
+  const t0 = Date.now();
+  const configured = gmailConfigured();
+  if (!configured.ok) return { ok: false, detail: configured.reason ?? "Gmail is not configured", eightBit: false, durationMs: 0 };
+  const host = opts.host ?? "smtp.gmail.com";
+  const port = opts.port ?? 465;
+  const timeoutMs = opts.timeoutMs ?? 20_000;
+  const { user, plain } = credentials();
+  try {
+    const s = await openSmtp(host, port, timeoutMs);
+    try {
+      const ehlo = await s.expect("EHLO", is2xx, `EHLO ${user.split("@")[1] || "localhost"}`);
+      const eightBit = /^8BITMIME$/im.test(ehlo.text);
+      const auth = await s.expect("AUTH", (c) => c === 235, `AUTH PLAIN ${plain}`);
+      s.write("QUIT");
+      return { ok: true, detail: `${host}:${port} accepted the credentials (${auth.text.split("\n")[0]})`, eightBit, durationMs: Date.now() - t0 };
+    } finally {
+      s.close();
+    }
+  } catch (e) {
+    return { ok: false, detail: (e as Error).message, eightBit: false, durationMs: Date.now() - t0 };
   }
 }

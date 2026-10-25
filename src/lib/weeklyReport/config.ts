@@ -12,11 +12,26 @@ const FILE = path.join(process.cwd(), "config", "weekly-report.json");
 /** Email colors: the dashboard's light bands or its dark bands. */
 export type ReportTheme = "light" | "dark";
 
+export interface SendTime {
+  weekday: number;
+  hour: number;
+  minute: number;
+}
+
+/** One scheduled send: a weekday and time (New York) plus how long after it a missed send may still go out. */
+export interface Schedule {
+  enabled: boolean;
+  sendTime: SendTime;
+  catchUpHours: number;
+}
+
 export interface WeeklyReportConfig {
   enabled: boolean;
   theme: ReportTheme;
-  sendTime: { weekday: number; hour: number; minute: number };
+  sendTime: SendTime;
   catchUpHours: number;
+  /** The Wednesday check-in: the week so far, sent to the same recipients. */
+  midweek: Schedule & { subject: string };
   recipients: string[];
   from: { name: string; address: string };
   subject: string;
@@ -39,11 +54,19 @@ export function weeklyReportConfig(): WeeklyReportConfig {
   const st = (raw.sendTime ?? {}) as Record<string, unknown>;
   const from = (raw.from ?? {}) as Record<string, unknown>;
   const flags = (raw.flags ?? {}) as Record<string, unknown>;
+  const mw = (raw.midweek ?? {}) as Record<string, unknown>;
+  const mst = (mw.sendTime ?? {}) as Record<string, unknown>;
   const cfg: WeeklyReportConfig = {
     enabled: raw.enabled === true,
     theme: raw.theme === "dark" ? "dark" : "light",
     sendTime: { weekday: int(st.weekday, 0, 6, 0), hour: int(st.hour, 0, 23, 17), minute: int(st.minute, 0, 59, 0) },
     catchUpHours: num(raw.catchUpHours, 0, 24 * 6, 48),
+    midweek: {
+      enabled: mw.enabled === true,
+      sendTime: { weekday: int(mst.weekday, 0, 6, 3), hour: int(mst.hour, 0, 23, 15), minute: int(mst.minute, 0, 59, 0) },
+      catchUpHours: num(mw.catchUpHours, 0, 24 * 6, 20),
+      subject: str(mw.subject, "VCN Midweek Check-in · {range}"),
+    },
     recipients: emails(raw.recipients),
     from: { name: str(from.name, "VCN Sales Dashboard"), address: str(from.address, "info@intelagentmedia.com").toLowerCase() },
     subject: str(raw.subject, "VCN Weekly Sales Report · {range}"),
@@ -91,8 +114,8 @@ export function weekRange(weekStart: Date, now: Date): DateRange {
   return { ...r, label: `Week of ${fmtDay(weekStart)}` };
 }
 
-/** The instant the scheduled send for a report week is due (its send-day at sendTime, New York). */
-export function scheduledInstant(weekStart: Date, cfg = weeklyReportConfig()): Date {
+/** The instant a schedule's send for a report week is due (its send-day at sendTime, New York). */
+export function scheduledInstant(weekStart: Date, cfg: { sendTime: SendTime } = weeklyReportConfig()): Date {
   // weekday 0 = Sunday is day 6 of a Monday-first week; weekday 1..6 map to days 0..5.
   const offset = (cfg.sendTime.weekday + 6) % 7;
   const day = addDays(weekStart, offset);
@@ -106,7 +129,7 @@ export function scheduledInstant(weekStart: Date, cfg = weeklyReportConfig()): D
  * down at 5 PM still sends when it comes back the same evening or the next
  * morning, and never sends a week that is already days old.
  */
-export function dueWeekStart(now: Date, cfg = weeklyReportConfig()): Date | null {
+export function dueWeekStart(now: Date, cfg: { sendTime: SendTime; catchUpHours: number } = weeklyReportConfig()): Date | null {
   const candidates = [startOfWeek(now), addDays(startOfWeek(now), -7)];
   for (const ws of candidates) {
     const at = scheduledInstant(ws, cfg).getTime();
@@ -115,8 +138,17 @@ export function dueWeekStart(now: Date, cfg = weeklyReportConfig()): Date | null
   return null;
 }
 
+/** The next send instant of a schedule after `now` (this week's, or a later week's). */
+export function nextScheduledInstant(now: Date, cfg: { sendTime: SendTime } = weeklyReportConfig()): Date {
+  for (let i = 0; i < 4; i++) {
+    const at = scheduledInstant(addDays(startOfWeek(now), 7 * i), cfg);
+    if (at.getTime() > now.getTime()) return at;
+  }
+  return scheduledInstant(addDays(startOfWeek(now), 28), cfg);
+}
+
 /** Plain-language schedule, e.g. "Sundays at 5:00 PM (America/New_York)". */
-export function scheduleLabel(cfg = weeklyReportConfig()): string {
+export function scheduleLabel(cfg: { sendTime: SendTime } = weeklyReportConfig()): string {
   const days = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
   const h12 = cfg.sendTime.hour % 12 === 0 ? 12 : cfg.sendTime.hour % 12;
   return `${days[cfg.sendTime.weekday]} at ${h12}:${String(cfg.sendTime.minute).padStart(2, "0")} ${cfg.sendTime.hour < 12 ? "AM" : "PM"} (America/New_York)`;

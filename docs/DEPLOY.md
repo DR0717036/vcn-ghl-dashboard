@@ -46,9 +46,14 @@ Variables panel (Railway today, Render after the move):
 | `GMAIL_APP_PASSWORD` | that account's app password (Google Account > Security > 2-Step Verification > App passwords), from `.env` |
 | `ANTHROPIC_API_KEY` | the Anthropic key for the report's narrative, from `.env`; optional, the email goes out numbers-only without it |
 
-The Sunday schedule stays off until `enabled` is set to true in
-`config/weekly-report.json`; test sends and previews work as soon as the
-two Gmail variables exist (`/api/admin/weekly-report`, signed in as the owner).
+Two schedules live in `config/weekly-report.json`: the Sunday report
+(`enabled`, on since 2026-10-24) and the Wednesday midweek check-in
+(`midweek.enabled`). Previews and test sends work as soon as the two Gmail
+variables exist (`/api/admin/weekly-report`, signed in as the owner), and
+`/api/admin/weekly-report?action=check` confirms on the host, without sending
+anything, that Gmail accepts the credentials, the Anthropic key answers, both
+schedules and their next send times, and the once-per-week guard. The Mapping
+page shows the same schedules and the send log.
 
 ## First deploy, step by step
 

@@ -14,7 +14,7 @@ import { computeRates, computeRepAppointments, computeStatusCards } from "@/lib/
 import { computeCommission } from "@/lib/commission";
 import { computeResponseTimes, computeStale } from "@/lib/conversations";
 import { getDb, getState, latestSyncRuns } from "@/lib/db";
-import { addDays, dayKeysBetween, fmtDateTime, fmtDay, fmtRange, fmtRangeShort, nyParts, parseNyDay, resolveRange, startOfDay, type DateRange } from "@/lib/dates";
+import { addDays, dayKeysBetween, fmtDateTime, fmtDay, fmtRange, fmtRangeShort, nyDayKey, nyParts, parseNyDay, resolveRange, startOfDay, type DateRange } from "@/lib/dates";
 import { buildLeads, computeAssignedByUser, computeOutcomes, computeStaleLeads } from "@/lib/leads";
 import { semesters, trackedMilestones } from "@/lib/mapping-config";
 import { analyzeMessaging, keywordCard, replyRateCard } from "@/lib/messaging";
@@ -67,6 +67,8 @@ export interface RepRow {
   dials: number;
   dialsPrev: number | null;
   dialsGoal: number | null;
+  /** The rep's full weekly bookings goal (Appointments Booked card), for the midweek check-in. */
+  bookedGoal: number | null;
   talkMinutes: number;
   talkPrev: number | null;
   booked: number;
@@ -122,6 +124,26 @@ export interface TrendWeek {
   wonValue: number;
 }
 
+/** The gap to a full weekly goal over the working days left this week (midweek check-in). */
+export interface FinishMetric {
+  soFar: number | null;
+  goal: number | null;
+  /** Needed per remaining working day; null when there is no goal, the goal is met, or no working days are left. */
+  needPerDay: number | null;
+  /** Fewer so far than the goal spread evenly over the working days done. */
+  belowPace: boolean;
+}
+
+export interface FinishData {
+  elapsedWorkingDays: number;
+  totalWorkingDays: number;
+  remainingWorkingDays: number;
+  /** "Thu–Fri", "Fri", or "none". */
+  remainingLabel: string;
+  team: ({ key: string; label: string } & FinishMetric)[];
+  reps: { userId: string; name: string; initials: string; photo: string | null; role: string; combined: FinishMetric; dials: FinishMetric; booked: FinishMetric }[];
+}
+
 export interface Flag {
   level: "warn" | "bad" | "info";
   /** Two or three words naming the kind of flag ("Below goal", "Sync"). */
@@ -175,6 +197,8 @@ export interface WeeklyReportData {
     staleConversations: { conversations: number; unread: number; oldestMinutes: number | null; afterMinutes: number };
   };
   trend: TrendWeek[];
+  /** To finish the week (the midweek check-in's section 2). */
+  finish: FinishData;
   flags: Flag[];
   notes: string[];
 }
@@ -335,6 +359,7 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
         dials: num(m.dials.value),
         dialsPrev: pm ? num(pm.dials.value) : null,
         dialsGoal: callRow?.callGoal?.full ?? null,
+        bookedGoal: apptRow?.bookedGoal?.full ?? null,
         talkMinutes: num(m.talkMinutes.value),
         talkPrev: pm ? num(pm.talkMinutes.value) : null,
         booked: num(m.booked.value),
@@ -538,6 +563,37 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
     ...(subs.partialHistory ? [`Milestone tracking began ${cov.firstCoreSyncAt ? fmtDay(new Date(cov.firstCoreSyncAt)) : "recently"}; comparisons that reach back before that are partial.`] : []),
   );
 
+  // ---- midweek: to finish the week ----------------------------------------------------------
+  const weekDays = workingDayKeys(weekStart, addDays(weekStart, 7), cfg.workingDays);
+  const todayKey = nyDayKey(now);
+  const elapsedKeys = weekDays.filter((k) => k <= todayKey);
+  const remainingKeys = weekDays.filter((k) => k > todayKey);
+  const dayName = (k: string) => {
+    const dt = parseNyDay(k);
+    return dt ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][nyParts(dt).wd] : "";
+  };
+  const remainingLabel = remainingKeys.length === 0 ? "none" : remainingKeys.length === 1 ? dayName(remainingKeys[0]) : `${dayName(remainingKeys[0])}–${dayName(remainingKeys[remainingKeys.length - 1])}`;
+  const elapsedShare = weekDays.length > 0 ? elapsedKeys.length / weekDays.length : 1;
+  const finishMetric = (soFar: number | null, goal: number | null): FinishMetric => ({
+    soFar,
+    goal,
+    needPerDay: goal === null || soFar === null || soFar >= goal || remainingKeys.length === 0 ? null : (goal - soFar) / remainingKeys.length,
+    belowPace: goal !== null && goal > 0 && soFar !== null && soFar < goal * elapsedShare,
+  });
+  const hk = (key: string) => headlines.find((h) => h.key === key)!;
+  const finish: FinishData = {
+    elapsedWorkingDays: elapsedKeys.length,
+    totalWorkingDays: weekDays.length,
+    remainingWorkingDays: remainingKeys.length,
+    remainingLabel,
+    team: [
+      { key: "combined", label: "Combined submissions", ...finishMetric(hk("combined").value, hk("combined").goal) },
+      { key: "dials", label: "Dials", ...finishMetric(hk("dials").value, hk("dials").goal) },
+      { key: "booked", label: "Appointments booked", ...finishMetric(hk("booked").value, hk("booked").goal) },
+    ],
+    reps: reps.map((r) => ({ userId: r.userId, name: r.name, initials: r.initials, photo: r.photo, role: r.role, combined: finishMetric(r.combined, r.combinedGoal), dials: finishMetric(r.dials, r.dialsGoal), booked: finishMetric(r.booked, r.bookedGoal) })),
+  };
+
   return {
     weekStart: fmtKey(weekStart),
     rangeLabel: week.label,
@@ -570,6 +626,7 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
     funnel: { steps, cohort },
     pipeline,
     trend,
+    finish,
     flags,
     notes,
   };

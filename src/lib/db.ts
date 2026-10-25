@@ -341,6 +341,7 @@ export function getDb(): DatabaseSync {
       triggered_by TEXT                -- scheduler | the admin's email
     );
     CREATE UNIQUE INDEX IF NOT EXISTS weekly_report_scheduled_once ON weekly_report_sends(week_start) WHERE kind = 'scheduled';
+    CREATE UNIQUE INDEX IF NOT EXISTS weekly_report_midweek_once ON weekly_report_sends(week_start) WHERE kind = 'midweek';
   `);
   return db;
 }
@@ -474,7 +475,10 @@ export interface WeeklyReportSendRow {
  * null when a scheduled row for that week already exists (sent, failed, or
  * in progress), so a restart or redeploy can never send the same week twice.
  */
-export function claimWeeklyReportSend(weekStart: string, kind: "scheduled" | "test", recipients: string[], triggeredBy: string): number | null {
+/** scheduled = the Sunday report, midweek = the Wednesday check-in; each has a once-per-week unique index. Tests are never limited. */
+export type WeeklyReportSendKind = "scheduled" | "test" | "midweek" | "midweek-test";
+
+export function claimWeeklyReportSend(weekStart: string, kind: WeeklyReportSendKind, recipients: string[], triggeredBy: string): number | null {
   try {
     const res = getDb()
       .prepare(`INSERT INTO weekly_report_sends (week_start, kind, recipients, started_at, triggered_by) VALUES (?, ?, ?, ?, ?)`)
@@ -499,6 +503,34 @@ export function abandonStaleWeeklyReportSends(olderThanMs: number): number {
     .prepare(`UPDATE weekly_report_sends SET finished_at = ?, ok = 0, error = 'Abandoned: the server stopped before the send finished. Not re-sent automatically; use the admin preview route to send it by hand.' WHERE ok IS NULL AND started_at < ?`)
     .run(new Date().toISOString(), cutoff);
   return Number(r.changes);
+}
+
+/**
+ * Proves the once-per-week guard on this host without leaving a trace: inside a transaction that is
+ * rolled back, a second scheduled (and a second midweek) row for the same week must be refused.
+ */
+export function weeklyReportIdempotencyProbe(): { ok: boolean; detail: string } {
+  const db = getDb();
+  const results: string[] = [];
+  let ok = true;
+  for (const kind of ["scheduled", "midweek"] as const) {
+    db.exec("BEGIN");
+    try {
+      const ins = db.prepare(`INSERT INTO weekly_report_sends (week_start, kind, recipients, started_at, triggered_by) VALUES ('1970-01-05', ?, 'probe', ?, 'probe')`);
+      ins.run(kind, new Date().toISOString());
+      let refused = false;
+      try {
+        ins.run(kind, new Date().toISOString());
+      } catch (e) {
+        refused = /UNIQUE constraint failed/i.test((e as Error).message);
+      }
+      results.push(`${kind}: a second row for the same week was ${refused ? "refused by the unique index" : "ACCEPTED (guard missing)"}`);
+      if (!refused) ok = false;
+    } finally {
+      db.exec("ROLLBACK");
+    }
+  }
+  return { ok, detail: results.join("; ") };
 }
 
 export function latestWeeklyReportSends(limit = 8): WeeklyReportSendRow[] {

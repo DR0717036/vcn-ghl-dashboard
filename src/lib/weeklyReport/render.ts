@@ -8,7 +8,7 @@ import { fmtDateTime } from "@/lib/dates";
 import { fmtValue, type Flag, type Headline, type Kind, type RepRow, type WeeklyReportData } from "./data";
 import type { ChartRef } from "./charts";
 import type { ReportTheme } from "./config";
-import type { Narrative } from "./narrative";
+import type { MidweekNarrative, Narrative } from "./narrative";
 
 export const LOGO_CID = "vcn-logo";
 
@@ -406,24 +406,120 @@ export function renderHtml(d: WeeklyReportData, narrative: Narrative | null, the
   }
 }
 
+/** The Wednesday check-in: the same data for the week so far, in a shorter email built from the same pieces. */
+export function renderMidweekHtml(d: WeeklyReportData, narrative: MidweekNarrative | null, theme: ReportTheme = "light"): string {
+  applyTheme(theme);
+  try {
+    return minify(renderMidweekBody(d, narrative));
+  } finally {
+    applyTheme("light");
+  }
+}
+
+// ---- pieces both emails share ------------------------------------------------------------------
+
+/** Rows of two tiles side by side. */
+function tileTable(rows: string[][]): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows.map((r) => `<tr>${r.map((t, i) => `<td width="50%" valign="top" style="padding:0 ${i === 0 ? "5px" : "0"} 10px ${i === 0 ? "0" : "5px"}">${t}</td>`).join("")}</tr>`).join("")}</table>`;
+}
+
+/** The yellow-edged "in brief" sentence. */
+function briefBox(text: string): string {
+  return `<div style="border-left:4px solid ${C.yellow};background:${C.inset};border-radius:0 10px 10px 0;padding:10px 14px;margin:0 0 14px;font-size:15px;font-weight:600;line-height:1.45;color:${C.ink}">${esc(text)}</div>`;
+}
+
+/** The six headline tiles in three rows; `cmp` names the comparison ("last week" or "same point last week"). */
+function headlineTiles(d: WeeklyReportData, cmp: string): string {
+  const H = (key: string) => d.headlines.find((x) => x.key === key)!;
+  const wonValue = H("wonValue");
+  const iau = H("iau");
+  const semesterLine = (iau.parts ?? []).map((p) => `${p.short} ${fmtValue("count", p.value)}`).join(" · ");
+  const opp = (h: Headline) => {
+    const o = h.oppValue;
+    return o ? `Opportunity Value ${fmtValue("usd", o.value)}${o.prev !== null ? ` (${cmp} ${fmtValue("usd", o.prev)})` : ""}` : "";
+  };
+  return tileTable([
+    [tile(H("combined"), opp(H("combined"))), tile(H("won"), `Opportunity Value ${fmtValue("usd", wonValue.value)}${wonValue.prev !== null ? ` (${cmp} ${fmtValue("usd", wonValue.prev)})` : ""}`)],
+    [tile(H("army"), opp(H("army"))), tile(iau, [semesterLine, opp(iau)])],
+    [tile(H("booked"), `${cmp} ${fmtValue("count", H("booked").prev)}`), tile(H("newLeads"), `${cmp} ${fmtValue("count", H("newLeads").prev)}`)],
+  ]);
+}
+
+/** One rep card: rank, photo, name, plan; the submissions hero with goal bar and Army / Veteran split; the full card adds the stat row and show rate. */
+function repCard(r: RepRow, compact: boolean): string {
+  const cellFont = `font:500 12px/1.4 ${FONT};color:${C.secondary}`;
+  const att = r.attainment;
+  const goalText = r.combinedGoal === null ? "no goal" : `of ${n(Math.round(r.combinedGoal))} goal`;
+  const hero =
+    `<div style="line-height:1.3">${big(n(r.combined), 30)} <span style="font-weight:600;font-size:13px;color:${C.muted}">${esc(goalText)}</span> &nbsp;${changePillFor("count", r.combined, r.combinedPrev)}</div>` +
+    (r.combinedGoal !== null && r.combinedGoal > 0 ? `<div style="margin:8px 0 4px">${bar(r.combined / r.combinedGoal, attainColor(att))}</div>` : "") +
+    (att === null ? "" : `<b style="font-size:11px;color:${att >= 1 ? C.good : att >= 0.5 ? C.warn : C.bad}">${n(Math.round(att * 100))}% of goal</b><br>`) +
+    `<b style="font-size:13px;color:${C.ink}">Army ${n(r.ca101)} · Veteran ${n(r.iau)}</b>`;
+  const left = `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding:0 8px 0 0;font:800 16px/1 ${FONT};color:${C.muted}">${n(r.rank)}</td><td valign="middle">${avatar(r, compact ? 40 : 48)}</td></tr></table><div style="margin-top:8px;line-height:1.3"><b style="font-size:15px;color:${C.ink}">${esc(r.name)}</b><br><span style="font-weight:600;font-size:11px;color:${C.muted}">${esc(r.role.toLowerCase())}</span></div>`;
+  const head = `<tr><td width="150" valign="top" style="padding:${compact ? "12px 10px 12px 14px" : "14px 10px 12px 14px"};${cellFont}">${left}</td><td valign="top" style="padding:${compact ? "12px 14px 12px 6px" : "14px 14px 12px 6px"};${cellFont}">${hero}</td></tr>`;
+  if (compact) return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;margin-bottom:8px">${head}</table>`;
+  const dialsSub = r.dialsGoal !== null && r.dialsGoal > 0 ? `of ${n(Math.round(r.dialsGoal))} · ${n(Math.round((r.dials / r.dialsGoal) * 100))}%` : "no goal";
+  const miniRow = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${C.border}"><tr>${statCell("Dials", n(r.dials), dialsSub, "25%", false)}${statCell("Talk time", fmtValue("minutes", r.talkMinutes), "", "25%", false)}${statCell("Appointments booked", n(r.booked), "", "25%", false)}${statCell("Won", n(r.won), r.won > 0 ? `${fmtValue("usd", r.wonValue)} Opportunity Value` : "", "25%", true)}</tr></table>`;
+  const showLine =
+    r.showRate === null
+      ? ""
+      : `<tr><td colspan="2" style="padding:0 14px 10px;${cellFont}"><div style="padding-top:8px;border-top:1px solid ${C.border}">Show rate <b style="color:${C.ink}">${esc(fmtValue("pct", r.showRate))}</b> · ${n(r.showed)} showed of ${n(r.showed + r.noshow)} marked${r.showRatePrev !== null ? ` (last week ${esc(fmtValue("pct", r.showRatePrev))})` : ""}</div></td></tr>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;margin-bottom:10px">${head}<tr><td colspan="2" style="padding:0 8px${r.showRate === null ? " 4px" : ""}">${miniRow}</td></tr>${showLine}</table>`;
+}
+
+const FLAG_ORDER = { bad: 0, warn: 1, info: 2 } as const;
+
+/** Flag cards, red first, then yellow, then notes; a short bold label before each sentence. */
+function flagCards(flags: Flag[]): string {
+  const sorted = [...flags].sort((a, b) => FLAG_ORDER[a.level] - FLAG_ORDER[b.level]);
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${sorted
+    .map((f) => {
+      const c = levelColor(f.level);
+      return `<tr><td style="padding:0 0 8px"><div style="background:${c.bg};border-left:4px solid ${c.fg};border-radius:8px;padding:9px 12px;font:500 13px/1.45 ${FONT};color:${C.body}"><b style="color:${c.fg}">${esc(f.label)}</b> · ${esc(f.text)}</div></td></tr>`;
+    })
+    .join("")}</table>`;
+}
+
+/** Numbered tips in the accent color. */
+function tipsTable(tips: string[]): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${tips.map((t, i) => `<tr><td width="34" valign="top" style="padding:0 0 10px;font:800 26px/1.1 ${FONT};color:${C.bar}">${i + 1}</td><td valign="top" style="padding:4px 0 10px;font:400 14px/1.55 ${FONT};color:${C.body}">${esc(t)}</td></tr>`).join("")}</table>`;
+}
+
+/** Two buttons, then one muted paragraph. */
+function footerRow(d: WeeklyReportData, dash: string | null, compared: string): string {
+  const button = (href: string, text: string, primary: boolean) =>
+    `<td style="padding:0 8px 8px 0"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td bgcolor="${primary ? C.blue : C.inset}" style="border-radius:8px;${primary ? "" : `border:1px solid ${C.border};`}"><a href="${esc(href)}" style="display:inline-block;padding:10px 16px;font:700 13px/1 ${FONT};color:${primary ? "#fff" : C.ink};text-decoration:none">${esc(text)}</a></td></tr></table></td>`;
+  const buttons = dash ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 6px"><tr>${button(dash + "/?range=last_week", "Open dashboard", true)}${button(dash + "/mapping", "How this is counted", false)}</tr></table>` : "";
+  return `<tr><td style="padding:4px 4px 0;font:400 12px/1.6 ${FONT};color:${C.muted}">${buttons}<p style="margin:0">${esc(d.rangeText)} (Monday to Sunday, America/New_York)${d.partial ? ", week in progress" : ""}, ${esc(compared)} ${esc(d.prevRangeText)}. Data as of ${d.dataAsOf ? esc(fmtDateTime(d.dataAsOf)) : "no completed sync"} (last successful sync); generated ${esc(fmtDateTime(d.generatedAt))}. ${d.notes.map((x) => esc(x)).join(" ")} Read-only view of Go High Level; this dashboard never changes CRM data.</p></td></tr>`;
+}
+
+/** The document: head with the web font, the navy banner, the sections, the footer. */
+function shell(d: WeeklyReportData, title: string, parts: string[], footer: string): string {
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${C.scheme}"><meta name="supported-color-schemes" content="${C.scheme}"><!--[if !mso]><!--><link rel="preconnect" href="https://fonts.googleapis.com"><link href="${FONT_URL}" rel="stylesheet"><style>@import url('${FONT_URL}');</style><!--<![endif]--><title>${esc(`${title}: ${d.rangeText}`)}</title></head>
+<body style="margin:0;padding:0;background:${C.page};-webkit-text-size-adjust:100%">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.page}"><tr><td align="center" style="padding:16px 8px">
+<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%">
+<tr><td style="padding:0 0 12px 0">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.dark};${C.cardImage ? `background-image:${C.cardImage};border:1px solid ${C.border};` : ""}border-radius:14px"><tr>
+<td style="padding:18px 20px" valign="middle"><table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td valign="middle" style="padding-right:12px"><img src="cid:${LOGO_CID}" width="44" height="44" alt="Veteran Careers Network" style="display:block;border:0;border-radius:8px"></td>
+<td valign="middle"><div style="font:800 20px/1.15 ${FONT};letter-spacing:-0.02em;color:${C.onDark}">${esc(title)}</div><div style="font:700 13px/1.4 ${FONT};color:${C.yellow}">${esc(d.rangeText)}</div><div style="font:500 11px/1.4 ${FONT};color:${C.headerSub}">by Intelagent Media · data as of ${d.dataAsOf ? esc(fmtDateTime(d.dataAsOf)) : "no completed sync"}</div></td>
+</tr></table></td></tr></table></td></tr>
+${parts.join("\n")}
+${footer}
+</table></td></tr></table>
+</body></html>`;
+}
+
+// ---- the Sunday report ---------------------------------------------------------------------------
+
 function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null, charts: ChartRef[]): string {
   const dash = d.dashboardUrl;
   const parts: string[] = [];
 
-  // 1. headline numbers: week in brief, six KPI tiles in three rows (submissions and won; Army and Veteran submissions; booked and leads created), one-line note
-  const H = (key: string) => d.headlines.find((x) => x.key === key)!;
-  const brief = narrative?.brief ?? briefFallback(d);
-  const briefHtml = `<div style="border-left:4px solid ${C.yellow};background:${C.inset};border-radius:0 10px 10px 0;padding:10px 14px;margin:0 0 14px;font-size:15px;font-weight:600;line-height:1.45;color:${C.ink}">${esc(brief)}</div>`;
-  const wonValue = H("wonValue");
-  const iau = H("iau");
-  const semesterLine = (iau.parts ?? []).map((p) => `${p.short} ${fmtValue("count", p.value)}`).join(" · ");
-  const tileRows = [
-    [tile(H("combined"), oppValueLine(H("combined"))), tile(H("won"), `Opportunity Value ${fmtValue("usd", wonValue.value)}${wonValue.prev !== null ? ` (last week ${fmtValue("usd", wonValue.prev)})` : ""}`)],
-    [tile(H("army"), oppValueLine(H("army"))), tile(iau, [semesterLine, oppValueLine(iau)])],
-    [tile(H("booked"), `last week ${fmtValue("count", H("booked").prev)}`), tile(H("newLeads"), `last week ${fmtValue("count", H("newLeads").prev)}`)],
-  ];
-  const tileTable = (rows: string[][]) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows.map((r) => `<tr>${r.map((t, i) => `<td width="50%" valign="top" style="padding:0 ${i === 0 ? "5px" : "0"} 10px ${i === 0 ? "0" : "5px"}">${t}</td>`).join("")}</tr>`).join("")}</table>`;
-  parts.push(section("1 · Headline numbers", d.rangeShort, briefHtml + tileTable(tileRows) + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`), `vs ${d.prevRangeShort}`));
+  // 1. headline numbers: week in brief, six KPI tiles in three rows, one-line note
+  parts.push(section("1 · Headline numbers", d.rangeShort, briefBox(narrative?.brief ?? briefFallback(d)) + headlineTiles(d, "last week") + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? " (the full week's goal, not pro-rated)" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`), `vs ${d.prevRangeShort}`));
 
   // 2. leaderboard: two highlight tiles with photos, one sentence on the spread, then one full-width card per rep
   const highlight = (title: string, r: RepRow | null, line: string, empty: string) =>
@@ -432,29 +528,11 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null, charts
   const bi = d.biggestImprover;
   const calloutsHtml = tileTable([[highlight("Top performer", tp, tp ? `${n(tp.combined)} submissions · ${n(tp.dials)} dials · ${n(tp.booked)} booked` : "", "No rep submitted or dialed this week."), highlight("Biggest improver", bi?.rep ?? null, bi ? `+${n(bi.delta)} submissions vs last week (${n(bi.rep.combinedPrev ?? 0)} → ${n(bi.rep.combined)})` : "", "No rep submitted more than last week.")]]);
   const spreadHtml = paragraph(narrative?.leaderboard ?? leaderboardFallback(d));
-  const cellFont = `font:500 12px/1.4 ${FONT};color:${C.secondary}`;
-  const repCards = d.reps.map((r) => {
-    const att = r.attainment;
-    const goalText = r.combinedGoal === null ? "no goal" : `of ${n(Math.round(r.combinedGoal))} goal`;
-    const hero =
-      `<div style="line-height:1.3">${big(n(r.combined), 30)} <span style="font-weight:600;font-size:13px;color:${C.muted}">${esc(goalText)}</span> &nbsp;${changePillFor("count", r.combined, r.combinedPrev)}</div>` +
-      (r.combinedGoal !== null && r.combinedGoal > 0 ? `<div style="margin:8px 0 4px">${bar(r.combined / r.combinedGoal, attainColor(att))}</div>` : "") +
-      (att === null ? "" : `<b style="font-size:11px;color:${att >= 1 ? C.good : att >= 0.5 ? C.warn : C.bad}">${n(Math.round(att * 100))}% of goal</b><br>`) +
-      `<b style="font-size:13px;color:${C.ink}">Army ${n(r.ca101)} · Veteran ${n(r.iau)}</b>`;
-    const left = `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding:0 8px 0 0;font:800 16px/1 ${FONT};color:${C.muted}">${n(r.rank)}</td><td valign="middle">${avatar(r, 48)}</td></tr></table><div style="margin-top:8px;line-height:1.3"><b style="font-size:15px;color:${C.ink}">${esc(r.name)}</b><br><span style="font-weight:600;font-size:11px;color:${C.muted}">${esc(r.role.toLowerCase())}</span></div>`;
-    const dialsSub = r.dialsGoal !== null && r.dialsGoal > 0 ? `of ${n(Math.round(r.dialsGoal))} · ${n(Math.round((r.dials / r.dialsGoal) * 100))}%` : "no goal";
-    const miniRow = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${C.border}"><tr>${statCell("Dials", n(r.dials), dialsSub, "25%", false)}${statCell("Talk time", fmtValue("minutes", r.talkMinutes), "", "25%", false)}${statCell("Appointments booked", n(r.booked), "", "25%", false)}${statCell("Won", n(r.won), r.won > 0 ? `${fmtValue("usd", r.wonValue)} Opportunity Value` : "", "25%", true)}</tr></table>`;
-    const showLine =
-      r.showRate === null
-        ? ""
-        : `<tr><td colspan="2" style="padding:0 14px 10px;${cellFont}"><div style="padding-top:8px;border-top:1px solid ${C.border}">Show rate <b style="color:${C.ink}">${esc(fmtValue("pct", r.showRate))}</b> · ${n(r.showed)} showed of ${n(r.showed + r.noshow)} marked${r.showRatePrev !== null ? ` (last week ${esc(fmtValue("pct", r.showRatePrev))})` : ""}</div></td></tr>`;
-    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;margin-bottom:10px"><tr><td width="150" valign="top" style="padding:14px 10px 12px 14px;${cellFont}">${left}</td><td valign="top" style="padding:14px 14px 12px 6px;${cellFont}">${hero}</td></tr><tr><td colspan="2" style="padding:0 8px${r.showRate === null ? " 4px" : ""}">${miniRow}</td></tr>${showLine}</table>`;
-  });
   parts.push(
     section(
       "2 · Rep leaderboard",
       "Ranked by combined submissions",
-      calloutsHtml + spreadHtml + repCards.join("") + note("Submissions = CA 101 + IAU App (every semester) credited to the rep; the goal is the rep's own weekly rate (green at goal, yellow from half, red below half). Show rate is of the rep's appointments scheduled this week that were marked, shown only when there were any. Won is Opportunity Value, not cash."),
+      calloutsHtml + spreadHtml + d.reps.map((r) => repCard(r, false)).join("") + note("Submissions = CA 101 + IAU App (every semester) credited to the rep; the goal is the rep's own weekly rate (green at goal, yellow from half, red below half). Show rate is of the rep's appointments scheduled this week that were marked, shown only when there were any. Won is Opportunity Value, not cash."),
     ),
   );
 
@@ -597,7 +675,7 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null, charts
     ),
   );
 
-  // 6. trend: the narrative, two PNG charts (inline cid images rendered in charts.ts), then one compact caption row per week
+  // 6. trend: the narrative, three PNG charts (inline cid images rendered in charts.ts), then one compact caption row per week
   const chartsHtml = charts.map((c) => `<img src="cid:${c.cid}" width="${c.width}" height="${c.height}" alt="${esc(c.alt)}" style="display:block;width:100%;max-width:${c.width}px;height:auto;border-radius:8px;margin:0 0 20px">`).join("");
   const captionRows = d.trend.map((w, i) => {
     const last = i === d.trend.length - 1;
@@ -612,47 +690,98 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null, charts
     ),
   );
 
-  // 7. flags: red first, then yellow, then notes; a short bold label before each sentence
-  const order = { bad: 0, warn: 1, info: 2 } as const;
-  const sortedFlags = [...d.flags].sort((a, b) => order[a.level] - order[b.level]);
-  const flagsHtml = sortedFlags.length
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${sortedFlags
-        .map((f) => {
-          const c = levelColor(f.level);
-          return `<tr><td style="padding:0 0 8px"><div style="background:${c.bg};border-left:4px solid ${c.fg};border-radius:8px;padding:9px 12px;font:500 13px/1.45 ${FONT};color:${C.body}"><b style="color:${c.fg}">${esc(f.label)}</b> · ${esc(f.text)}</div></td></tr>`;
-        })
-        .join("")}</table>`
-    : paragraph("Nothing to flag this week: every rep is at or above half of goal, show rates held, no bounces or opt-outs, no unmarked past appointments, and every sync finished.");
-  parts.push(section("7 · Flags", "What needs attention", flagsHtml));
+  // 7. flags
+  parts.push(section("7 · Flags", "What needs attention", d.flags.length ? flagCards(d.flags) : paragraph("Nothing to flag this week: every rep is at or above half of goal, show rates held, no bounces or opt-outs, no unmarked past appointments, and every sync finished.")));
 
-  // 8. tips: numbered in the accent color
-  const tipsHtml = narrative
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${narrative.tips.map((t, i) => `<tr><td width="34" valign="top" style="padding:0 0 10px;font:800 26px/1.1 ${FONT};color:${C.bar}">${i + 1}</td><td valign="top" style="padding:4px 0 10px;font:400 14px/1.55 ${FONT};color:${C.body}">${esc(t)}</td></tr>`).join("")}</table>` +
-      note(`Written by ${esc(narrative.model)} from the numbers above; every figure it mentions was checked against the data.`)
-    : paragraph("Tips are unavailable this week: the narrative could not be generated, so this email shows the numbers only.");
+  // 8. tips
+  const tipsHtml = narrative ? tipsTable(narrative.tips) + note(`Written by ${esc(narrative.model)} from the numbers above; every figure it mentions was checked against the data.`) : paragraph("Tips are unavailable this week: the narrative could not be generated, so this email shows the numbers only.");
   parts.push(section("8 · Three tips for the week", "From this week's numbers", tipsHtml));
 
-  // 9. footer: two buttons, then one muted paragraph
-  const button = (href: string, text: string, primary: boolean) =>
-    `<td style="padding:0 8px 8px 0"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td bgcolor="${primary ? C.blue : C.inset}" style="border-radius:8px;${primary ? "" : `border:1px solid ${C.border};`}"><a href="${esc(href)}" style="display:inline-block;padding:10px 16px;font:700 13px/1 ${FONT};color:${primary ? "#fff" : C.ink};text-decoration:none">${esc(text)}</a></td></tr></table></td>`;
-  const buttons = dash ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 6px"><tr>${button(dash + "/?range=last_week", "Open dashboard", true)}${button(dash + "/mapping", "How this is counted", false)}</tr></table>` : "";
-  const footer = `<tr><td style="padding:4px 4px 0;font:400 12px/1.6 ${FONT};color:${C.muted}">${buttons}<p style="margin:0">${esc(d.rangeText)} (Monday to Sunday, America/New_York)${d.partial ? ", week in progress" : ""}, compared with ${esc(d.prevRangeText)}. Data as of ${d.dataAsOf ? esc(fmtDateTime(d.dataAsOf)) : "no completed sync"} (last successful sync); generated ${esc(fmtDateTime(d.generatedAt))}. ${d.notes.map((x) => esc(x)).join(" ")} Read-only view of Go High Level; this dashboard never changes CRM data.</p></td></tr>`;
+  // 9. footer
+  return shell(d, "VCN Weekly Sales Report", parts, footerRow(d, dash, "compared with"));
+}
 
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${C.scheme}"><meta name="supported-color-schemes" content="${C.scheme}"><!--[if !mso]><!--><link rel="preconnect" href="https://fonts.googleapis.com"><link href="${FONT_URL}" rel="stylesheet"><style>@import url('${FONT_URL}');</style><!--<![endif]--><title>${esc(`VCN Weekly Sales Report: ${d.rangeText}`)}</title></head>
-<body style="margin:0;padding:0;background:${C.page};-webkit-text-size-adjust:100%">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.page}"><tr><td align="center" style="padding:16px 8px">
-<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%">
-<tr><td style="padding:0 0 12px 0">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.dark};${C.cardImage ? `background-image:${C.cardImage};border:1px solid ${C.border};` : ""}border-radius:14px"><tr>
-<td style="padding:18px 20px" valign="middle"><table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td valign="middle" style="padding-right:12px"><img src="cid:${LOGO_CID}" width="44" height="44" alt="Veteran Careers Network" style="display:block;border:0;border-radius:8px"></td>
-<td valign="middle"><div style="font:800 20px/1.15 ${FONT};letter-spacing:-0.02em;color:${C.onDark}">VCN Weekly Sales Report</div><div style="font:700 13px/1.4 ${FONT};color:${C.yellow}">${esc(d.rangeText)}</div><div style="font:500 11px/1.4 ${FONT};color:${C.headerSub}">by Intelagent Media · data as of ${d.dataAsOf ? esc(fmtDateTime(d.dataAsOf)) : "no completed sync"}</div></td>
-</tr></table></td></tr></table></td></tr>
-${parts.join("\n")}
-${footer}
-</table></td></tr></table>
-</body></html>`;
+// ---- the Wednesday check-in ----------------------------------------------------------------------
+
+/** A numbers-only "week so far" sentence for when the narrative is unavailable; every figure is copied from the data. */
+export function midweekBriefFallback(d: WeeklyReportData): string {
+  const h = (key: string) => d.headlines.find((x) => x.key === key)!;
+  const c = h("combined");
+  const goal = c.goal === null ? "" : ` of a ${n(Math.round(c.goal))} weekly goal`;
+  return `${fmtValue("count", c.value)} combined submissions so far${goal} (Army ${fmtValue("count", h("army").value)}, Veteran ${fmtValue("count", h("iau").value)}), ${fmtValue("count", h("booked").value)} appointments booked, ${fmtValue("count", h("newLeads").value)} leads created, ${fmtValue("count", h("won").value)} won.`;
+}
+
+/** What needs action before Friday: unmarked appointments, stale conversations, reps below pace, plus any sync or data flag. */
+export function midweekFlags(d: WeeklyReportData): Flag[] {
+  const keep = new Set(["Unmarked appointments", "Sync", "Unavailable", "Rep mapping"]);
+  const out: Flag[] = d.flags.filter((f) => keep.has(f.label));
+  const sc = d.pipeline.staleConversations;
+  if (sc.conversations > 0) {
+    out.push({ level: sc.conversations >= 10 ? "bad" : "warn", label: "Stale conversations", text: `${n(sc.conversations)} conversation${sc.conversations === 1 ? " has" : "s have"} unread inbound messages waiting over ${n(sc.afterMinutes)} min (${n(sc.unread)} message${sc.unread === 1 ? "" : "s"}${sc.oldestMinutes !== null ? `, oldest ${waitText(sc.oldestMinutes)}` : ""}).` });
+  }
+  const below = d.finish.reps.filter((r) => r.combined.belowPace);
+  if (below.length > 0) {
+    out.push({ level: "warn", label: "Below pace", text: `${below.map((r) => `${r.name} (${fmtValue("count", r.combined.soFar)} of ${n(Math.round(r.combined.goal ?? 0))})`).join(", ")}: fewer submissions so far than the weekly goal spread evenly over the ${n(d.finish.elapsedWorkingDays)} working day${d.finish.elapsedWorkingDays === 1 ? "" : "s"} done.` });
+  }
+  return out;
+}
+
+/** "x/day", "goal met", "no working days left", or "no goal". */
+function finishText(x: { soFar: number | null; goal: number | null; needPerDay: number | null }): string {
+  if (x.goal === null) return "no goal";
+  if (x.needPerDay === null) return x.soFar !== null && x.soFar >= x.goal ? "goal met" : "no days left";
+  return `${perDayText(x.needPerDay)}/day`;
+}
+
+/** One decimal for small daily needs, a whole number with commas for big ones (dials). */
+function perDayText(v: number): string {
+  return v >= 20 ? n(Math.round(v)) : v.toFixed(1);
+}
+
+function renderMidweekBody(d: WeeklyReportData, narrative: MidweekNarrative | null): string {
+  const dash = d.dashboardUrl;
+  const parts: string[] = [];
+  const f = d.finish;
+  const daysLeft = `${n(f.remainingWorkingDays)} working day${f.remainingWorkingDays === 1 ? "" : "s"} left${f.remainingWorkingDays > 0 ? ` (${esc(f.remainingLabel)})` : ""}`;
+
+  // 1. the week so far: brief sentence, the six headline tiles
+  parts.push(
+    section(
+      "1 · The week so far",
+      d.rangeShort,
+      briefBox(narrative?.brief ?? midweekBriefFallback(d)) + headlineTiles(d, "same point last week") + note(`Goal bars show pace against the full weekly goal, not a pro-rated one; change is against the same Monday-to-now window last week (${esc(d.prevRangeText)}); submissions count CA 101 plus IAU App for every semester.`),
+      `vs the same point last week · ${n(f.elapsedWorkingDays)} of ${n(f.totalWorkingDays)} working days done`,
+    ),
+  );
+
+  // 2. to finish the week: three team tiles, then one row per rep
+  const finishTile = (t: (typeof f.team)[number]) => box(`${label(t.label)}<div style="margin:6px 0 4px">${big(finishText(t), 26)}</div><span style="font-size:11px">${t.goal === null ? "no weekly goal configured" : `${esc(fmtValue("count", t.soFar))} of ${n(Math.round(t.goal))} so far · ${esc(daysLeft)}`}</span>`);
+  const finishRow = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${f.team.map((t, i) => `<td width="33%" valign="top" style="padding:0 ${i === 2 ? "0" : "5px"} 10px ${i === 0 ? "0" : "5px"}">${finishTile(t)}</td>`).join("")}</tr></table>`;
+  const cell = (x: { soFar: number | null; goal: number | null; needPerDay: number | null; belowPace: boolean }) =>
+    `<td align="right" style="padding:7px 6px;border-bottom:1px solid ${C.rowLine};font:500 12px/1.35 ${FONT};color:${C.body};white-space:nowrap"><b style="color:${x.belowPace ? C.bad : C.ink}">${esc(finishText(x))}</b><br><span style="font-size:11px;color:${C.muted}">${x.goal === null ? "no goal" : `${esc(fmtValue("count", x.soFar))} of ${n(Math.round(x.goal))}`}</span></td>`;
+  const repRows = f.reps.map((r) => `<tr><td style="padding:7px 6px;border-bottom:1px solid ${C.rowLine};font:700 12px/1.35 ${FONT};color:${C.ink}">${esc(r.name)}${r.combined.belowPace ? `<br><span style="font-size:11px;font-weight:600;color:${C.bad}">below pace</span>` : ""}</td>${cell(r.combined)}${cell(r.dials)}${cell(r.booked)}</tr>`).join("");
+  const repTable = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><thead><tr><th ${THL}>Rep</th><th ${TH}>Submissions</th><th ${TH}>Dials</th><th ${TH}>Booked</th></tr></thead><tbody>${repRows}</tbody></table>`;
+  parts.push(
+    section(
+      "2 · To finish the week",
+      daysLeft,
+      finishRow + repTable + note("Need per day = the gap to the full weekly goal spread over the working days left this week (Monday to Friday calendar). Below pace = fewer submissions so far than the weekly goal spread evenly over the working days done. Rep goals are each rep's own weekly rates; the team figures are their sum."),
+      "Needed per remaining working day to reach the weekly goal",
+    ),
+  );
+
+  // 3. reps so far: compact cards
+  parts.push(section("3 · Reps so far", "Ranked by combined submissions", d.reps.map((r) => repCard(r, true)).join("") + note("Submissions = CA 101 + IAU App (every semester) credited to the rep; the bar is against the rep's full weekly goal (green at goal, yellow from half, red below half); the pill compares with the same point last week.")));
+
+  // 4. before Friday
+  const flags = midweekFlags(d);
+  parts.push(section("4 · Before Friday", "What needs action", flags.length ? flagCards(flags) : paragraph("Nothing needs action before Friday: past appointments are marked, no unread conversations are waiting, every rep is on pace, and every sync finished.")));
+
+  // 5. two tips
+  const tipsHtml = narrative ? tipsTable(narrative.tips) + note(`Written by ${esc(narrative.model)} from the numbers above; every figure it mentions was checked against the data.`) : paragraph("Tips are unavailable: the narrative could not be generated, so this email shows the numbers only.");
+  parts.push(section("5 · Two tips for the rest of the week", "From the numbers above", tipsHtml));
+
+  return shell(d, "VCN Midweek Check-in", parts, footerRow(d, dash, "compared with the same window last week,"));
 }
 
 // ---- plain text ---------------------------------------------------------------------------------
@@ -738,4 +867,53 @@ export function renderText(d: WeeklyReportData, narrative: Narrative | null): st
   if (d.dashboardUrl) out.push(`Dashboard: ${d.dashboardUrl}/?range=last_week`, `Mapping page: ${d.dashboardUrl}/mapping`);
   out.push(...d.notes, "Read-only view of Go High Level. This dashboard never changes CRM data.");
   return out.join("\n");
+}
+
+
+/** Plain-text alternative for the midweek check-in. */
+export function renderMidweekText(d: WeeklyReportData, narrative: MidweekNarrative | null): string {
+  const out: string[] = [];
+  const H = (s: string) => out.push("", s.toUpperCase(), "=".repeat(s.length));
+  const f = d.finish;
+  out.push(`VCN MIDWEEK CHECK-IN`, `${d.rangeText} (Monday to now, America/New_York)`, `Compared with the same window last week, ${d.prevRangeText}. Data as of ${d.dataAsOf ? fmtDateTime(d.dataAsOf) : "no completed sync"}.`);
+  const chg = (kind: Kind, v: number | null, p: number | null, lower?: boolean) => {
+    const c = change(kind, v, p, lower);
+    return c ? `${c.arrow === "■" ? "=" : c.arrow === "▲" ? "+" : "-"} ${c.text.replace(/^[+−]/, "")}` : "n/a";
+  };
+  H("1. The week so far");
+  out.push(narrative?.brief ?? midweekBriefFallback(d), "");
+  const rows: string[][] = [];
+  for (const h of d.headlines) {
+    const g = goalCell(h);
+    rows.push([h.label, fmtValue(h.kind, h.value), h.prevUnavailable && h.prev === null ? "n/a" : fmtValue(h.kind, h.prev), chg(h.kind, h.value, h.prev, h.lowerIsBetter), g.text]);
+  }
+  out.push(textTable(["Metric", "So far", "Same pt LW", "Change", "Weekly goal"], rows, [34, 10, 10, 16, 16]));
+
+  H("2. To finish the week");
+  out.push(`${f.remainingWorkingDays} working day${f.remainingWorkingDays === 1 ? "" : "s"} left${f.remainingWorkingDays > 0 ? ` (${f.remainingLabel})` : ""}; ${f.elapsedWorkingDays} of ${f.totalWorkingDays} done.`);
+  const ft = (x: { soFar: number | null; goal: number | null; needPerDay: number | null }) => (x.goal === null ? "no goal" : x.needPerDay === null ? (x.soFar !== null && x.soFar >= x.goal ? "goal met" : "no days left") : `${perDayText(x.needPerDay)}/day`);
+  out.push(textTable(["Team", "So far", "Goal", "Need / day"], f.team.map((t) => [t.label, fmtValue("count", t.soFar), t.goal === null ? "-" : String(Math.round(t.goal)), ft(t)]), [24, 8, 8, 12]));
+  out.push("");
+  out.push(
+    textTable(
+      ["Rep", "Subs", "Need/day", "Dials", "Need/day", "Booked", "Need/day"],
+      f.reps.map((r) => [`${r.name}${r.combined.belowPace ? " (below pace)" : ""}`, `${fmtValue("count", r.combined.soFar)}/${r.combined.goal === null ? "-" : Math.round(r.combined.goal)}`, ft(r.combined), `${fmtValue("count", r.dials.soFar)}/${r.dials.goal === null ? "-" : Math.round(r.dials.goal)}`, ft(r.dials), `${fmtValue("count", r.booked.soFar)}/${r.booked.goal === null ? "-" : Math.round(r.booked.goal)}`, ft(r.booked)]),
+      [30, 8, 10, 10, 10, 8, 10],
+    ),
+  );
+
+  H("3. Reps so far");
+  out.push(textTable(["Rep", "Subs", "Goal", "Attain", "vs same pt LW", "Army", "Veteran"], d.reps.map((r) => [`${r.rank}. ${r.name} (${r.role.toLowerCase()})`, n(r.combined), r.combinedGoal === null ? "-" : String(Math.round(r.combinedGoal)), r.attainment === null ? "-" : `${Math.round(r.attainment * 100)}%`, chg("count", r.combined, r.combinedPrev), n(r.ca101), n(r.iau)]), [30, 5, 5, 7, 14, 5, 8]));
+
+  H("4. Before Friday");
+  const flags = midweekFlags(d);
+  if (flags.length === 0) out.push("Nothing needs action before Friday.");
+  for (const fl of [...flags].sort((a, b) => FLAG_ORDER[a.level] - FLAG_ORDER[b.level])) out.push(`[${fl.level === "bad" ? "ATTENTION" : fl.level === "warn" ? "WATCH" : "NOTE"}] ${fl.label}: ${fl.text}`);
+
+  H("5. Two tips for the rest of the week");
+  if (narrative) narrative.tips.forEach((tip, i) => out.push(`${i + 1}. ${tip}`));
+  else out.push("Tips are unavailable: the narrative could not be generated.");
+
+  out.push("", d.dashboardUrl ? `Dashboard: ${d.dashboardUrl}/?range=this_week · Mapping page: ${d.dashboardUrl}/mapping` : "", ...d.notes, "Read-only view of Go High Level; this dashboard never changes CRM data.");
+  return out.filter((l, i, a) => !(l === "" && a[i - 1] === "")).join("\n");
 }

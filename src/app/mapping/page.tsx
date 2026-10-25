@@ -3,7 +3,7 @@
 // Everything shown comes from the local cache; nothing here calls GHL.
 
 import { cacheHealth, getState, lastSuccessfulSync, latestSyncRuns, latestWeeklyReportSends, readSnapshots, type SnapshotRow } from "@/lib/db";
-import { scheduleLabel, weeklyReportConfig } from "@/lib/weeklyReport/config";
+import { nextScheduledInstant, scheduleLabel, weeklyReportConfig } from "@/lib/weeklyReport/config";
 import { gmailConfigured } from "@/lib/mailer";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { explainSyncSummary, fmtBytes, runningTooLong } from "@/lib/syncStatus";
@@ -128,7 +128,11 @@ export default async function MappingPage() {
   const diskWarning = getState("disk_warning");
   // Weekly sales report email: schedule and the send log
   const reportCfg = weeklyReportConfig();
-  const reportSends = latestWeeklyReportSends(8);
+  const reportSends = latestWeeklyReportSends(10);
+  const reportNow = new Date();
+  const nextWeekly = nextScheduledInstant(reportNow, reportCfg).toISOString();
+  const nextMidweek = nextScheduledInstant(reportNow, reportCfg.midweek).toISOString();
+  const sendKindLabel = (k: string) => (k === "scheduled" ? "Sunday report" : k === "midweek" ? "Midweek check-in" : k === "midweek-test" ? "midweek test" : "test");
   const gmail = gmailConfigured();
   const anthropicKeySet = Boolean(process.env.ANTHROPIC_API_KEY?.trim());
   const duration = (a: string, b: string | null) => (b ? `${Math.max(1, Math.round((Date.parse(b) - Date.parse(a)) / 60000))} min` : "running");
@@ -329,15 +333,20 @@ export default async function MappingPage() {
       <section className="card">
         <h2>Weekly sales report email</h2>
         <p className="note">
-          A Monday-to-Sunday summary (headline numbers, rep leaderboard, month-to-date pace, funnel, pipeline health, four-week trend,
-          flags, and three tips) built from the same figures as the scorecard and emailed from the server scheduler. Each report week is
-          sent at most once, whatever restarts or redeploys happen; one SMTP failure is retried once, then logged here. Settings live in
-          config/weekly-report.json.
+          Two emails built from the same figures as the scorecard and sent by the server scheduler: the Sunday report (a Monday-to-Sunday
+          summary with headline numbers, rep leaderboard, month-to-date pace, funnel, pipeline health, four-week trend, flags, and three
+          tips) and the Wednesday midweek check-in (the week so far, what it takes to finish the week, compact rep cards, what needs action
+          before Friday, two tips). Each report week is sent at most once per email, whatever restarts or redeploys happen; one SMTP
+          failure is retried once, then logged here. Settings live in config/weekly-report.json.
         </p>
         <div className="status-bar">
           <span>
-            <b>Schedule:</b> {scheduleLabel(reportCfg)}{" "}
-            {reportCfg.enabled ? <span className="pill pill-ok">enabled</span> : <span className="pill pill-warn">off (enabled: false)</span>}
+            <b>Sunday report:</b> {scheduleLabel(reportCfg)}{" "}
+            {reportCfg.enabled ? <span className="pill pill-ok">enabled · next {when(nextWeekly)}</span> : <span className="pill pill-warn">off (enabled: false)</span>}
+          </span>
+          <span>
+            <b>Midweek check-in:</b> {scheduleLabel(reportCfg.midweek)}{" "}
+            {reportCfg.midweek.enabled ? <span className="pill pill-ok">enabled · next {when(nextMidweek)}</span> : <span className="pill pill-warn">off (midweek.enabled: false)</span>}
           </span>
           <span>
             <b>Theme:</b> {reportCfg.theme}
@@ -369,7 +378,7 @@ export default async function MappingPage() {
               {reportSends.map((r) => (
                 <tr key={r.id}>
                   <td>Week of {day(r.week_start + "T12:00:00")}</td>
-                  <td>{r.kind === "test" ? <span className="pill pill-info">test</span> : "scheduled"}</td>
+                  <td>{r.kind.endsWith("test") ? <span className="pill pill-info">{sendKindLabel(r.kind)}</span> : sendKindLabel(r.kind)}</td>
                   <td>{when(r.started_at)}</td>
                   <td>
                     {r.ok === 1 ? <span className="pill pill-ok">sent</span> : r.ok === 0 ? <span className="pill pill-bad">failed</span> : <span className="pill pill-info">sending</span>}
