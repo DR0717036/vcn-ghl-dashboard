@@ -243,11 +243,15 @@ export function fmtRange(start: Date, end: Date, partial: boolean): string {
 
 const dayShortFmt = new Intl.DateTimeFormat("en-US", { timeZone: REPORTING_TZ, month: "short", day: "numeric" });
 
-/** "Oct 12 – Oct 18" style description of a range without the year (end exclusive). */
-export function fmtRangeShort(start: Date, end: Date): string {
+const yearFmt = new Intl.DateTimeFormat("en-US", { timeZone: REPORTING_TZ, year: "numeric" });
+
+/** "Oct 12 – Oct 18" style description of a range without the year (end exclusive); withYear appends ", 2026" once. */
+export function fmtRangeShort(start: Date, end: Date, withYear = false): string {
+  const last = new Date(end.getTime() - 1);
   const a = dayShortFmt.format(start);
-  const b = dayShortFmt.format(new Date(end.getTime() - 1));
-  return a === b ? a : `${a} – ${b}`;
+  const b = dayShortFmt.format(last);
+  const range = a === b ? a : `${a} – ${b}`;
+  return withYear ? `${range}, ${yearFmt.format(last)}` : range;
 }
 
 /** "YYYY-MM-DD" in New York for a given instant. */

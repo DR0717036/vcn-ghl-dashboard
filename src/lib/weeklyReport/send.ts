@@ -8,7 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { abandonStaleWeeklyReportSends, claimWeeklyReportSend, finishWeeklyReportSend, getState } from "@/lib/db";
-import { fmtRange } from "@/lib/dates";
+import { fmtDateTime, fmtRangeShort } from "@/lib/dates";
 import { gmailConfigured, sendGmail, type MailMessage } from "@/lib/mailer";
 import { dueWeekStart, weekKeyOf, weekRange, weeklyReportConfig, type ReportTheme } from "./config";
 import { buildWeeklyReport, type WeeklyReportData } from "./data";
@@ -36,7 +36,8 @@ export async function renderWeeklyReport(weekStart: Date, now: Date, withNarrati
   const data = buildWeeklyReport(weekStart, now);
   const outcome = withNarrative ? await generateNarrative(data) : { narrative: null, skipped: "narrative not requested", durationMs: 0 };
   const r = weekRange(weekStart, now);
-  const subject = cfg.subject.replace("{range}", fmtRange(r.start, r.end, false));
+  // The range (with the year) makes every week's subject distinct, so Gmail does not thread the reports together and trim repeated sections.
+  const subject = cfg.subject.replace("{range}", fmtRangeShort(r.start, r.end, true));
   return { data, narrative: outcome.narrative, narrativeSkipped: outcome.skipped, narrativeMs: outcome.durationMs, subject, theme: useTheme, html: renderHtml(data, outcome.narrative, useTheme), text: renderText(data, outcome.narrative) };
 }
 
@@ -92,7 +93,7 @@ export async function sendWeeklyReport(opts: { weekStart: Date; now: Date; kind:
     const r = await renderWeeklyReport(opts.weekStart, opts.now, opts.withNarrative !== false, opts.theme);
     narrative = r.narrative !== null;
     narrativeSkipped = r.narrativeSkipped;
-    const msg: MailMessage = { from: cfg.from, to: opts.to, subject: opts.kind === "test" ? `[TEST] [${r.theme}] ${r.subject}` : r.subject, text: r.text, html: r.html, inline: inlineImages(r.data) };
+    const msg: MailMessage = { from: cfg.from, to: opts.to, subject: opts.kind === "test" ? `[TEST] [${r.theme}] ${r.subject} · sent ${fmtDateTime(opts.now)}` : r.subject, text: r.text, html: r.html, inline: inlineImages(r.data) };
     for (attempts = 1; attempts <= 2; attempts++) {
       try {
         const res = await sendGmail(msg);

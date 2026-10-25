@@ -14,7 +14,7 @@ export const LOGO_CID = "vcn-logo";
 // Brand tokens (tokens.css): page #05080d, card surfaces #f4f7fb/#ffffff, ink #182536/#46566a/#5b6b7f,
 // blue #1677ff, yellow #ffd51f, status good #15803d / warn #8a5b00 / bad #c62828 on light surfaces.
 // Manrope where the client loads web fonts (Apple Mail, iPhone Mail, Outlook for Mac); Gmail and Outlook for Windows fall back to Helvetica Neue / Arial.
-const FONT = "Manrope, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+const FONT = "Manrope,'Helvetica Neue',Arial,sans-serif";
 const FONT_URL = "https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap";
 /** The email's colors. Light = the dashboard's light bands; dark = its dark bands (tokens.css). */
 interface Palette {
@@ -139,8 +139,8 @@ function applyTheme(theme: ReportTheme): void {
   C = theme === "dark" ? DARK : LIGHT;
   TH = `style="font:700 11px/1.3 ${FONT};letter-spacing:0.04em;text-transform:uppercase;color:${C.muted};text-align:right;padding:6px 6px;border-bottom:1px solid ${C.border};white-space:nowrap"`;
   THL = TH.replace("text-align:right", "text-align:left");
-  TD = `style="font:500 13px/1.35 ${FONT};color:${C.body};text-align:right;padding:7px 6px;border-bottom:1px solid ${C.rowLine};white-space:nowrap"`;
-  TDL = TD.replace("text-align:right", "text-align:left").replace("white-space:nowrap", "");
+  TD = `style="font:500 13px/1.35 ${FONT};color:${C.body};text-align:right;padding:7px 6px;border-bottom:1px solid ${C.rowLine}"`;
+  TDL = TD.replace("text-align:right", "text-align:left");
   TDB = TD.replace("font:500", "font:800").replace(C.body, C.ink);
 }
 applyTheme("light");
@@ -198,9 +198,9 @@ const levelColor = (l: Flag["level"]) => (l === "bad" ? { fg: C.bad, bg: C.badBg
 
 function section(kicker: string, title: string, body: string, subtitle?: string): string {
   return `<tr><td style="padding:0 0 12px 0">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${cardBg()}border:1px solid ${C.border};border-radius:14px"><tr><td style="padding:18px 20px">
-<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.12em;text-transform:uppercase;color:${C.kicker};margin-bottom:4px">${esc(kicker)}</div>
-<div style="font:800 18px/1.15 ${FONT};letter-spacing:-0.02em;color:${C.ink};margin-bottom:${subtitle ? "2px" : "12px"}">${esc(title)}</div>${subtitle ? `<div style="font:600 13px/1.3 ${FONT};color:${C.muted};margin-bottom:12px">${esc(subtitle)}</div>` : ""}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${cardBg()}border:1px solid ${C.border};border-radius:14px"><tr><td style="padding:18px 20px;font:500 13px/1.4 ${FONT};color:${C.body}">
+<div style="font-size:11px;font-weight:700;line-height:1.2;letter-spacing:.12em;color:${C.kicker};margin-bottom:4px">${esc(kicker.toUpperCase())}</div>
+<div style="font-size:18px;font-weight:800;line-height:1.15;letter-spacing:-.02em;color:${C.ink};margin-bottom:${subtitle ? "2px" : "12px"}">${esc(title)}</div>${subtitle ? `<div style="font-size:13px;font-weight:600;line-height:1.3;color:${C.muted};margin-bottom:12px">${esc(subtitle)}</div>` : ""}
 ${body}
 </td></tr></table></td></tr>`;
 }
@@ -217,7 +217,7 @@ function changeHtml(c: Change | null, unavailable?: string): string {
 }
 
 function note(text: string): string {
-  return `<p style="font:400 12px/1.5 ${FONT};color:${C.muted};margin:10px 0 0">${text}</p>`;
+  return `<p style="font-size:12px;font-weight:400;line-height:1.5;color:${C.muted};margin:10px 0 0">${text}</p>`;
 }
 
 function pill(text: string, fg: string, bg: string): string {
@@ -225,7 +225,7 @@ function pill(text: string, fg: string, bg: string): string {
 }
 
 function paragraph(text: string): string {
-  return `<p style="font:400 14px/1.55 ${FONT};color:${C.body};margin:0 0 10px">${esc(text)}</p>`;
+  return `<p style="font-size:14px;font-weight:400;line-height:1.55;color:${C.body};margin:0 0 10px">${esc(text)}</p>`;
 }
 
 /** A numbers-only "week in brief" for when the narrative is unavailable; every figure is copied from the data. */
@@ -236,31 +236,44 @@ export function briefFallback(d: WeeklyReportData): string {
   return `${fmtValue("count", c.value)} combined submissions${goal} (Army ${fmtValue("count", h("army").value)}, Veteran ${fmtValue("count", h("iau").value)}), ${fmtValue("count", h("booked").value)} appointments booked, ${fmtValue("count", h("newLeads").value)} leads created, ${fmtValue("count", h("won").value)} won.`;
 }
 
-/** Small green / red / gray change pill vs last week. */
+// Size discipline (Gmail clips HTML over about 102 KB): every table cell that holds text sets the
+// font family once, and the text inside uses <b>, <span>, <br>, and plain divs that inherit it.
+// Nothing repeats the family on inline elements.
+
+/** Small green / red / gray change pill vs last week (inherits the font family from its cell). */
 function changePill(h: Headline): string {
   return changePillFor(h.kind, h.value, h.prev, h.lowerIsBetter);
 }
 
 function changePillFor(kind: Kind, value: number | null, prev: number | null, lowerIsBetter = false): string {
   const c = change(kind, value, prev, lowerIsBetter);
-  if (!c) return `<span style="display:inline-block;font:700 11px/1 ${FONT};color:${C.muted};background:${C.neutralBg};border-radius:999px;padding:4px 8px;white-space:nowrap">no comparison</span>`;
+  const base = "display:inline-block;font-weight:700;font-size:11px;line-height:1;border-radius:999px;padding:4px 8px;white-space:nowrap;vertical-align:middle";
+  if (!c) return `<span style="${base};color:${C.muted};background:${C.neutralBg}">no comparison</span>`;
   const bg = c.arrow === "■" ? C.neutralBg : c.color === C.good ? C.goodBg : C.badBg;
-  return `<span style="display:inline-block;font:700 11px/1 ${FONT};color:${c.color};background:${bg};border-radius:999px;padding:4px 8px;white-space:nowrap">${c.arrow} ${esc(c.text)}</span>`;
+  return `<span style="${base};color:${c.color};background:${bg}">${c.arrow} ${esc(c.text)}</span>`;
 }
 
-/** Thin goal-progress bar (table cells, no images) with "x of goal · y%" under it. */
+/** An uppercase muted label; no font family (inherits from the cell). */
+function label(text: string, px = 11, inheritColor = false): string {
+  return `<b style="font-size:${px}px;letter-spacing:.08em${inheritColor ? "" : `;color:${C.muted}`}">${esc(text.toUpperCase())}</b>`;
+}
+
+/** A big figure. */
+function big(text: string, px: number, color = C.ink): string {
+  return `<b style="font-size:${px}px;line-height:1.1;letter-spacing:-.02em;color:${color}">${esc(text)}</b>`;
+}
+
+/** An inset tile: one cell that carries the font family, so everything inside inherits it. */
+function box(inner: string, extra = "", padding = "12px 14px"): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px${extra}"><tr><td style="padding:${padding};font:500 12px/1.45 ${FONT};color:${C.secondary}">${inner}</td></tr></table>`;
+}
+
+/** Thin goal-progress bar (table cells, no images) with "x of goal · y%" under it; nothing without a goal. */
 function goalBar(h: Headline): string {
   if (h.goal === null || h.goal <= 0) return "";
   const v = h.value ?? 0;
-  const pct = Math.round((v / h.goal) * 100);
-  const fill = Math.max(v > 0 ? 2 : 0, Math.min(100, Math.round((v / h.goal) * 100)));
-  const color = v >= h.goal - 1e-9 ? C.good : C.bar;
   const goalText = h.kind === "count" ? n(Math.round(h.goal)) : fmtValue(h.kind, h.goal);
-  const bar =
-    fill >= 100
-      ? `<td height="6" bgcolor="${color}" style="height:6px;font-size:0;line-height:0;border-radius:3px">&nbsp;</td>`
-      : `<td height="6" width="${fill}%" bgcolor="${color}" style="height:6px;font-size:0;line-height:0;border-radius:3px 0 0 3px">&nbsp;</td><td height="6" bgcolor="${C.border}" style="height:6px;font-size:0;line-height:0;border-radius:0 3px 3px 0">&nbsp;</td>`;
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px"><tr>${fill === 0 ? `<td height="6" bgcolor="${C.border}" style="height:6px;font-size:0;line-height:0;border-radius:3px">&nbsp;</td>` : bar}</tr></table><div style="font:500 11px/1.4 ${FONT};color:${C.muted};margin-top:4px">${esc(fmtValue(h.kind, h.value))} of ${esc(goalText)} goal · ${n(pct)}%</div>`;
+  return `<div style="margin-top:8px">${bar(v / h.goal, v >= h.goal - 1e-9 ? C.good : C.bar)}</div><span style="font-size:11px;color:${C.muted}">${esc(fmtValue(h.kind, h.value))} of ${esc(goalText)} goal · ${n(Math.round((v / h.goal) * 100))}%</span>`;
 }
 
 /** "Opportunity Value $X (last week $Y)" for a headline that carries one; empty otherwise. */
@@ -271,15 +284,10 @@ function oppValueLine(h: Headline): string {
 }
 
 /** One KPI tile: label, big number, change pill, one or more sub-lines, goal bar when there is a goal. */
-function tile(h: Headline, sub: string | string[], small = false): string {
-  const big = small ? "22px" : "28px";
-  const value = h.value === null ? `<span style="font:800 ${small ? "16px" : "18px"}/1.2 ${FONT};color:${C.muted}" title="${esc(h.unavailable ?? "")}">unavailable</span>` : `<span style="font:800 ${big}/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${esc(fmtValue(h.kind, h.value))}</span>`;
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px"><tr><td style="padding:12px 14px">
-<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">${esc(h.label)}</div>
-<div>${value} &nbsp;${changePill(h)}</div>
-${(Array.isArray(sub) ? sub : [sub]).filter(Boolean).map((s) => `<div style="font:500 12px/1.4 ${FONT};color:${C.secondary};margin-top:4px">${esc(s)}</div>`).join("")}
-${goalBar(h)}
-</td></tr></table>`;
+function tile(h: Headline, sub: string | string[]): string {
+  const value = h.value === null ? `<b style="font-size:18px;color:${C.muted}" title="${esc(h.unavailable ?? "")}">unavailable</b>` : big(fmtValue(h.kind, h.value), 28);
+  const subs = (Array.isArray(sub) ? sub : [sub]).filter(Boolean).map((s) => `<br>${esc(s)}`).join("");
+  return box(`${label(h.label)}<div style="margin:6px 0 4px;line-height:1.3">${value} &nbsp;${changePill(h)}</div>${subs.replace(/^<br>/, "")}${goalBar(h)}`);
 }
 
 /** Inline-image id for a rep's photo (attached as cid:<id> in the email; served from /public in the browser preview). */
@@ -303,8 +311,8 @@ export function repPhotoAssets(d: WeeklyReportData): { cid: string; publicPath: 
 
 /** Round rep photo, or an initials circle when there is no photo. Plain img / table cell, so it renders everywhere. */
 function avatar(r: { userId: string; photo: string | null; initials: string }, size: number): string {
-  if (r.photo) return `<img src="cid:${repPhotoCid(r.userId)}" width="${size}" height="${size}" alt="${esc(r.initials)}" style="display:block;width:${size}px;height:${size}px;border-radius:50%;border:0">`;
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr><td width="${size}" height="${size}" align="center" valign="middle" bgcolor="${C.badge}" style="width:${size}px;height:${size}px;border-radius:50%;font:800 ${Math.round(size * 0.36)}px/1 ${FONT};color:${C.onDark}">${esc(r.initials)}</td></tr></table>`;
+  if (r.photo) return `<img src="cid:${repPhotoCid(r.userId)}" width="${size}" height="${size}" alt="${esc(r.initials)}" style="display:block;border-radius:50%;border:0">`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="${size}" height="${size}" align="center" valign="middle" bgcolor="${C.badge}" style="width:${size}px;height:${size}px;border-radius:50%;font:800 ${Math.round(size * 0.36)}px/1 ${FONT};color:${C.onDark}">${esc(r.initials)}</td></tr></table>`;
 }
 
 /** Green at or above goal, yellow from half, red below half (the leaderboard's attainment colors). */
@@ -315,12 +323,12 @@ function attainColor(att: number | null): string {
 
 /** Thin bar filled to `pct` (0 to 1, more is capped) in `color`; table cells only, no images. */
 function bar(pct: number, color: string, height = 6): string {
-  const fill = Math.max(pct > 0 ? 2 : 0, Math.min(100, Math.round(pct * 100)));
-  const s = `height:${height}px;font-size:0;line-height:0`;
+  const fill = Math.max(pct > 0 ? 2 : 0, Math.min(100, Math.min(100, Math.round(pct * 100))));
+  const s = "font-size:0;line-height:0";
   const open = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>`;
-  if (fill === 0) return `${open}<td height="${height}" bgcolor="${C.border}" style="${s};border-radius:3px">&nbsp;</td></tr></table>`;
-  if (fill >= 100) return `${open}<td height="${height}" bgcolor="${color}" style="${s};border-radius:3px">&nbsp;</td></tr></table>`;
-  return `${open}<td height="${height}" width="${fill}%" bgcolor="${color}" style="${s};border-radius:3px 0 0 3px">&nbsp;</td><td height="${height}" bgcolor="${C.border}" style="${s};border-radius:0 3px 3px 0">&nbsp;</td></tr></table>`;
+  if (fill === 0) return `${open}<td height="${height}" bgcolor="${C.border}" style="${s}">&nbsp;</td></tr></table>`;
+  if (fill >= 100) return `${open}<td height="${height}" bgcolor="${color}" style="${s}">&nbsp;</td></tr></table>`;
+  return `${open}<td height="${height}" width="${fill}%" bgcolor="${color}" style="${s}">&nbsp;</td><td height="${height}" bgcolor="${C.border}" style="${s}">&nbsp;</td></tr></table>`;
 }
 
 /** A numbers-only sentence on the spread across reps for when the narrative is unavailable; every figure is copied from the data. */
@@ -332,9 +340,9 @@ export function leaderboardFallback(d: WeeklyReportData): string {
   return `${top.name} led with ${n(top.combined)} submissions and ${bottom.name} had ${n(bottom.combined)}; ${n(met)} of ${n(d.reps.length)} reps met their weekly goal.`;
 }
 
-/** A small labelled statistic cell for mini rows (label, value, optional sub-line). */
-function statCell(label: string, value: string, sub: string, width: string, last: boolean): string {
-  return `<td width="${width}" valign="top" style="padding:8px 6px 8px 10px;${last ? "" : `border-right:1px solid ${C.border};`}"><div style="font:700 10px/1.2 ${FONT};letter-spacing:0.06em;text-transform:uppercase;color:${C.muted}">${esc(label)}</div><div style="font:800 15px/1.3 ${FONT};color:${C.ink};margin-top:2px">${esc(value)}</div>${sub ? `<div style="font:500 11px/1.3 ${FONT};color:${C.muted}">${esc(sub)}</div>` : ""}</td>`;
+/** A small labelled statistic cell for mini rows (label, value, optional sub-line); the cell carries the font. */
+function statCell(title: string, value: string, sub: string, width: string, last: boolean): string {
+  return `<td width="${width}" valign="top" style="padding:8px 6px 8px 10px;${last ? "" : `border-right:1px solid ${C.border};`}font:500 11px/1.4 ${FONT};color:${C.muted}">${label(title, 10, true)}<br><b style="font-size:15px;color:${C.ink}">${esc(value)}</b>${sub ? `<br>${esc(sub)}` : ""}</td>`;
 }
 
 /**
@@ -367,7 +375,7 @@ function markedBar(fillPct: number, color: string, opts: { solid?: number | null
     pos = at + 3;
   }
   advance(100);
-  const base = `height:${h}px;font-size:0;line-height:0`;
+  const base = "font-size:0;line-height:0";
   const cells = segs
     .map((s) => {
       if (s.kind === "hollow") return `<td width="${s.w}%" height="${h}" style="${base};border:2px solid ${C.marker};background:transparent">&nbsp;</td>`;
@@ -375,7 +383,7 @@ function markedBar(fillPct: number, color: string, opts: { solid?: number | null
       return `<td width="${s.w}%" height="${h}" bgcolor="${bg}" style="${base}">&nbsp;</td>`;
     })
     .join("");
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-radius:4px;overflow:hidden"><tr>${cells}</tr></table>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>${cells}</tr></table>`;
 }
 
 /** Green at or above the quota, yellow from half, red below half (the pace table's rule). */
@@ -383,10 +391,15 @@ function paceColor(pct: number | null): string {
   return pct === null ? C.border : pct >= 1 ? C.good : pct >= 0.5 ? C.yellow : C.bad;
 }
 
+/** Drops the newlines and indentation between tags and shortens #ffffff; the HTML is for machines, the plain-text part is for people. */
+function minify(html: string): string {
+  return html.replace(/>\s*\n\s*</g, "><").replace(/#ffffff/g, "#fff");
+}
+
 export function renderHtml(d: WeeklyReportData, narrative: Narrative | null, theme: ReportTheme = "light"): string {
   applyTheme(theme);
   try {
-    return renderHtmlBody(d, narrative);
+    return minify(renderHtmlBody(d, narrative));
   } finally {
     applyTheme("light");
   }
@@ -400,7 +413,7 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
   // 1. headline numbers: week in brief, six KPI tiles in three rows (submissions and won; Army and Veteran submissions; booked and leads created), one-line note
   const H = (key: string) => d.headlines.find((x) => x.key === key)!;
   const brief = narrative?.brief ?? briefFallback(d);
-  const briefHtml = `<div style="border-left:4px solid ${C.yellow};background:${C.inset};border-radius:0 10px 10px 0;padding:10px 14px;margin:0 0 14px;font:600 15px/1.45 ${FONT};color:${C.ink}">${esc(brief)}</div>`;
+  const briefHtml = `<div style="border-left:4px solid ${C.yellow};background:${C.inset};border-radius:0 10px 10px 0;padding:10px 14px;margin:0 0 14px;font-size:15px;font-weight:600;line-height:1.45;color:${C.ink}">${esc(brief)}</div>`;
   const wonValue = H("wonValue");
   const iau = H("iau");
   const semesterLine = (iau.parts ?? []).map((p) => `${p.short} ${fmtValue("count", p.value)}`).join(" · ");
@@ -413,35 +426,29 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
   parts.push(section("1 · Headline numbers", d.rangeShort, briefHtml + tileTable(tileRows) + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`), `vs ${d.prevRangeShort}`));
 
   // 2. leaderboard: two highlight tiles with photos, one sentence on the spread, then one full-width card per rep
-  const highlight = (label: string, r: RepRow | null, line: string, empty: string) =>
-    `<div style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;padding:10px 12px"><div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">${esc(label)}</div>${
-      r
-        ? `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding:0 10px 0 0">${avatar(r, 40)}</td><td valign="middle"><div style="font:800 15px/1.3 ${FONT};color:${C.ink}">${esc(r.name)}</div><div style="font:500 12px/1.4 ${FONT};color:${C.secondary}">${esc(line)}</div></td></tr></table>`
-        : `<div style="font:500 13px/1.4 ${FONT};color:${C.secondary}">${esc(empty)}</div>`
-    }</div>`;
+  const highlight = (title: string, r: RepRow | null, line: string, empty: string) =>
+    box(`${label(title)}<div style="margin-top:6px">${r ? `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding:0 10px 0 0">${avatar(r, 40)}</td><td valign="middle" style="font:500 12px/1.4 ${FONT};color:${C.secondary}"><b style="font-size:15px;color:${C.ink}">${esc(r.name)}</b><br>${esc(line)}</td></tr></table>` : esc(empty)}</div>`, "", "10px 12px");
   const tp = d.topPerformer;
   const bi = d.biggestImprover;
-  const calloutsHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" valign="top" style="padding:0 5px 10px 0">${highlight("Top performer", tp, tp ? `${n(tp.combined)} submissions · ${n(tp.dials)} dials · ${n(tp.booked)} booked` : "", "No rep submitted or dialed this week.")}</td><td width="50%" valign="top" style="padding:0 0 10px 5px">${highlight("Biggest improver", bi?.rep ?? null, bi ? `+${n(bi.delta)} submissions vs last week (${n(bi.rep.combinedPrev ?? 0)} → ${n(bi.rep.combined)})` : "", "No rep submitted more than last week.")}</td></tr></table>`;
+  const calloutsHtml = tileTable([[highlight("Top performer", tp, tp ? `${n(tp.combined)} submissions · ${n(tp.dials)} dials · ${n(tp.booked)} booked` : "", "No rep submitted or dialed this week."), highlight("Biggest improver", bi?.rep ?? null, bi ? `+${n(bi.delta)} submissions vs last week (${n(bi.rep.combinedPrev ?? 0)} → ${n(bi.rep.combined)})` : "", "No rep submitted more than last week.")]]);
   const spreadHtml = paragraph(narrative?.leaderboard ?? leaderboardFallback(d));
-  const mini = (label: string, value: string, sub: string, last: boolean) =>
-    `<td width="25%" valign="top" style="padding:8px 6px 8px 10px;${last ? "" : `border-right:1px solid ${C.border};`}"><div style="font:700 10px/1.2 ${FONT};letter-spacing:0.06em;text-transform:uppercase;color:${C.muted}">${esc(label)}</div><div style="font:800 15px/1.3 ${FONT};color:${C.ink};margin-top:2px">${esc(value)}</div>${sub ? `<div style="font:500 11px/1.3 ${FONT};color:${C.muted}">${esc(sub)}</div>` : ""}</td>`;
+  const cellFont = `font:500 12px/1.4 ${FONT};color:${C.secondary}`;
   const repCards = d.reps.map((r) => {
     const att = r.attainment;
     const goalText = r.combinedGoal === null ? "no goal" : `of ${n(Math.round(r.combinedGoal))} goal`;
-    const attLine = att === null ? "" : `<div style="font:700 11px/1.4 ${FONT};color:${att >= 1 ? C.good : att >= 0.5 ? C.warn : C.bad};margin-top:4px">${n(Math.round(att * 100))}% of goal</div>`;
     const hero =
-      `<div><span style="font:800 30px/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${n(r.combined)}</span> <span style="font:600 13px/1.2 ${FONT};color:${C.muted}">${esc(goalText)}</span> &nbsp;${changePillFor("count", r.combined, r.combinedPrev)}</div>` +
-      (r.combinedGoal !== null && r.combinedGoal > 0 ? `<div style="margin-top:8px">${bar(r.combined / r.combinedGoal, attainColor(att))}</div>${attLine}` : "") +
-      `<div style="font:700 13px/1.5 ${FONT};color:${C.ink};margin-top:4px">Army ${n(r.ca101)} · Veteran ${n(r.iau)}</div>`;
-    const rankBadge = `<div style="font:800 16px/1 ${FONT};color:${C.muted};min-width:16px">${n(r.rank)}</div>`;
-    const left = `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding:0 8px 0 0">${rankBadge}</td><td valign="middle">${avatar(r, 48)}</td></tr></table><div style="font:800 15px/1.3 ${FONT};color:${C.ink};margin-top:8px">${esc(r.name)}</div><div style="font:600 11px/1.3 ${FONT};color:${C.muted}">${esc(r.role.toLowerCase())}</div>`;
+      `<div style="line-height:1.3">${big(n(r.combined), 30)} <span style="font-weight:600;font-size:13px;color:${C.muted}">${esc(goalText)}</span> &nbsp;${changePillFor("count", r.combined, r.combinedPrev)}</div>` +
+      (r.combinedGoal !== null && r.combinedGoal > 0 ? `<div style="margin:8px 0 4px">${bar(r.combined / r.combinedGoal, attainColor(att))}</div>` : "") +
+      (att === null ? "" : `<b style="font-size:11px;color:${att >= 1 ? C.good : att >= 0.5 ? C.warn : C.bad}">${n(Math.round(att * 100))}% of goal</b><br>`) +
+      `<b style="font-size:13px;color:${C.ink}">Army ${n(r.ca101)} · Veteran ${n(r.iau)}</b>`;
+    const left = `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding:0 8px 0 0;font:800 16px/1 ${FONT};color:${C.muted}">${n(r.rank)}</td><td valign="middle">${avatar(r, 48)}</td></tr></table><div style="margin-top:8px;line-height:1.3"><b style="font-size:15px;color:${C.ink}">${esc(r.name)}</b><br><span style="font-weight:600;font-size:11px;color:${C.muted}">${esc(r.role.toLowerCase())}</span></div>`;
     const dialsSub = r.dialsGoal !== null && r.dialsGoal > 0 ? `of ${n(Math.round(r.dialsGoal))} · ${n(Math.round((r.dials / r.dialsGoal) * 100))}%` : "no goal";
-    const miniRow = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${C.border}"><tr>${mini("Dials", n(r.dials), dialsSub, false)}${mini("Talk time", fmtValue("minutes", r.talkMinutes), "", false)}${mini("Appointments booked", n(r.booked), "", false)}${mini("Won", n(r.won), r.won > 0 ? `${fmtValue("usd", r.wonValue)} Opportunity Value` : "", true)}</tr></table>`;
+    const miniRow = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${C.border}"><tr>${statCell("Dials", n(r.dials), dialsSub, "25%", false)}${statCell("Talk time", fmtValue("minutes", r.talkMinutes), "", "25%", false)}${statCell("Appointments booked", n(r.booked), "", "25%", false)}${statCell("Won", n(r.won), r.won > 0 ? `${fmtValue("usd", r.wonValue)} Opportunity Value` : "", "25%", true)}</tr></table>`;
     const showLine =
       r.showRate === null
         ? ""
-        : `<tr><td colspan="2" style="padding:0 14px 10px"><div style="font:500 12px/1.4 ${FONT};color:${C.secondary};padding-top:8px;border-top:1px solid ${C.border}">Show rate <b style="color:${C.ink}">${esc(fmtValue("pct", r.showRate))}</b> · ${n(r.showed)} showed of ${n(r.showed + r.noshow)} marked${r.showRatePrev !== null ? ` (last week ${esc(fmtValue("pct", r.showRatePrev))})` : ""}</div></td></tr>`;
-    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;margin-bottom:10px"><tr><td width="150" valign="top" style="padding:14px 10px 12px 14px">${left}</td><td valign="top" style="padding:14px 14px 12px 6px">${hero}</td></tr><tr><td colspan="2" style="padding:0 8px${r.showRate === null ? " 4px" : ""}">${miniRow}</td></tr>${showLine}</table>`;
+        : `<tr><td colspan="2" style="padding:0 14px 10px;${cellFont}"><div style="padding-top:8px;border-top:1px solid ${C.border}">Show rate <b style="color:${C.ink}">${esc(fmtValue("pct", r.showRate))}</b> · ${n(r.showed)} showed of ${n(r.showed + r.noshow)} marked${r.showRatePrev !== null ? ` (last week ${esc(fmtValue("pct", r.showRatePrev))})` : ""}</div></td></tr>`;
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;margin-bottom:10px"><tr><td width="150" valign="top" style="padding:14px 10px 12px 14px;${cellFont}">${left}</td><td valign="top" style="padding:14px 14px 12px 6px;${cellFont}">${hero}</td></tr><tr><td colspan="2" style="padding:0 8px${r.showRate === null ? " 4px" : ""}">${miniRow}</td></tr>${showLine}</table>`;
   });
   parts.push(
     section(
@@ -457,31 +464,18 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
   const teamPct = t.quota > 0 ? t.mtd / t.quota : null;
   const needText = (mtd: number, quota: number, need: number | null) => (need === null ? (quota > 0 && mtd >= quota ? "quota met" : "no working days left") : `${need.toFixed(1)}/day`);
   const expected = p.expectedToday;
-  const heroHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;margin-bottom:12px"><tr><td style="padding:14px 14px 10px">
-<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">Team · ${esc(p.monthShort)}</div>
-<div><span style="font:800 30px/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${n(t.mtd)}</span> <span style="font:600 14px/1.2 ${FONT};color:${C.muted}">of ${n(t.quota)} quota${teamPct === null ? "" : ` · ${n(Math.round(teamPct * 100))}%`}</span></div>
-<div style="margin-top:10px">${markedBar(teamPct ?? 0, paceColor(teamPct), { solid: expected !== null && t.quota > 0 ? expected / t.quota : null, height: 10 })}</div>
-<div style="font:500 11px/1.4 ${FONT};color:${C.muted};margin-top:4px">${expected !== null ? `▮ marker = on pace today (${n(Math.round(expected))} after ${n(p.workingDaysElapsed)} of ${n(p.workingDaysTotal)} working days)` : "no quota configured"}${t.othersMtd > 0 ? ` · plus ${n(t.othersMtd)} by users who are not configured reps` : ""}</div>
-</td></tr><tr><td style="padding:0 4px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${C.border}"><tr>${statCell("Projected month-end", t.projected === null ? "unavailable" : n(t.projected), "at the current pace", "34%", false)}${statCell("Needed per working day", needText(t.mtd, t.quota, t.neededPerDay), "to reach quota", "33%", false)}${statCell("Working days left", n(p.workingDaysRemaining), `of ${n(p.workingDaysTotal)} this month`, "33%", true)}</tr></table></td></tr></table>`;
+  const heroHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;margin-bottom:12px"><tr><td style="padding:14px 14px 10px;font:500 11px/1.4 ${FONT};color:${C.muted}">${label(`Team · ${p.monthShort}`, 11, true)}<div style="margin:6px 0 10px;line-height:1.3">${big(n(t.mtd), 30)} <span style="font-weight:600;font-size:14px">of ${n(t.quota)} quota${teamPct === null ? "" : ` · ${n(Math.round(teamPct * 100))}%`}</span></div>${markedBar(teamPct ?? 0, paceColor(teamPct), { solid: expected !== null && t.quota > 0 ? expected / t.quota : null, height: 10 })}<div style="margin-top:4px">${expected !== null ? `▮ marker = on pace today (${n(Math.round(expected))} after ${n(p.workingDaysElapsed)} of ${n(p.workingDaysTotal)} working days)` : "no quota configured"}${t.othersMtd > 0 ? ` · plus ${n(t.othersMtd)} by users who are not configured reps` : ""}</div></td></tr><tr><td style="padding:0 4px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${C.border}"><tr>${statCell("Projected month-end", t.projected === null ? "unavailable" : n(t.projected), "at the current pace", "34%", false)}${statCell("Needed per working day", needText(t.mtd, t.quota, t.neededPerDay), "to reach quota", "33%", false)}${statCell("Working days left", n(p.workingDaysRemaining), `of ${n(p.workingDaysTotal)} this month`, "33%", true)}</tr></table></td></tr></table>`;
+  const colHead = `padding:0 0 4px;font:700 10px/1.2 ${FONT};letter-spacing:.06em;color:${C.muted}`;
   const repPaceRows = p.reps
     .map((r, i) => {
       const pct = r.quotaPct;
       const proj = r.projected !== null && r.quota > 0 ? r.projected / r.quota : null;
-      return `<tr${i ? ` style="border-top:1px solid ${C.border}"` : ""}>
-<td width="32" valign="middle" style="padding:8px 8px 8px 0">${avatar(r, 32)}</td>
-<td width="112" valign="middle" style="padding:8px 8px 8px 0"><div style="font:800 13px/1.3 ${FONT};color:${C.ink}">${esc(r.name)}</div><div style="font:600 11px/1.3 ${FONT};color:${C.muted}">${esc(r.role.toLowerCase())}</div></td>
-<td valign="middle" style="padding:8px 8px 8px 0">${markedBar(pct ?? 0, paceColor(pct), { hollow: proj })}<div style="font:600 11px/1.4 ${FONT};color:${C.secondary};margin-top:4px">${n(r.mtd)} / ${n(r.quota)} quota${pct === null ? "" : ` · ${n(Math.round(pct * 100))}%`} · need ${esc(needText(r.mtd, r.quota, r.neededPerDay))}${r.projected !== null ? ` · ▢ projected ${n(r.projected)}` : ""}</div></td>
-<td width="104" align="right" valign="middle" style="padding:8px 0 8px 6px"><div style="font:700 13px/1.3 ${FONT};color:${C.muted}">${r.commissionMtd === null ? "—" : esc(fmtValue("usd", r.commissionMtd))}</div><div style="font:500 10px/1.3 ${FONT};color:${C.muted}">${esc(r.commissionLabel)}</div></td>
-</tr>`;
+      return `<tr${i ? ` style="border-top:1px solid ${C.border}"` : ""}><td width="32" valign="middle" style="padding:8px 8px 8px 0">${avatar(r, 32)}</td><td width="112" valign="middle" style="padding:8px 8px 8px 0;font:600 11px/1.3 ${FONT};color:${C.muted}"><b style="font-size:13px;color:${C.ink}">${esc(r.name)}</b><br>${esc(r.role.toLowerCase())}</td><td valign="middle" style="padding:8px 8px 8px 0;font:600 11px/1.4 ${FONT};color:${C.secondary}">${markedBar(pct ?? 0, paceColor(pct), { hollow: proj })}<div style="margin-top:4px">${n(r.mtd)} / ${n(r.quota)} quota${pct === null ? "" : ` · ${n(Math.round(pct * 100))}%`} · need ${esc(needText(r.mtd, r.quota, r.neededPerDay))}${r.projected !== null ? ` · ▢ projected ${n(r.projected)}` : ""}</div></td><td width="104" align="right" valign="middle" style="padding:8px 0 8px 6px;font:500 10px/1.3 ${FONT};color:${C.muted}"><b style="font-size:13px">${r.commissionMtd === null ? "—" : esc(fmtValue("usd", r.commissionMtd))}</b><br>${esc(r.commissionLabel)}</td></tr>`;
     })
     .join("");
-  const repPaceHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td colspan="3" style="padding:0 0 4px;font:700 10px/1.2 ${FONT};letter-spacing:0.06em;text-transform:uppercase;color:${C.muted}">Submissions vs monthly quota</td><td align="right" style="padding:0 0 4px;font:700 10px/1.2 ${FONT};letter-spacing:0.06em;text-transform:uppercase;color:${C.muted}">Est. commission</td></tr>${repPaceRows}</table>`;
+  const repPaceHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td colspan="3" style="${colHead}">SUBMISSIONS VS MONTHLY QUOTA</td><td align="right" style="${colHead}">EST. COMMISSION</td></tr>${repPaceRows}</table>`;
   const semTile = (s: (typeof p.semesters)[number]) =>
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px"><tr><td style="padding:12px 14px">
-<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">${esc(s.label)}</div>
-<div style="white-space:nowrap"><span style="font:800 24px/1.1 ${FONT};color:${C.ink}">${esc(fmtValue("count", s.submittedMtd))}</span> <span style="font:600 11px/1.2 ${FONT};color:${C.muted}">submitted</span> &nbsp; <span style="font:800 24px/1.1 ${FONT};color:${C.ink}">${esc(fmtValue("count", s.acceptedMtd))}</span> <span style="font:600 11px/1.2 ${FONT};color:${C.muted}">accepted</span></div>
-<div style="font:500 11px/1.4 ${FONT};color:${C.muted};margin-top:6px">month to date · since ${esc(p.toDateSince ?? "tracking began")}: ${esc(fmtValue("count", s.submittedToDate))} submitted, ${esc(fmtValue("count", s.acceptedToDate))} accepted</div>
-</td></tr></table>`;
+    box(`${label(s.label)}<div style="margin:6px 0;white-space:nowrap">${big(fmtValue("count", s.submittedMtd), 24)} <span style="font-weight:600;font-size:11px;color:${C.muted}">submitted</span> &nbsp; ${big(fmtValue("count", s.acceptedMtd), 24)} <span style="font-weight:600;font-size:11px;color:${C.muted}">accepted</span></div><span style="font-size:11px;color:${C.muted}">month to date · since ${esc(p.toDateSince ?? "tracking began")}: ${esc(fmtValue("count", s.submittedToDate))} submitted, ${esc(fmtValue("count", s.acceptedToDate))} accepted</span>`);
   const semTiles = p.semesters.map(semTile);
   const semRowsHtml: string[][] = [];
   for (let i = 0; i < semTiles.length; i += 2) semRowsHtml.push(semTiles.slice(i, i + 2));
@@ -492,9 +486,9 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
       heroHtml +
         (narrative ? paragraph(narrative.projections) : "") +
         repPaceHtml +
-        `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:14px 0 8px">Semester totals (Veteran G.I. Bill)</div>` +
+        `<div style="font-size:14px;font-weight:800;line-height:1.3;color:${C.ink};margin:14px 0 8px">Semester totals (Veteran G.I. Bill)</div>` +
         tileTable(semRowsHtml) +
-        `<div style="font:700 13px/1.4 ${FONT};color:${C.ink};margin-top:2px">Estimated commission to date: ${esc(fmtValue("usd", p.commissionMtd))} <span style="font-weight:500;color:${C.muted}">(estimates from dashboard counts; the official calculation is done outside the dashboard)</span></div>` +
+        `<div style="font-size:13px;font-weight:700;line-height:1.4;color:${C.ink};margin-top:2px">Estimated commission to date: ${esc(fmtValue("usd", p.commissionMtd))} <span style="font-weight:500;color:${C.muted}">(estimates from dashboard counts; the official calculation is done outside the dashboard)</span></div>` +
         note("Projection = month-to-date submissions ÷ working days elapsed × working days in the month (Monday to Friday); need/day = the gap to quota over the working days left; the pace marker = quota × working days elapsed ÷ working days in the month; quota and commission count every semester."),
       `as of ${fmtDateTime(p.asOf)}`,
     ),
@@ -504,7 +498,7 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
   const steps = d.funnel.steps;
   const maxCur = Math.max(1, ...steps.map((s) => s.cur ?? 0));
   const ratePct = (a: number | null, b: number | null) => (a === null || b === null || b <= 0 ? null : Math.round((a / b) * 100));
-  const shortLabel = (label: string) => label.replace(/\s*\(.*\)\s*$/, "");
+  const shortLabel = (text: string) => text.replace(/\s*\(.*\)\s*$/, "");
   const funnelRows = steps
     .map((s, i) => {
       const w = s.cur === null ? 0 : Math.max(12, Math.round((s.cur / maxCur) * 100));
@@ -528,11 +522,7 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
   const funnelHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:12px">${funnelRows}</table>`;
   const cohortCard = (c: (typeof d.funnel.cohort)[number]) => {
     const pct = (v: number) => (c.leads > 0 ? `${n(Math.round((v / c.leads) * 100))}%` : "—");
-    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px"><tr><td style="padding:10px 12px">
-<div style="font:700 10px/1.2 ${FONT};letter-spacing:0.06em;text-transform:uppercase;color:${C.muted}">${esc(c.label)}</div>
-<div style="font:800 18px/1.3 ${FONT};color:${C.ink}">${n(c.leads)} <span style="font:600 11px/1.2 ${FONT};color:${C.muted}">leads</span></div>
-<div style="font:500 12px/1.45 ${FONT};color:${C.secondary}">${n(c.appointment)} booked an appointment (${pct(c.appointment)}) · ${n(c.submitted)} submitted (${pct(c.submitted)}) · ${n(c.won)} won (${pct(c.won)})${c.historyUnavailable > 0 ? ` · history unavailable for ${n(c.historyUnavailable)}` : ""}</div>
-</td></tr></table>`;
+    return box(`${label(c.label, 10)}<div style="margin:2px 0">${big(n(c.leads), 18)} <span style="font-weight:600;font-size:11px;color:${C.muted}">leads</span></div>${n(c.appointment)} booked an appointment (${pct(c.appointment)}) · ${n(c.submitted)} submitted (${pct(c.submitted)}) · ${n(c.won)} won (${pct(c.won)})${c.historyUnavailable > 0 ? ` · history unavailable for ${n(c.historyUnavailable)}` : ""}`, "", "10px 12px");
   };
   const cohortTiles = d.funnel.cohort.slice(0, 2).map(cohortCard);
   parts.push(
@@ -540,7 +530,7 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
       "4 · Funnel conversion",
       "Leads → appointments → submissions → accepted → won",
       funnelHtml +
-        (cohortTiles.length ? `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:0 0 8px">Matched cohorts (Lead Outcomes), as of today</div>` + tileTable([cohortTiles]) : "") +
+        (cohortTiles.length ? `<div style="font-size:14px;font-weight:800;line-height:1.3;color:${C.ink};margin:0 0 8px">Matched cohorts (Lead Outcomes), as of today</div>` + tileTable([cohortTiles]) : "") +
         note("Each bar is the week's own event count (different contacts at each step), so read the funnel as throughput, not one group followed through; the cohort cards do follow one week's new leads. Submissions = CA 101 + IAU App, Accepted = IAU App Accepted, Won = Army CA + Veteran G.I. Bill, every semester."),
     ),
   );
@@ -592,12 +582,7 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
       sev: ph.staleConversations.conversations === 0 ? "good" : ph.staleConversations.conversations < 10 ? "warn" : "bad",
     },
   ];
-  const healthTile = (x: (typeof healthTiles)[number]) =>
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-left:4px solid ${sevColor(x.sev)};border-radius:12px"><tr><td style="padding:12px 14px">
-<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">${esc(x.label)}</div>
-<div style="font:800 26px/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${esc(x.value)}</div>
-<div style="font:500 11px/1.45 ${FONT};color:${C.secondary};margin-top:4px">${esc(x.sub)}</div>
-</td></tr></table>`;
+  const healthTile = (x: (typeof healthTiles)[number]) => box(`${label(x.label)}<div style="margin:6px 0 4px">${big(x.value, 26)}</div><span style="font-size:11px">${esc(x.sub)}</span>`, `;border-left:4px solid ${sevColor(x.sev)}`);
   const healthRows: string[][] = [];
   for (let i = 0; i < healthTiles.length; i += 2) healthRows.push(healthTiles.slice(i, i + 2).map(healthTile));
   parts.push(

@@ -46,7 +46,7 @@ export function weeklyReportConfig(): WeeklyReportConfig {
     catchUpHours: num(raw.catchUpHours, 0, 24 * 6, 48),
     recipients: emails(raw.recipients),
     from: { name: str(from.name, "VCN Sales Dashboard"), address: str(from.address, "info@intelagentmedia.com").toLowerCase() },
-    subject: str(raw.subject, "VCN Weekly Sales Report: {range}"),
+    subject: str(raw.subject, "VCN Weekly Sales Report · {range}"),
     workingDays: (Array.isArray(raw.workingDays) ? raw.workingDays : [1, 2, 3, 4, 5]).filter((d): d is number => typeof d === "number" && d >= 0 && d <= 6),
     flags: { underGoalShare: num(flags.underGoalShare, 0, 1, 0.5), showRateDropPoints: num(flags.showRateDropPoints, 0, 100, 10) },
     dashboardUrl: str(raw.dashboardUrl, "").replace(/\/+$/, ""),

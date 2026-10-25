@@ -45,6 +45,66 @@ function b64(data: Buffer | string): string {
   return s.replace(/.{1,76}/g, (m) => m + CRLF).trimEnd();
 }
 
+/**
+ * Quoted-printable (RFC 2045) for the text parts: readable ASCII stays as it is, so the encoded part is
+ * barely larger than the text itself. Base64 would add a third, and Gmail's clipping limit (about 102 KB)
+ * is measured on the encoded HTML part. Lines are kept to 76 characters with soft breaks.
+ */
+export function qp(text: string): string {
+  const bytes = Buffer.from(text.replace(/\r?\n/g, "\r\n"), "utf8");
+  const lines: string[] = [];
+  let line = "";
+  const endLine = () => {
+    // Trailing whitespace is not allowed to end a line in quoted-printable.
+    if (line.endsWith(" ")) line = line.slice(0, -1) + "=20";
+    else if (line.endsWith("\t")) line = line.slice(0, -1) + "=09";
+    lines.push(line);
+    line = "";
+  };
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i];
+    if (b === 13 && bytes[i + 1] === 10) {
+      endLine();
+      i++;
+      continue;
+    }
+    const tok = (b >= 33 && b <= 126 && b !== 61) || b === 32 || b === 9 ? String.fromCharCode(b) : `=${b.toString(16).toUpperCase().padStart(2, "0")}`;
+    if (line.length + tok.length > 75) {
+      lines.push(line + "=");
+      line = "";
+    }
+    line += tok;
+  }
+  if (line) endLine();
+  // A text that ends with a line break keeps it (the loop consumed the CRLF without opening a new line).
+  return lines.join(CRLF) + (bytes.length >= 2 && bytes[bytes.length - 2] === 13 && bytes[bytes.length - 1] === 10 ? CRLF : "");
+}
+
+/**
+ * For an 8BITMIME session the text parts go as UTF-8 exactly as they are (no "=3D" for every equals sign,
+ * no soft breaks), which keeps the HTML part the same size Gmail will measure. SMTP lines may not exceed
+ * 998 bytes, so a long line is split between two tags (or at a space) well before that.
+ */
+export function wrap8bit(text: string, maxChars = 700): string {
+  return text
+    .replace(/\r?\n/g, "\r\n")
+    .split("\r\n")
+    .flatMap((line) => {
+      const out: string[] = [];
+      while (Buffer.byteLength(line) > 990) {
+        let cut = line.lastIndexOf("><", maxChars) + 1;
+        if (cut <= 0) cut = line.lastIndexOf(" ", maxChars);
+        if (cut <= 0) cut = Math.min(maxChars, line.length - 1);
+        while (cut > 1 && Buffer.byteLength(line.slice(0, cut)) > 990) cut = Math.floor(cut / 2);
+        out.push(line.slice(0, cut));
+        line = line.slice(cut);
+      }
+      out.push(line);
+      return out;
+    })
+    .join(CRLF);
+}
+
 function encodeHeaderText(s: string): string {
   // eslint-disable-next-line no-control-regex
   return /^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffer.from(s, "utf8").toString("base64")}?=`;
@@ -56,7 +116,9 @@ function addr(name: string, address: string): string {
 }
 
 /** The raw RFC 5322 message, CRLF line endings, ready for DATA. */
-export function buildMime(msg: MailMessage, messageId: string): string {
+export function buildMime(msg: MailMessage, messageId: string, opts: { eightBit?: boolean } = {}): string {
+  const textEncoding = opts.eightBit ? "8bit" : "quoted-printable";
+  const encodeText = (s: string) => (opts.eightBit ? wrap8bit(s) : qp(s));
   const alt = `alt-${randomUUID()}`;
   const rel = `rel-${randomUUID()}`;
   const domain = msg.from.address.split("@")[1] || "localhost";
@@ -71,14 +133,14 @@ export function buildMime(msg: MailMessage, messageId: string): string {
   const alternative = [
     `--${alt}`,
     "Content-Type: text/plain; charset=utf-8",
-    "Content-Transfer-Encoding: base64",
+    `Content-Transfer-Encoding: ${textEncoding}`,
     "",
-    b64(msg.text),
+    encodeText(msg.text),
     `--${alt}`,
     "Content-Type: text/html; charset=utf-8",
-    "Content-Transfer-Encoding: base64",
+    `Content-Transfer-Encoding: ${textEncoding}`,
     "",
-    b64(msg.html),
+    encodeText(msg.html),
     `--${alt}--`,
   ];
   const inline = msg.inline ?? [];
@@ -125,7 +187,6 @@ export async function sendGmail(msg: MailMessage, opts: { host?: string; port?: 
   const port = opts.port ?? 465;
   const timeoutMs = opts.timeoutMs ?? 30_000;
   const messageId = randomUUID();
-  const raw = buildMime(msg, messageId);
 
   const socket = tls.connect({ host, port, servername: host });
   socket.setEncoding("utf8");
@@ -184,10 +245,13 @@ export async function sendGmail(msg: MailMessage, opts: { host?: string; port?: 
       setTimeout(() => reject(new Error(`SMTP connect: no TLS handshake within ${timeoutMs / 1000}s`)), timeoutMs);
     });
     await expect("greeting", (c) => c === 220);
-    await expect("EHLO", is2xx, `EHLO ${msg.from.address.split("@")[1] || "localhost"}`);
+    const ehlo = await expect("EHLO", is2xx, `EHLO ${msg.from.address.split("@")[1] || "localhost"}`);
+    // Gmail advertises 8BITMIME; with it the text parts go unencoded, which keeps the HTML part at its real size.
+    const eightBit = /^8BITMIME$/im.test(ehlo.text);
+    const raw = buildMime(msg, messageId, { eightBit });
     const plain = Buffer.from(`\u0000${user}\u0000${pass}`, "utf8").toString("base64");
     await expect("AUTH", (c) => c === 235, `AUTH PLAIN ${plain}`);
-    await expect("MAIL FROM", is2xx, `MAIL FROM:<${msg.from.address}>`);
+    await expect("MAIL FROM", is2xx, `MAIL FROM:<${msg.from.address}>${eightBit ? " BODY=8BITMIME" : ""}`);
     for (const to of msg.to) await expect(`RCPT TO ${to}`, is2xx, `RCPT TO:<${to}>`);
     await expect("DATA", (c) => c === 354, "DATA");
     // Dot-stuffing: a line starting with "." must be sent as "..".

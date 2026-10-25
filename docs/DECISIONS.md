@@ -1164,3 +1164,17 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     src/lib/weeklyReport/render.ts changes. The preview route takes
     ?theme=light|dark (and POST {theme}) to compare; test subjects carry
     [light] / [dark]. Default stays light until the owner chooses.
+    Delivery (owner request 2026-10-24): the subject carries the week's range
+    with the year ("VCN Weekly Sales Report · Oct 12 – Oct 18, 2026") so Gmail
+    never threads one week's report under another's and trims "repeated"
+    sections; test sends add "· sent <time>" so every test is unique. Gmail
+    clips an HTML part over about 102 KB (measured as sent, encoding
+    included), so the renderer keeps the HTML small: the font family is set
+    once per table cell and inherited by the text inside it, labels are
+    uppercased in code rather than with CSS, whitespace between tags is
+    dropped, and photos stay inline CID attachments (never base64 in the
+    HTML). The mailer sends the text parts as 8bit when the server advertises
+    8BITMIME (Gmail does), falling back to quoted-printable; base64 would have
+    added a third to the size. Last week's report rendered at about 80 KB per
+    theme (81 KB on the wire); the section redesigns still to come must stay
+    inside that budget.
