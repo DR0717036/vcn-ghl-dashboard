@@ -125,7 +125,7 @@ export function briefFallback(d: WeeklyReportData): string {
   const h = (key: string) => d.headlines.find((x) => x.key === key)!;
   const c = h("combined");
   const goal = c.goal === null ? "" : ` of a ${n(Math.round(c.goal))} goal`;
-  return `${fmtValue("count", c.value)} combined submissions${goal}, ${fmtValue("count", h("dials").value)} dials, ${fmtValue("count", h("booked").value)} appointments booked, ${fmtValue("count", h("won").value)} won.`;
+  return `${fmtValue("count", c.value)} combined submissions${goal} (Army ${fmtValue("count", h("army").value)}, Veteran ${fmtValue("count", h("iau").value)}), ${fmtValue("count", h("booked").value)} appointments booked, ${fmtValue("count", h("newLeads").value)} leads created, ${fmtValue("count", h("won").value)} won.`;
 }
 
 /** Small green / red / gray change pill vs last week. */
@@ -138,7 +138,7 @@ function changePill(h: Headline): string {
 
 /** Thin goal-progress bar (table cells, no images) with "x of goal · y%" under it. */
 function goalBar(h: Headline): string {
-  if (h.goal === null || h.goal <= 0) return `<div style="font:500 11px/1.4 ${FONT};color:${C.muted};margin-top:8px">no goal</div>`;
+  if (h.goal === null || h.goal <= 0) return "";
   const v = h.value ?? 0;
   const pct = Math.round((v / h.goal) * 100);
   const fill = Math.max(v > 0 ? 2 : 0, Math.min(100, Math.round((v / h.goal) * 100)));
@@ -151,38 +151,23 @@ function goalBar(h: Headline): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px"><tr>${fill === 0 ? `<td height="6" bgcolor="${C.border}" style="height:6px;font-size:0;line-height:0;border-radius:3px">&nbsp;</td>` : bar}</tr></table><div style="font:500 11px/1.4 ${FONT};color:${C.muted};margin-top:4px">${esc(fmtValue(h.kind, h.value))} of ${esc(goalText)} goal · ${n(pct)}%</div>`;
 }
 
-/** One KPI tile: label, big number, change pill, sub-line, goal bar. */
-function tile(h: Headline, sub: string, small = false): string {
+/** "Opportunity Value $X (last week $Y)" for a headline that carries one; empty otherwise. */
+function oppValueLine(h: Headline): string {
+  const o = h.oppValue;
+  if (!o) return "";
+  return `Opportunity Value ${fmtValue("usd", o.value)}${o.prev !== null ? ` (last week ${fmtValue("usd", o.prev)})` : ""}`;
+}
+
+/** One KPI tile: label, big number, change pill, one or more sub-lines, goal bar when there is a goal. */
+function tile(h: Headline, sub: string | string[], small = false): string {
   const big = small ? "22px" : "28px";
   const value = h.value === null ? `<span style="font:800 ${small ? "16px" : "18px"}/1.2 ${FONT};color:${C.muted}" title="${esc(h.unavailable ?? "")}">unavailable</span>` : `<span style="font:800 ${big}/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${esc(fmtValue(h.kind, h.value))}</span>`;
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px"><tr><td style="padding:12px 14px">
 <div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">${esc(h.label)}</div>
 <div>${value} &nbsp;${changePill(h)}</div>
-<div style="font:500 12px/1.4 ${FONT};color:${C.secondary};margin-top:4px">${esc(sub)}</div>
+${(Array.isArray(sub) ? sub : [sub]).filter(Boolean).map((s) => `<div style="font:500 12px/1.4 ${FONT};color:${C.secondary};margin-top:4px">${esc(s)}</div>`).join("")}
 ${goalBar(h)}
 </td></tr></table>`;
-}
-
-/** Two stacked segment bars (this week, last week) of the submissions parts on one shared scale, with a legend. */
-function mixBars(h: Headline): string {
-  const parts = h.parts ?? [];
-  const colors = [C.blue, "#0a8db4", "#a88900", "#d55181", "#8178e0"];
-  const totals = [parts.reduce((s, p) => s + (p.value ?? 0), 0), parts.reduce((s, p) => s + (p.prev ?? 0), 0)];
-  const scale = Math.max(1, ...totals);
-  const row = (label: string, pick: (p: NonNullable<Headline["parts"]>[number]) => number | null, total: number) => {
-    const segs = parts.map((p, i) => ({ v: pick(p) ?? 0, color: colors[i % colors.length], short: p.short })).filter((s) => s.v > 0);
-    const used = segs.reduce((s, x) => s + Math.round((x.v / scale) * 100), 0);
-    const cells = segs.map((s) => { const w = Math.round((s.v / scale) * 100); return `<td width="${w}%" bgcolor="${s.color}" style="height:20px;font:700 11px/20px ${FONT};color:#ffffff;text-align:center;white-space:nowrap;overflow:hidden">${w >= 30 ? esc(s.short) + " " : ""}${n(s.v)}</td>`; }).join("");
-    const rest = used < 100 ? `<td bgcolor="#eef2f6" style="height:20px;font-size:0;line-height:0">&nbsp;</td>` : "";
-    return `<tr><td width="76" style="font:600 12px/1.3 ${FONT};color:${C.secondary};padding:0 8px 6px 0;white-space:nowrap">${esc(label)}</td><td style="padding:0 0 6px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-radius:4px;overflow:hidden">${segs.length ? `<tr>${cells}${rest}</tr>` : `<tr><td bgcolor="#eef2f6" style="height:20px;font:600 11px/20px ${FONT};color:${C.muted};text-align:center">none</td></tr>`}</table></td><td width="34" align="right" style="font:800 13px/1.3 ${FONT};color:${C.ink};padding:0 0 6px 8px">${n(total)}</td></tr>`;
-  };
-  const legend = parts.map((p, i) => `<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[i % colors.length]};vertical-align:-1px"></span> ${esc(p.short)} <b style="color:${C.ink}">${esc(fmtValue("count", p.value))}</b> <span style="color:${C.muted}">(last week ${esc(fmtValue("count", p.prev))})</span></span>`).join("");
-  // Army = the CA 101 part; Veteran = every IAU part (one per semester).
-  const army = parts.filter((p) => /CA 101/.test(p.short));
-  const vet = parts.filter((p) => !/CA 101/.test(p.short));
-  const sum = (list: typeof parts, pick: (p: (typeof parts)[number]) => number | null) => (list.some((p) => pick(p) === null) ? null : list.reduce((s, p) => s + (pick(p) ?? 0), 0));
-  const split = `<div style="font:800 14px/1.5 ${FONT};color:${C.ink};margin-top:4px">Army ${esc(fmtValue("count", sum(army, (p) => p.value)))} · Veteran ${esc(fmtValue("count", sum(vet, (p) => p.value)))} <span style="font:500 12px/1.5 ${FONT};color:${C.muted}">(last week Army ${esc(fmtValue("count", sum(army, (p) => p.prev)))} · Veteran ${esc(fmtValue("count", sum(vet, (p) => p.prev)))})</span></div>`;
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${row("This week", (p) => p.value, totals[0])}${row("Last week", (p) => p.prev, totals[1])}</table><div style="font:500 12px/1.6 ${FONT};color:${C.secondary};margin-top:2px">${legend}</div>${split}`;
 }
 
 export function renderHtml(d: WeeklyReportData, narrative: Narrative | null): string {
@@ -190,23 +175,20 @@ export function renderHtml(d: WeeklyReportData, narrative: Narrative | null): st
   const link = (path: string, label: string) => (dash ? `<a href="${esc(dash + path)}" style="color:${C.blueText};font-weight:700">${esc(label)}</a>` : esc(label));
   const parts: string[] = [];
 
-  // 1. headline numbers: week in brief, six KPI tiles, submissions mix, leads tiles, one-line note
+  // 1. headline numbers: week in brief, six KPI tiles in three rows (submissions and won; Army and Veteran submissions; booked and leads created), one-line note
   const H = (key: string) => d.headlines.find((x) => x.key === key)!;
   const brief = narrative?.brief ?? briefFallback(d);
   const briefHtml = `<div style="border-left:4px solid ${C.yellow};background:${C.inset};border-radius:0 10px 10px 0;padding:10px 14px;margin:0 0 14px;font:600 15px/1.45 ${FONT};color:${C.ink}">${esc(brief)}</div>`;
-  const showRate = H("showRate");
   const wonValue = H("wonValue");
+  const iau = H("iau");
+  const semesterLine = (iau.parts ?? []).map((p) => `${p.short} ${fmtValue("count", p.value)}`).join(" · ");
   const tileRows = [
-    [tile(H("combined"), `last week ${fmtValue("count", H("combined").prev)}`), tile(H("won"), `${fmtValue("usd", wonValue.value)} Opportunity Value${wonValue.prev !== null ? ` (last week ${fmtValue("usd", wonValue.prev)})` : ""}`)],
-    [tile(H("talk"), `last week ${fmtValue("minutes", H("talk").prev)}`), tile(H("booked"), `last week ${fmtValue("count", H("booked").prev)}`)],
-    [tile(H("completed"), `show rate ${fmtValue("pct", showRate.value)}${showRate.prev !== null ? ` (last week ${fmtValue("pct", showRate.prev)})` : ""}`), tile(H("dials"), `last week ${fmtValue("count", H("dials").prev)}`)],
+    [tile(H("combined"), oppValueLine(H("combined"))), tile(H("won"), `Opportunity Value ${fmtValue("usd", wonValue.value)}${wonValue.prev !== null ? ` (last week ${fmtValue("usd", wonValue.prev)})` : ""}`)],
+    [tile(H("army"), oppValueLine(H("army"))), tile(iau, [semesterLine, oppValueLine(iau)])],
+    [tile(H("booked"), `last week ${fmtValue("count", H("booked").prev)}`), tile(H("newLeads"), `last week ${fmtValue("count", H("newLeads").prev)}`)],
   ];
   const tileTable = (rows: string[][]) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows.map((r) => `<tr>${r.map((t, i) => `<td width="50%" valign="top" style="padding:0 ${i === 0 ? "5px" : "0"} 10px ${i === 0 ? "0" : "5px"}">${t}</td>`).join("")}</tr>`).join("")}</table>`;
-  const firstRowHtml = tileTable(tileRows.slice(0, 1));
-  const otherRowsHtml = tileTable(tileRows.slice(1));
-  const mixHtml = `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:4px 0 8px">Submissions by program</div>` + mixBars(H("combined")) + `<div style="height:14px;font-size:0;line-height:0">&nbsp;</div>`;
-  const leadsHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px"><tr><td width="50%" valign="top" style="padding:0 5px 0 0">${tile(H("newLeads"), `last week ${fmtValue("count", H("newLeads").prev)}`, true)}</td><td width="50%" valign="top" style="padding:0 0 0 5px">${tile(H("assigned"), H("assigned").prevUnavailable && H("assigned").prev === null ? "no comparison: assignment tracking is newer than last week" : `last week ${fmtValue("count", H("assigned").prev)}`, true)}</td></tr></table>`;
-  parts.push(section("1 · Headline numbers", `${d.rangeText} vs ${d.prevRangeText}`, briefHtml + firstRowHtml + mixHtml + otherRowsHtml + leadsHtml + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`)));
+  parts.push(section("1 · Headline numbers", `${d.rangeText} vs ${d.prevRangeText}`, briefHtml + tileTable(tileRows) + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`)));
 
   // 2. leaderboard
   const callouts: string[] = [];
@@ -375,6 +357,7 @@ export function renderText(d: WeeklyReportData, narrative: Narrative | null): st
     const g = goalCell(h);
     rows.push([h.label, fmtValue(h.kind, h.value), h.prevUnavailable && h.prev === null ? "n/a" : fmtValue(h.kind, h.prev), chg(h.kind, h.value, h.prev, h.lowerIsBetter), g.text]);
     for (const p of h.parts ?? []) rows.push([`  - ${p.label}`, fmtValue(h.kind, p.value), fmtValue(h.kind, p.prev), chg(h.kind, p.value, p.prev), ""]);
+    if (h.oppValue) rows.push(["  Opportunity Value", fmtValue("usd", h.oppValue.value), h.oppValue.prev === null ? "n/a" : fmtValue("usd", h.oppValue.prev), chg("usd", h.oppValue.value, h.oppValue.prev), ""]);
   }
   out.push(textTable(["Metric", "This wk", "Last wk", "Change", "Goal"], rows, [34, 10, 10, 16, 16]));
 

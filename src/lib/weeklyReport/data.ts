@@ -44,6 +44,8 @@ export interface Headline {
   lowerIsBetter?: boolean;
   /** Smaller lines under the figure (e.g. CA 101 and each semester's IAU part); `short` is the label for tight spaces. */
   parts?: { label: string; short: string; value: number | null; prev: number | null }[];
+  /** Opportunity Value behind the figure (value at the time of each event, distinct opportunities), as the card reports it. Never revenue. */
+  oppValue?: { value: number | null; prev: number | null; missing: number };
   /** Where the figure comes from on the dashboard. */
   source: string;
 }
@@ -237,7 +239,38 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
         { label: "CA 101 (Army)", short: "Army CA 101", value: subs.parts?.ca101.achieved ?? null, prev: subs.parts?.ca101.prev ?? null },
         ...(subs.parts?.iau ?? []).map((p) => ({ label: p.label, short: `Veteran IAU (${semesters().find((s) => s.submittedKey === p.key)?.short ?? p.reportingGroup})`, value: p.achieved, prev: p.prev })),
       ],
+      oppValue: subs.value === null ? undefined : { value: subs.oppValue, prev: subs.prevOppValue, missing: subs.oppValueMissing },
       source: "Program Submissions (combined), every semester",
+    },
+    {
+      key: "army",
+      label: "Army CA 101 submissions",
+      kind: "count",
+      value: subs.value === null ? null : subs.ca101,
+      unavailable: subs.unavailableReason,
+      prev: subs.parts?.ca101.prev ?? null,
+      prevUnavailable: subs.parts?.ca101.prevUnavailableReason,
+      goal: null,
+      oppValue: subs.parts ? { value: subs.parts.ca101.value, prev: subs.parts.ca101.prevValue, missing: subs.parts.ca101.valueMissing } : undefined,
+      source: "Army CA 101 Submitted card (the CA 101 part of combined submissions)",
+    },
+    {
+      key: "iau",
+      label: "Veteran IAU submissions",
+      kind: "count",
+      value: subs.value === null ? null : subs.iau,
+      unavailable: subs.unavailableReason,
+      prev: !subs.parts || subs.parts.iau.some((p) => p.prev === null) ? null : subs.parts.iau.reduce((s, p) => s + (p.prev ?? 0), 0),
+      prevUnavailable: subs.parts?.iau.find((p) => p.prevUnavailableReason)?.prevUnavailableReason,
+      goal: null,
+      parts: (subs.parts?.iau ?? []).map((p) => {
+        const sem = semesters().find((s) => s.submittedKey === p.key);
+        return { label: p.label, short: sem?.short ?? p.reportingGroup, value: p.achieved, prev: p.prev };
+      }),
+      oppValue: subs.parts
+        ? { value: subs.parts.iau.reduce((s, p) => s + p.value, 0), prev: subs.parts.iau.some((p) => p.prevValue === null) ? null : subs.parts.iau.reduce((s, p) => s + (p.prevValue ?? 0), 0), missing: subs.parts.iau.reduce((s, p) => s + p.valueMissing, 0) }
+        : undefined,
+      source: "IAU App Submitted cards, every semester (the IAU part of combined submissions)",
     },
     { key: "dials", label: "Dials", kind: "count", value: calls.total.dials, prev: callsPrev.total.dials, goal: calls.callsGoal?.full ?? null, source: "Rep Call Activity (outbound human dials)" },
     { key: "talk", label: "Talk time", kind: "minutes", value: talk.value, unavailable: talk.unavailableReason, prev: talk.prev, prevUnavailable: talk.prevUnavailableReason, goal: talk.goal?.full ?? null, source: "Talk Time card" },
@@ -249,6 +282,7 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
     { key: "won", label: "Won opportunities", kind: "count", value: wonNow.total.count, prev: wonPrev.total.count, goal: null, source: "Won row, Became Won During Period (Army CA + Veteran G.I. Bill)" },
     { key: "wonValue", label: "Won Opportunity Value", kind: "usd", value: wonNow.total.value, prev: wonPrev.total.value, goal: null, source: "Won row (Opportunity Value, never cash or commission)" },
   ];
+  if (subs.oppValueMissing > 0) notes.push(`${n(subs.oppValueMissing)} submitted opportunit${subs.oppValueMissing === 1 ? "y has" : "ies have"} no Opportunity Value in GHL and add nothing to the submissions value.`);
   if (wonNow.total.valueMissing > 0) notes.push(`${n(wonNow.total.valueMissing)} won opportunit${wonNow.total.valueMissing === 1 ? "y has" : "ies have"} no Opportunity Value in GHL and add nothing to the value total.`);
 
   // ---- 2. rep leaderboard ----------------------------------------------------------------

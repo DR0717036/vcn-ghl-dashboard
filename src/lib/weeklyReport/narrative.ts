@@ -58,6 +58,12 @@ export function narrativeInput(d: WeeklyReportData): Record<string, unknown> {
     weekStillInProgress: d.partial,
     headline: {
       combinedSubmissions: line("combined"),
+      armyCA101Submissions: line("army"),
+      veteranIauSubmissions: line("iau"),
+      submissionsOpportunityValue: (() => {
+        const o = h("combined").oppValue;
+        return o ? { thisWeek: fmtValue("usd", o.value), lastWeek: fmtValue("usd", o.prev) } : "unavailable";
+      })(),
       dials: line("dials"),
       talkTime: line("talk"),
       appointmentsBooked: line("booked"),
