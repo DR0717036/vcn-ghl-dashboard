@@ -5,7 +5,7 @@
 // the trend commentary, the projections wording, and the three tips.
 
 import { fmtDateTime } from "@/lib/dates";
-import { fmtValue, type Flag, type Headline, type Kind, type WeeklyReportData } from "./data";
+import { fmtValue, type Flag, type Headline, type Kind, type RepRow, type WeeklyReportData } from "./data";
 import type { Narrative } from "./narrative";
 
 export const LOGO_CID = "vcn-logo";
@@ -130,7 +130,11 @@ export function briefFallback(d: WeeklyReportData): string {
 
 /** Small green / red / gray change pill vs last week. */
 function changePill(h: Headline): string {
-  const c = change(h.kind, h.value, h.prev, h.lowerIsBetter);
+  return changePillFor(h.kind, h.value, h.prev, h.lowerIsBetter);
+}
+
+function changePillFor(kind: Kind, value: number | null, prev: number | null, lowerIsBetter = false): string {
+  const c = change(kind, value, prev, lowerIsBetter);
   if (!c) return `<span style="display:inline-block;font:700 11px/1 ${FONT};color:${C.muted};background:#eef2f6;border-radius:999px;padding:4px 8px;white-space:nowrap">no comparison</span>`;
   const bg = c.arrow === "■" ? "#eef2f6" : c.color === C.good ? C.goodBg : C.badBg;
   return `<span style="display:inline-block;font:700 11px/1 ${FONT};color:${c.color};background:${bg};border-radius:999px;padding:4px 8px;white-space:nowrap">${c.arrow} ${esc(c.text)}</span>`;
@@ -170,6 +174,56 @@ ${goalBar(h)}
 </td></tr></table>`;
 }
 
+/** Inline-image id for a rep's photo (attached as cid:<id> in the email; served from /public in the browser preview). */
+export function repPhotoCid(userId: string): string {
+  return `rep-${userId.replace(/[^A-Za-z0-9]/g, "")}`;
+}
+
+/** The rep photos the HTML references, as {cid, publicPath} (publicPath like "/reps/jane-doe.jpg"). */
+export function repPhotoAssets(d: WeeklyReportData): { cid: string; publicPath: string }[] {
+  const seen = new Set<string>();
+  const out: { cid: string; publicPath: string }[] = [];
+  for (const r of d.reps) {
+    if (!r.photo) continue;
+    const cid = repPhotoCid(r.userId);
+    if (seen.has(cid)) continue;
+    seen.add(cid);
+    out.push({ cid, publicPath: r.photo });
+  }
+  return out;
+}
+
+/** Round rep photo, or an initials circle when there is no photo. Plain img / table cell, so it renders everywhere. */
+function avatar(r: RepRow, size: number): string {
+  if (r.photo) return `<img src="cid:${repPhotoCid(r.userId)}" width="${size}" height="${size}" alt="${esc(r.initials)}" style="display:block;width:${size}px;height:${size}px;border-radius:50%;border:0">`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr><td width="${size}" height="${size}" align="center" valign="middle" bgcolor="${C.dark}" style="width:${size}px;height:${size}px;border-radius:50%;font:800 ${Math.round(size * 0.36)}px/1 ${FONT};color:#ffffff">${esc(r.initials)}</td></tr></table>`;
+}
+
+/** Green at or above goal, yellow from half, red below half (the leaderboard's attainment colors). */
+function attainColor(att: number | null): string {
+  if (att === null) return C.border;
+  return att >= 1 ? C.good : att >= 0.5 ? C.yellow : C.bad;
+}
+
+/** Thin bar filled to `pct` (0 to 1, more is capped) in `color`; table cells only, no images. */
+function bar(pct: number, color: string, height = 6): string {
+  const fill = Math.max(pct > 0 ? 2 : 0, Math.min(100, Math.round(pct * 100)));
+  const s = `height:${height}px;font-size:0;line-height:0`;
+  const open = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>`;
+  if (fill === 0) return `${open}<td height="${height}" bgcolor="${C.border}" style="${s};border-radius:3px">&nbsp;</td></tr></table>`;
+  if (fill >= 100) return `${open}<td height="${height}" bgcolor="${color}" style="${s};border-radius:3px">&nbsp;</td></tr></table>`;
+  return `${open}<td height="${height}" width="${fill}%" bgcolor="${color}" style="${s};border-radius:3px 0 0 3px">&nbsp;</td><td height="${height}" bgcolor="${C.border}" style="${s};border-radius:0 3px 3px 0">&nbsp;</td></tr></table>`;
+}
+
+/** A numbers-only sentence on the spread across reps for when the narrative is unavailable; every figure is copied from the data. */
+export function leaderboardFallback(d: WeeklyReportData): string {
+  if (d.reps.length === 0) return "No sales reps are configured.";
+  const top = d.reps[0];
+  const bottom = d.reps[d.reps.length - 1];
+  const met = d.reps.filter((r) => r.attainment !== null && r.attainment >= 1).length;
+  return `${top.name} led with ${n(top.combined)} submissions and ${bottom.name} had ${n(bottom.combined)}; ${n(met)} of ${n(d.reps.length)} reps met their weekly goal.`;
+}
+
 export function renderHtml(d: WeeklyReportData, narrative: Narrative | null): string {
   const dash = d.dashboardUrl;
   const link = (path: string, label: string) => (dash ? `<a href="${esc(dash + path)}" style="color:${C.blueText};font-weight:700">${esc(label)}</a>` : esc(label));
@@ -190,37 +244,42 @@ export function renderHtml(d: WeeklyReportData, narrative: Narrative | null): st
   const tileTable = (rows: string[][]) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows.map((r) => `<tr>${r.map((t, i) => `<td width="50%" valign="top" style="padding:0 ${i === 0 ? "5px" : "0"} 10px ${i === 0 ? "0" : "5px"}">${t}</td>`).join("")}</tr>`).join("")}</table>`;
   parts.push(section("1 · Headline numbers", `${d.rangeText} vs ${d.prevRangeText}`, briefHtml + tileTable(tileRows) + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`)));
 
-  // 2. leaderboard
-  const callouts: string[] = [];
-  if (d.topPerformer) callouts.push(`<td style="padding:0 6px 10px 0" width="50%"><div style="background:${C.inset};border-radius:10px;padding:10px 12px"><div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted}">Top performer</div><div style="font:800 16px/1.3 ${FONT};color:${C.ink}">${esc(d.topPerformer.name)}</div><div style="font:500 12px/1.4 ${FONT};color:${C.secondary}">${n(d.topPerformer.combined)} submissions · ${n(d.topPerformer.dials)} dials · ${n(d.topPerformer.booked)} booked</div></div></td>`);
-  callouts.push(
-    `<td style="padding:0 0 10px 6px" width="50%"><div style="background:${C.inset};border-radius:10px;padding:10px 12px"><div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted}">Biggest improver</div>${
-      d.biggestImprover
-        ? `<div style="font:800 16px/1.3 ${FONT};color:${C.ink}">${esc(d.biggestImprover.rep.name)}</div><div style="font:500 12px/1.4 ${FONT};color:${C.secondary}">+${n(d.biggestImprover.delta)} submissions vs last week (${n(d.biggestImprover.rep.combinedPrev ?? 0)} → ${n(d.biggestImprover.rep.combined)})</div>`
-        : `<div style="font:500 13px/1.4 ${FONT};color:${C.secondary}">No rep submitted more than last week.</div>`
-    }</div></td>`,
-  );
-  const repRows = d.reps.map((r) => {
-    const goal = r.combinedGoal === null ? "" : ` <span style="color:${C.muted};font-weight:500">/ ${Math.round(r.combinedGoal)}</span>`;
-    const att = r.attainment === null ? "" : `<br><span style="font-size:11px;color:${r.attainment >= 1 ? C.good : r.attainment >= 0.5 ? C.warn : C.bad};font-weight:700">${Math.round(r.attainment * 100)}% of goal</span>`;
-    return [
-      `<span style="font-weight:700;color:${C.ink}">${r.rank}. ${esc(r.name)}</span>`,
-      `<span style="font-weight:800;color:${C.ink}">${n(r.combined)}</span>${goal}${att}`,
-      changeHtml(change("count", r.combined, r.combinedPrev)),
-      `${n(r.dials)}${r.dialsGoal ? `<br><span style="font-size:11px;color:${C.muted}">of ${Math.round(r.dialsGoal)}</span>` : ""}`,
-      esc(fmtValue("minutes", r.talkMinutes)),
-      n(r.booked),
-      r.showRate === null ? `<span style="color:${C.muted}">—</span>` : `${esc(fmtValue("pct", r.showRate))}<br><span style="font-size:11px;color:${C.muted}">${n(r.showed)} of ${n(r.showed + r.noshow)}</span>`,
-      `${n(r.won)}${r.wonValue > 0 ? `<br><span style="font-size:11px;color:${C.muted}">${esc(fmtValue("usd", r.wonValue))}</span>` : ""}`,
-    ];
+  // 2. leaderboard: two highlight tiles with photos, one sentence on the spread, then one full-width card per rep
+  const highlight = (label: string, r: RepRow | null, line: string, empty: string) =>
+    `<div style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;padding:10px 12px"><div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">${esc(label)}</div>${
+      r
+        ? `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding:0 10px 0 0">${avatar(r, 40)}</td><td valign="middle"><div style="font:800 15px/1.3 ${FONT};color:${C.ink}">${esc(r.name)}</div><div style="font:500 12px/1.4 ${FONT};color:${C.secondary}">${esc(line)}</div></td></tr></table>`
+        : `<div style="font:500 13px/1.4 ${FONT};color:${C.secondary}">${esc(empty)}</div>`
+    }</div>`;
+  const tp = d.topPerformer;
+  const bi = d.biggestImprover;
+  const calloutsHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" valign="top" style="padding:0 5px 10px 0">${highlight("Top performer", tp, tp ? `${n(tp.combined)} submissions · ${n(tp.dials)} dials · ${n(tp.booked)} booked` : "", "No rep submitted or dialed this week.")}</td><td width="50%" valign="top" style="padding:0 0 10px 5px">${highlight("Biggest improver", bi?.rep ?? null, bi ? `+${n(bi.delta)} submissions vs last week (${n(bi.rep.combinedPrev ?? 0)} → ${n(bi.rep.combined)})` : "", "No rep submitted more than last week.")}</td></tr></table>`;
+  const spreadHtml = paragraph(narrative?.leaderboard ?? leaderboardFallback(d));
+  const mini = (label: string, value: string, sub: string, last: boolean) =>
+    `<td width="25%" valign="top" style="padding:8px 6px 8px 10px;${last ? "" : `border-right:1px solid ${C.border};`}"><div style="font:700 10px/1.2 ${FONT};letter-spacing:0.06em;text-transform:uppercase;color:${C.muted}">${esc(label)}</div><div style="font:800 15px/1.3 ${FONT};color:${C.ink};margin-top:2px">${esc(value)}</div>${sub ? `<div style="font:500 11px/1.3 ${FONT};color:${C.muted}">${esc(sub)}</div>` : ""}</td>`;
+  const repCards = d.reps.map((r) => {
+    const att = r.attainment;
+    const goalText = r.combinedGoal === null ? "no goal" : `of ${n(Math.round(r.combinedGoal))} goal`;
+    const attLine = att === null ? "" : `<div style="font:700 11px/1.4 ${FONT};color:${att >= 1 ? C.good : att >= 0.5 ? C.warn : C.bad};margin-top:4px">${n(Math.round(att * 100))}% of goal</div>`;
+    const hero =
+      `<div><span style="font:800 30px/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${n(r.combined)}</span> <span style="font:600 13px/1.2 ${FONT};color:${C.muted}">${esc(goalText)}</span> &nbsp;${changePillFor("count", r.combined, r.combinedPrev)}</div>` +
+      (r.combinedGoal !== null && r.combinedGoal > 0 ? `<div style="margin-top:8px">${bar(r.combined / r.combinedGoal, attainColor(att))}</div>${attLine}` : "") +
+      `<div style="font:700 13px/1.5 ${FONT};color:${C.ink};margin-top:4px">Army ${n(r.ca101)} · Veteran ${n(r.iau)}</div>`;
+    const rankBadge = `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr><td width="22" height="22" align="center" valign="middle" bgcolor="${C.dark}" style="width:22px;height:22px;border-radius:50%;font:800 11px/1 ${FONT};color:#ffffff">${n(r.rank)}</td></tr></table>`;
+    const left = `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding:0 8px 0 0">${rankBadge}</td><td valign="middle">${avatar(r, 48)}</td></tr></table><div style="font:800 15px/1.3 ${FONT};color:${C.ink};margin-top:8px">${esc(r.name)}</div><div style="font:600 11px/1.3 ${FONT};color:${C.muted}">${esc(r.role.toLowerCase())}</div>`;
+    const dialsSub = r.dialsGoal !== null && r.dialsGoal > 0 ? `of ${n(Math.round(r.dialsGoal))} · ${n(Math.round((r.dials / r.dialsGoal) * 100))}%` : "no goal";
+    const miniRow = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${C.border}"><tr>${mini("Dials", n(r.dials), dialsSub, false)}${mini("Talk time", fmtValue("minutes", r.talkMinutes), "", false)}${mini("Appointments booked", n(r.booked), "", false)}${mini("Won", n(r.won), r.won > 0 ? `${fmtValue("usd", r.wonValue)} Opportunity Value` : "", true)}</tr></table>`;
+    const showLine =
+      r.showRate === null
+        ? ""
+        : `<tr><td colspan="2" style="padding:0 14px 10px"><div style="font:500 12px/1.4 ${FONT};color:${C.secondary};padding-top:8px;border-top:1px solid ${C.border}">Show rate <b style="color:${C.ink}">${esc(fmtValue("pct", r.showRate))}</b> · ${n(r.showed)} showed of ${n(r.showed + r.noshow)} marked${r.showRatePrev !== null ? ` (last week ${esc(fmtValue("pct", r.showRatePrev))})` : ""}</div></td></tr>`;
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;margin-bottom:10px"><tr><td width="150" valign="top" style="padding:14px 10px 12px 14px">${left}</td><td valign="top" style="padding:14px 14px 12px 6px">${hero}</td></tr><tr><td colspan="2" style="padding:0 8px${r.showRate === null ? " 4px" : ""}">${miniRow}</td></tr>${showLine}</table>`;
   });
   parts.push(
     section(
       "2 · Rep leaderboard",
       "Ranked by combined submissions",
-      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${callouts.join("")}</tr></table>` +
-        table(["Rep", "Submissions", "vs last wk", "Dials", "Talk", "Booked", "Show rate", "Won"], repRows) +
-        note("Submissions = CA 101 + IAU App (every semester) credited to the rep; the goal is the rep's own weekly rate. Show rate is of the rep's appointments scheduled this week that were marked. Won is Opportunity Value, not cash."),
+      calloutsHtml + spreadHtml + repCards.join("") + note("Submissions = CA 101 + IAU App (every semester) credited to the rep; the goal is the rep's own weekly rate (green at goal, yellow from half, red below half). Show rate is of the rep's appointments scheduled this week that were marked, shown only when there were any. Won is Opportunity Value, not cash."),
     ),
   );
 
@@ -364,11 +423,12 @@ export function renderText(d: WeeklyReportData, narrative: Narrative | null): st
   H("2. Rep leaderboard");
   if (d.topPerformer) out.push(`Top performer: ${d.topPerformer.name} (${n(d.topPerformer.combined)} submissions, ${n(d.topPerformer.dials)} dials, ${n(d.topPerformer.booked)} booked)`);
   out.push(d.biggestImprover ? `Biggest improver: ${d.biggestImprover.rep.name} (+${n(d.biggestImprover.delta)} submissions vs last week)` : "Biggest improver: no rep submitted more than last week.");
+  out.push(narrative?.leaderboard ?? leaderboardFallback(d), "");
   out.push(
     textTable(
       ["Rep", "Subs", "Goal", "Attain", "vs last", "Dials", "Talk", "Booked", "Show", "Won"],
-      d.reps.map((r) => [`${r.rank}. ${r.name}`, n(r.combined), r.combinedGoal === null ? "-" : String(Math.round(r.combinedGoal)), r.attainment === null ? "-" : `${Math.round(r.attainment * 100)}%`, chg("count", r.combined, r.combinedPrev), n(r.dials), fmtValue("minutes", r.talkMinutes), n(r.booked), r.showRate === null ? "-" : fmtValue("pct", r.showRate), n(r.won)]),
-      [20, 5, 5, 7, 12, 6, 8, 7, 5, 4],
+      d.reps.map((r) => [`${r.rank}. ${r.name} (${r.role.toLowerCase()})`, n(r.combined), r.combinedGoal === null ? "-" : String(Math.round(r.combinedGoal)), r.attainment === null ? "-" : `${Math.round(r.attainment * 100)}%`, chg("count", r.combined, r.combinedPrev), n(r.dials), fmtValue("minutes", r.talkMinutes), n(r.booked), r.showRate === null ? "-" : fmtValue("pct", r.showRate), n(r.won)]),
+      [30, 5, 5, 7, 12, 6, 8, 7, 5, 4],
     ),
   );
 

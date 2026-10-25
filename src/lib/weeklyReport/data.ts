@@ -54,6 +54,10 @@ export interface RepRow {
   userId: string;
   name: string;
   rank: number;
+  /** As the Rep Performance cards show them: initials, a photo under public/ ("/reps/jane-doe.jpg") or null, and Full-time / Part-time from the rep's kpiMultiplier. */
+  initials: string;
+  photo: string | null;
+  role: string;
   combined: number;
   combinedPrev: number | null;
   combinedGoal: number | null;
@@ -305,6 +309,9 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
         userId: r.userId as string,
         name: r.name,
         rank: 0,
+        initials: r.initials,
+        photo: r.photoUrl,
+        role: r.role,
         combined,
         combinedPrev: pm ? num(pm.combined.value) : null,
         combinedGoal,

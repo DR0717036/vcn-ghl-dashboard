@@ -13,7 +13,7 @@ import { gmailConfigured, sendGmail, type MailMessage } from "@/lib/mailer";
 import { dueWeekStart, weekKeyOf, weekRange, weeklyReportConfig } from "./config";
 import { buildWeeklyReport, type WeeklyReportData } from "./data";
 import { generateNarrative, type Narrative } from "./narrative";
-import { LOGO_CID, renderHtml, renderText } from "./render";
+import { LOGO_CID, renderHtml, renderText, repPhotoAssets } from "./render";
 
 const RETRY_DELAY_MS = 20_000;
 const ABANDON_AFTER_MS = 30 * 60 * 1000;
@@ -42,6 +42,18 @@ function logo(): MailMessage["inline"] {
   const file = path.join(process.cwd(), "public", "vcn-logo.png");
   if (!fs.existsSync(file)) return [];
   return [{ cid: LOGO_CID, filename: "vcn-logo.png", contentType: "image/png", data: fs.readFileSync(file) }];
+}
+
+/** The logo plus every rep photo the HTML references (public/reps), each as an inline cid: image. */
+function inlineImages(data: WeeklyReportData): MailMessage["inline"] {
+  const out = logo() ?? [];
+  for (const a of repPhotoAssets(data)) {
+    const file = path.join(process.cwd(), "public", a.publicPath.replace(/^\/+/, ""));
+    if (!fs.existsSync(file)) continue;
+    const ext = path.extname(file).toLowerCase();
+    out.push({ cid: a.cid, filename: path.basename(file), contentType: ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg", data: fs.readFileSync(file) });
+  }
+  return out;
 }
 
 export interface SendOutcome {
@@ -78,7 +90,7 @@ export async function sendWeeklyReport(opts: { weekStart: Date; now: Date; kind:
     const r = await renderWeeklyReport(opts.weekStart, opts.now, opts.withNarrative !== false);
     narrative = r.narrative !== null;
     narrativeSkipped = r.narrativeSkipped;
-    const msg: MailMessage = { from: cfg.from, to: opts.to, subject: opts.kind === "test" ? `[TEST] ${r.subject}` : r.subject, text: r.text, html: r.html, inline: logo() };
+    const msg: MailMessage = { from: cfg.from, to: opts.to, subject: opts.kind === "test" ? `[TEST] ${r.subject}` : r.subject, text: r.text, html: r.html, inline: inlineImages(r.data) };
     for (attempts = 1; attempts <= 2; attempts++) {
       try {
         const res = await sendGmail(msg);
