@@ -1178,3 +1178,15 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     added a third to the size. Last week's report rendered at about 80 KB per
     theme (81 KB on the wire); the section redesigns still to come must stay
     inside that budget.
+    Trend charts (owner request 2026-10-24): section 6 shows two PNG line
+    charts (submissions and won on one panel; dials and appointments booked
+    as two panels with their own scales, never two axes on one plot) drawn by
+    src/lib/weeklyReport/charts.ts with the image renderer that ships inside
+    Next.js (next/og: Satori + resvg), so no dependency was added. The lines
+    and dots are an SVG image, the labels real text in Manrope from the TTF
+    files in public/fonts (OFL), rendered at 2x and shown 560 px wide, styled
+    for the active theme, attached as inline cid: images (never base64 in the
+    HTML). The curve is monotone (no overshoot), the current week is
+    highlighted, and a compact caption row per week keeps the exact figures.
+    Flags carry a short label and sort red, yellow, note; tips are numbered in
+    the accent color; the footer has two buttons and one muted paragraph.

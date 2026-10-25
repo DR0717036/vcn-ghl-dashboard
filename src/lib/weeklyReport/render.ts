@@ -6,6 +6,7 @@
 
 import { fmtDateTime } from "@/lib/dates";
 import { fmtValue, type Flag, type Headline, type Kind, type RepRow, type WeeklyReportData } from "./data";
+import type { ChartRef } from "./charts";
 import type { ReportTheme } from "./config";
 import type { Narrative } from "./narrative";
 
@@ -396,18 +397,17 @@ function minify(html: string): string {
   return html.replace(/>\s*\n\s*</g, "><").replace(/#ffffff/g, "#fff");
 }
 
-export function renderHtml(d: WeeklyReportData, narrative: Narrative | null, theme: ReportTheme = "light"): string {
+export function renderHtml(d: WeeklyReportData, narrative: Narrative | null, theme: ReportTheme = "light", charts: ChartRef[] = []): string {
   applyTheme(theme);
   try {
-    return minify(renderHtmlBody(d, narrative));
+    return minify(renderHtmlBody(d, narrative, charts));
   } finally {
     applyTheme("light");
   }
 }
 
-function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): string {
+function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null, charts: ChartRef[]): string {
   const dash = d.dashboardUrl;
-  const link = (path: string, label: string) => (dash ? `<a href="${esc(dash + path)}" style="color:${C.blueText};font-weight:700">${esc(label)}</a>` : esc(label));
   const parts: string[] = [];
 
   // 1. headline numbers: week in brief, six KPI tiles in three rows (submissions and won; Army and Veteran submissions; booked and leads created), one-line note
@@ -597,40 +597,46 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
     ),
   );
 
-  // 6. trend
-  const trendRows = d.trend.map((w, i) => {
+  // 6. trend: the narrative, two PNG charts (inline cid images rendered in charts.ts), then one compact caption row per week
+  const chartsHtml = charts.map((c) => `<img src="cid:${c.cid}" width="${c.width}" height="${c.height}" alt="${esc(c.alt)}" style="display:block;width:100%;max-width:${c.width}px;height:auto;border-radius:8px;margin:0 0 10px">`).join("");
+  const captionRows = d.trend.map((w, i) => {
     const last = i === d.trend.length - 1;
-    const b = (s: string) => (last ? `<b style="color:${C.ink}">${s}</b>` : s);
-    return [`<span style="font-weight:700;color:${C.ink}">${esc(w.label)}${last ? ` <span style="color:${C.blueText}">(this week)</span>` : ""}</span>`, b(esc(fmtValue("count", w.combined))), b(n(w.dials)), b(esc(fmtValue("minutes", w.talkMinutes))), b(esc(fmtValue("count", w.booked))), b(esc(fmtValue("count", w.completed))), b(esc(fmtValue("pct", w.showRate))), b(esc(fmtValue("count", w.newLeads))), b(`${n(w.won)}${w.wonValue > 0 ? ` · ${esc(fmtValue("usd", w.wonValue))}` : ""}`)];
+    return `<tr><td style="padding:4px 0;border-top:1px solid ${C.rowLine};font:500 11px/1.4 ${FONT};color:${last ? C.ink : C.muted}"><b style="color:${C.ink}">${esc(w.shortLabel)}${last ? " (this week)" : ""}</b> · ${esc(fmtValue("count", w.combined))} subs · ${n(w.dials)} dials · ${esc(fmtValue("minutes", w.talkMinutes))} talk · ${esc(fmtValue("count", w.booked))} booked · ${esc(fmtValue("pct", w.showRate))} show · ${esc(fmtValue("count", w.newLeads))} leads · ${n(w.won)} won${w.wonValue > 0 ? ` (${esc(fmtValue("usd", w.wonValue))})` : ""}</td></tr>`;
   });
-  parts.push(section("6 · Four-week trend", "Headline metrics by week", (narrative ? paragraph(narrative.trend) : "") + table(["Week", "Subs", "Dials", "Talk", "Booked", "Showed", "Show rate", "Leads", "Won"], trendRows)));
+  const captionHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${captionRows.join("")}</table>`;
+  parts.push(
+    section(
+      "6 · Four-week trend",
+      "Headline metrics by week",
+      (narrative ? paragraph(narrative.trend) : "") + (chartsHtml || note("The charts could not be rendered for this email; the figures are in the rows below.")) + captionHtml + note("Each line runs on its own scale from zero (dials and bookings are separate panels); the rows carry the exact figures. Submissions count CA 101 plus IAU App for every semester; won is by opportunity status."),
+    ),
+  );
 
-  // 7. flags
-  const flagsHtml = d.flags.length
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${d.flags
+  // 7. flags: red first, then yellow, then notes; a short bold label before each sentence
+  const order = { bad: 0, warn: 1, info: 2 } as const;
+  const sortedFlags = [...d.flags].sort((a, b) => order[a.level] - order[b.level]);
+  const flagsHtml = sortedFlags.length
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${sortedFlags
         .map((f) => {
           const c = levelColor(f.level);
-          return `<tr><td style="padding:0 0 8px"><div style="background:${c.bg};border-left:4px solid ${c.fg};border-radius:8px;padding:9px 12px;font:500 13px/1.45 ${FONT};color:${C.body}"><b style="color:${c.fg};text-transform:uppercase;font-size:11px;letter-spacing:0.06em">${f.level === "bad" ? "Attention" : f.level === "warn" ? "Watch" : "Note"}</b> &nbsp;${esc(f.text)}</div></td></tr>`;
+          return `<tr><td style="padding:0 0 8px"><div style="background:${c.bg};border-left:4px solid ${c.fg};border-radius:8px;padding:9px 12px;font:500 13px/1.45 ${FONT};color:${C.body}"><b style="color:${c.fg}">${esc(f.label)}</b> · ${esc(f.text)}</div></td></tr>`;
         })
         .join("")}</table>`
     : paragraph("Nothing to flag this week: every rep is at or above half of goal, show rates held, no bounces or opt-outs, no unmarked past appointments, and every sync finished.");
   parts.push(section("7 · Flags", "What needs attention", flagsHtml));
 
-  // 8. tips
+  // 8. tips: numbered in the accent color
   const tipsHtml = narrative
-    ? `<ol style="font:400 14px/1.55 ${FONT};color:${C.body};margin:0;padding-left:20px">${narrative.tips.map((t) => `<li style="margin:0 0 8px">${esc(t)}</li>`).join("")}</ol>` + note(`Written by ${esc(narrative.model)} from the numbers above; every figure it mentions was checked against the data.`)
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${narrative.tips.map((t, i) => `<tr><td width="34" valign="top" style="padding:0 0 10px;font:800 26px/1.1 ${FONT};color:${C.bar}">${i + 1}</td><td valign="top" style="padding:4px 0 10px;font:400 14px/1.55 ${FONT};color:${C.body}">${esc(t)}</td></tr>`).join("")}</table>` +
+      note(`Written by ${esc(narrative.model)} from the numbers above; every figure it mentions was checked against the data.`)
     : paragraph("Tips are unavailable this week: the narrative could not be generated, so this email shows the numbers only.");
-  parts.push(section("8 · Three tips for the coming week", "From this week's numbers", tipsHtml));
+  parts.push(section("8 · Three tips for the week", "From this week's numbers", tipsHtml));
 
-  // 9. footer
-  const footer = `<tr><td style="padding:4px 4px 0">
-<div style="font:400 12px/1.6 ${FONT};color:${C.muted}">
-<b style="color:${C.secondary}">Period:</b> ${esc(d.rangeText)} (Monday to Sunday, America/New_York)${d.partial ? ", week in progress" : ""} · <b style="color:${C.secondary}">Compared with:</b> ${esc(d.prevRangeText)}<br>
-<b style="color:${C.secondary}">Data as of:</b> ${d.dataAsOf ? esc(fmtDateTime(d.dataAsOf)) : "no completed sync"} (last successful sync) · generated ${esc(fmtDateTime(d.generatedAt))}<br>
-${link("/?range=last_week", "Open the live dashboard")} · ${link("/mapping", "Mapping page (sync status and definitions)")}<br>
-${d.notes.map((x) => esc(x)).join("<br>")}
-<br>Read-only view of Go High Level. This dashboard never changes CRM data.
-</div></td></tr>`;
+  // 9. footer: two buttons, then one muted paragraph
+  const button = (href: string, text: string, primary: boolean) =>
+    `<td style="padding:0 8px 8px 0"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td bgcolor="${primary ? C.blue : C.inset}" style="border-radius:8px;${primary ? "" : `border:1px solid ${C.border};`}"><a href="${esc(href)}" style="display:inline-block;padding:10px 16px;font:700 13px/1 ${FONT};color:${primary ? "#fff" : C.ink};text-decoration:none">${esc(text)}</a></td></tr></table></td>`;
+  const buttons = dash ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 6px"><tr>${button(dash + "/?range=last_week", "Open dashboard", true)}${button(dash + "/mapping", "How this is counted", false)}</tr></table>` : "";
+  const footer = `<tr><td style="padding:4px 4px 0;font:400 12px/1.6 ${FONT};color:${C.muted}">${buttons}<p style="margin:0">${esc(d.rangeText)} (Monday to Sunday, America/New_York)${d.partial ? ", week in progress" : ""}, compared with ${esc(d.prevRangeText)}. Data as of ${d.dataAsOf ? esc(fmtDateTime(d.dataAsOf)) : "no completed sync"} (last successful sync); generated ${esc(fmtDateTime(d.generatedAt))}. ${d.notes.map((x) => esc(x)).join(" ")} Read-only view of Go High Level; this dashboard never changes CRM data.</p></td></tr>`;
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${C.scheme}"><meta name="supported-color-schemes" content="${C.scheme}"><!--[if !mso]><!--><link rel="preconnect" href="https://fonts.googleapis.com"><link href="${FONT_URL}" rel="stylesheet"><style>@import url('${FONT_URL}');</style><!--<![endif]--><title>${esc(`VCN Weekly Sales Report: ${d.rangeText}`)}</title></head>
@@ -721,9 +727,10 @@ export function renderText(d: WeeklyReportData, narrative: Narrative | null): st
 
   H("7. Flags");
   if (d.flags.length === 0) out.push("Nothing to flag this week.");
-  for (const f of d.flags) out.push(`[${f.level === "bad" ? "ATTENTION" : f.level === "warn" ? "WATCH" : "NOTE"}] ${f.text}`);
+  const flagOrder = { bad: 0, warn: 1, info: 2 } as const;
+  for (const f of [...d.flags].sort((a, b) => flagOrder[a.level] - flagOrder[b.level])) out.push(`[${f.level === "bad" ? "ATTENTION" : f.level === "warn" ? "WATCH" : "NOTE"}] ${f.label}: ${f.text}`);
 
-  H("8. Three tips for the coming week");
+  H("8. Three tips for the week");
   if (narrative) narrative.tips.forEach((tip, i) => out.push(`${i + 1}. ${tip}`));
   else out.push("Tips are unavailable this week: the narrative could not be generated, so this email shows the numbers only.");
 

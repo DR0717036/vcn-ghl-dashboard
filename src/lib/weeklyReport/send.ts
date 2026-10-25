@@ -11,6 +11,7 @@ import { abandonStaleWeeklyReportSends, claimWeeklyReportSend, finishWeeklyRepor
 import { fmtDateTime, fmtRangeShort } from "@/lib/dates";
 import { gmailConfigured, sendGmail, type MailMessage } from "@/lib/mailer";
 import { dueWeekStart, weekKeyOf, weekRange, weeklyReportConfig, type ReportTheme } from "./config";
+import { renderTrendCharts, type ChartImage } from "./charts";
 import { buildWeeklyReport, type WeeklyReportData } from "./data";
 import { generateNarrative, type Narrative } from "./narrative";
 import { LOGO_CID, renderHtml, renderText, repPhotoAssets } from "./render";
@@ -25,6 +26,8 @@ export interface Rendered {
   narrativeMs: number;
   subject: string;
   theme: ReportTheme;
+  /** The trend charts (PNG) the HTML references as cid: images. */
+  charts: ChartImage[];
   html: string;
   text: string;
 }
@@ -35,10 +38,17 @@ export async function renderWeeklyReport(weekStart: Date, now: Date, withNarrati
   const useTheme = theme ?? cfg.theme;
   const data = buildWeeklyReport(weekStart, now);
   const outcome = withNarrative ? await generateNarrative(data) : { narrative: null, skipped: "narrative not requested", durationMs: 0 };
+  let charts: ChartImage[] = [];
+  try {
+    charts = await renderTrendCharts(data, useTheme);
+  } catch (e) {
+    // The email still goes out; section 6 falls back to its caption rows.
+    console.warn(`[weekly-report] trend charts skipped: ${(e as Error).message}`);
+  }
   const r = weekRange(weekStart, now);
   // The range (with the year) makes every week's subject distinct, so Gmail does not thread the reports together and trim repeated sections.
   const subject = cfg.subject.replace("{range}", fmtRangeShort(r.start, r.end, true));
-  return { data, narrative: outcome.narrative, narrativeSkipped: outcome.skipped, narrativeMs: outcome.durationMs, subject, theme: useTheme, html: renderHtml(data, outcome.narrative, useTheme), text: renderText(data, outcome.narrative) };
+  return { data, narrative: outcome.narrative, narrativeSkipped: outcome.skipped, narrativeMs: outcome.durationMs, subject, theme: useTheme, charts, html: renderHtml(data, outcome.narrative, useTheme, charts), text: renderText(data, outcome.narrative) };
 }
 
 function logo(): MailMessage["inline"] {
@@ -47,9 +57,10 @@ function logo(): MailMessage["inline"] {
   return [{ cid: LOGO_CID, filename: "vcn-logo.png", contentType: "image/png", data: fs.readFileSync(file) }];
 }
 
-/** The logo plus every rep photo the HTML references (public/reps), each as an inline cid: image. */
-function inlineImages(data: WeeklyReportData): MailMessage["inline"] {
+/** The logo, every rep photo the HTML references (public/reps), and the trend charts, each as an inline cid: image. */
+function inlineImages(data: WeeklyReportData, charts: ChartImage[]): MailMessage["inline"] {
   const out = logo() ?? [];
+  for (const c of charts) out.push({ cid: c.cid, filename: c.filename, contentType: c.contentType, data: c.data });
   for (const a of repPhotoAssets(data)) {
     const file = path.join(process.cwd(), "public", a.publicPath.replace(/^\/+/, ""));
     if (!fs.existsSync(file)) continue;
@@ -93,7 +104,7 @@ export async function sendWeeklyReport(opts: { weekStart: Date; now: Date; kind:
     const r = await renderWeeklyReport(opts.weekStart, opts.now, opts.withNarrative !== false, opts.theme);
     narrative = r.narrative !== null;
     narrativeSkipped = r.narrativeSkipped;
-    const msg: MailMessage = { from: cfg.from, to: opts.to, subject: opts.kind === "test" ? `[TEST] [${r.theme}] ${r.subject} · sent ${fmtDateTime(opts.now)}` : r.subject, text: r.text, html: r.html, inline: inlineImages(r.data) };
+    const msg: MailMessage = { from: cfg.from, to: opts.to, subject: opts.kind === "test" ? `[TEST] [${r.theme}] ${r.subject} · sent ${fmtDateTime(opts.now)}` : r.subject, text: r.text, html: r.html, inline: inlineImages(r.data, r.charts) };
     for (attempts = 1; attempts <= 2; attempts++) {
       try {
         const res = await sendGmail(msg);

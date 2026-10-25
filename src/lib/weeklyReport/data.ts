@@ -108,6 +108,8 @@ export interface FunnelStep {
 
 export interface TrendWeek {
   label: string;
+  /** "Sep 21": the Monday, no year, for chart axes and captions. */
+  shortLabel: string;
   start: string;
   combined: number | null;
   dials: number;
@@ -122,6 +124,8 @@ export interface TrendWeek {
 
 export interface Flag {
   level: "warn" | "bad" | "info";
+  /** Two or three words naming the kind of flag ("Below goal", "Sync"). */
+  label: string;
   text: string;
 }
 
@@ -482,48 +486,48 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
     const rt = computeRates(r);
     const l = kpiNewLeads(r);
     const w = computeHeadline(wonOpps("period", r), "period", r);
-    return { label: `Week of ${fmtDay(ws)}`, start: fmtKey(ws), combined: s.value, dials: c.total.dials, talkMinutes: t.value, booked: a.booked.split.total, completed: a.completed.split.total, showRate: ratio(rt.showRate.num, rt.showRate.den), newLeads: l.value, won: w.total.count, wonValue: w.total.value };
+    return { label: `Week of ${fmtDay(ws)}`, shortLabel: fmtRangeShort(ws, addDays(ws, 1)), start: fmtKey(ws), combined: s.value, dials: c.total.dials, talkMinutes: t.value, booked: a.booked.split.total, completed: a.completed.split.total, showRate: ratio(rt.showRate.num, rt.showRate.den), newLeads: l.value, won: w.total.count, wonValue: w.total.value };
   });
 
   // ---- 7. flags ----------------------------------------------------------------------------
   const flags: Flag[] = [];
   const under = reps.filter((r) => r.combinedGoal && r.combinedGoal > 0 && r.combined < r.combinedGoal * cfg.flags.underGoalShare);
   if (under.length > 0) {
-    flags.push({ level: "bad", text: `Under ${Math.round(cfg.flags.underGoalShare * 100)}% of the weekly submissions goal: ${under.map((r) => `${r.name} (${n(r.combined)} of ${Math.round(r.combinedGoal as number)})`).join(", ")}.` });
+    flags.push({ level: "bad", label: "Below goal", text: `Under ${Math.round(cfg.flags.underGoalShare * 100)}% of the weekly submissions goal: ${under.map((r) => `${r.name} (${n(r.combined)} of ${Math.round(r.combinedGoal as number)})`).join(", ")}.` });
   }
   const teamShow = headlines.find((h) => h.key === "showRate")!;
   if (teamShow.value !== null && teamShow.prev !== null && (teamShow.prev - teamShow.value) * 100 >= cfg.flags.showRateDropPoints) {
-    flags.push({ level: "warn", text: `Team show rate fell from ${fmtValue("pct", teamShow.prev)} to ${fmtValue("pct", teamShow.value)} week over week (${rates.showRate.num} showed of ${rates.showRate.den} marked).` });
+    flags.push({ level: "warn", label: "Show rate", text: `Team show rate fell from ${fmtValue("pct", teamShow.prev)} to ${fmtValue("pct", teamShow.value)} week over week (${rates.showRate.num} showed of ${rates.showRate.den} marked).` });
   }
   const minMarked = cur.repAppts.minMarked;
   const repDrops = reps.filter((r) => r.showRate !== null && r.showRatePrev !== null && r.showed + r.noshow >= minMarked && (r.showRatePrev - r.showRate) * 100 >= cfg.flags.showRateDropPoints);
-  if (repDrops.length > 0) flags.push({ level: "warn", text: `Show rate dropped ${cfg.flags.showRateDropPoints}+ points for ${repDrops.map((r) => `${r.name} (${fmtValue("pct", r.showRatePrev)} to ${fmtValue("pct", r.showRate)})`).join(", ")}.` });
+  if (repDrops.length > 0) flags.push({ level: "warn", label: "Show rate", text: `Show rate dropped ${cfg.flags.showRateDropPoints}+ points for ${repDrops.map((r) => `${r.name} (${fmtValue("pct", r.showRatePrev)} to ${fmtValue("pct", r.showRate)})`).join(", ")}.` });
   const messaging = analyzeMessaging(week);
   const optOuts = keywordCard(messaging, "optout");
   const email = replyRateCard(messaging, "email");
   if (optOuts.contacts > 0) {
     const high = optOuts.rows.filter((t) => t.optOutRate !== null && t.optOutRate >= messaging.cfg.optOutRateLevels.high);
-    flags.push({ level: high.length > 0 ? "bad" : "info", text: `${n(optOuts.contacts)} contact${optOuts.contacts === 1 ? "" : "s"} opted out this week (STOP or similar)${high.length > 0 ? `; ${high.length} template${high.length === 1 ? " is" : "s are"} at a High opt-out rate` : ""}.` });
+    flags.push({ level: high.length > 0 ? "bad" : "info", label: "Opt-outs", text: `${n(optOuts.contacts)} contact${optOuts.contacts === 1 ? "" : "s"} opted out this week (STOP or similar)${high.length > 0 ? `; ${high.length} template${high.length === 1 ? " is" : "s are"} at a High opt-out rate` : ""}.` });
   }
   if (email.engagement && email.engagement.bounced > 0) {
     const e = email.engagement;
-    flags.push({ level: e.hard > 0 ? "bad" : "warn", text: `${n(e.bounced)} of ${n(e.sends)} emails sent this week bounced (${n(e.hard)} hard, ${n(e.soft)} soft, ${n(e.unknownBounce)} unknown).` });
+    flags.push({ level: e.hard > 0 ? "bad" : "warn", label: "Bounces", text: `${n(e.bounced)} of ${n(e.sends)} emails sent this week bounced (${n(e.hard)} hard, ${n(e.soft)} soft, ${n(e.unknownBounce)} unknown).` });
   }
   const notMarked = rates.lines.find((l) => l.key === "notMarked");
-  if (notMarked && notMarked.total.num > 0) flags.push({ level: "warn", text: `${n(notMarked.total.num)} appointment${notMarked.total.num === 1 ? "" : "s"} scheduled this week ${notMarked.total.num === 1 ? "has" : "have"} passed without Showed or No-show being marked; the show rate leaves them out.` });
+  if (notMarked && notMarked.total.num > 0) flags.push({ level: "warn", label: "Unmarked appointments", text: `${n(notMarked.total.num)} appointment${notMarked.total.num === 1 ? "" : "s"} scheduled this week ${notMarked.total.num === 1 ? "has" : "have"} passed without Showed or No-show being marked; the show rate leaves them out.` });
   const runs = latestSyncRuns(CORE_SYNC_KIND, 400).filter((r) => r.started_at >= week.start.toISOString() && r.started_at < week.end.toISOString());
   const failed = runs.filter((r) => r.ok === 0);
   const latest = latestSyncRuns(CORE_SYNC_KIND, 1)[0];
   if (failed.length > 0) {
     const phases = new Set<string>();
     for (const r of failed) for (const p of failedPhases(r.summary)) phases.add(p);
-    flags.push({ level: failed.length > runs.length / 2 ? "bad" : "warn", text: `${n(failed.length)} of ${n(runs.length)} automatic syncs this week did not finish fully${phases.size ? ` (phases: ${[...phases].join(", ")})` : ""}. Numbers come from the data that did load; see the Mapping page.` });
+    flags.push({ level: failed.length > runs.length / 2 ? "bad" : "warn", label: "Sync", text: `${n(failed.length)} of ${n(runs.length)} automatic syncs this week did not finish fully${phases.size ? ` (phases: ${[...phases].join(", ")})` : ""}. Numbers come from the data that did load; see the Mapping page.` });
   }
-  if (latest && runningTooLong(latest.started_at, latest.ok)) flags.push({ level: "bad", text: "A sync has been running for over 30 minutes; the server may be wedged. See the Mapping page." });
-  if (cov.lastCoreSyncOkAt && now.getTime() - Date.parse(cov.lastCoreSyncOkAt) > 2 * 3_600_000) flags.push({ level: "bad", text: `The last successful sync was ${fmtDateTime(cov.lastCoreSyncOkAt)}; the figures may be behind GHL.` });
-  if (!cov.lastCoreSyncOkAt) flags.push({ level: "bad", text: "No sync has completed yet; every figure below is unavailable." });
-  for (const h of headlines) if (h.unavailable) flags.push({ level: "info", text: `${h.label}: unavailable. ${h.unavailable}` });
-  if (subs.unmatchedReps.length > 0) flags.push({ level: "warn", text: `Configured reps not found among GHL users: ${subs.unmatchedReps.map((r) => r.name).join(", ")}.` });
+  if (latest && runningTooLong(latest.started_at, latest.ok)) flags.push({ level: "bad", label: "Sync", text: "A sync has been running for over 30 minutes; the server may be wedged. See the Mapping page." });
+  if (cov.lastCoreSyncOkAt && now.getTime() - Date.parse(cov.lastCoreSyncOkAt) > 2 * 3_600_000) flags.push({ level: "bad", label: "Sync", text: `The last successful sync was ${fmtDateTime(cov.lastCoreSyncOkAt)}; the figures may be behind GHL.` });
+  if (!cov.lastCoreSyncOkAt) flags.push({ level: "bad", label: "Sync", text: "No sync has completed yet; every figure below is unavailable." });
+  for (const h of headlines) if (h.unavailable) flags.push({ level: "info", label: "Unavailable", text: `${h.label}: unavailable. ${h.unavailable}` });
+  if (subs.unmatchedReps.length > 0) flags.push({ level: "warn", label: "Rep mapping", text: `Configured reps not found among GHL users: ${subs.unmatchedReps.map((r) => r.name).join(", ")}.` });
 
   // ---- notes shown in the footer ----------------------------------------------------------
   notes.push(

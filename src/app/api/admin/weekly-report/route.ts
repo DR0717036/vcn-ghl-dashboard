@@ -47,6 +47,8 @@ export async function GET(req: Request): Promise<NextResponse> {
     // The logo and rep photos are inline attachments in the email; in the browser preview they are served from the site.
     let html = r.html.replace(/src="cid:vcn-logo"/g, 'src="/vcn-logo.png"');
     for (const a of repPhotoAssets(r.data)) html = html.split('src="cid:' + a.cid + '"').join('src="' + a.publicPath + '"');
+    // The trend charts exist only in memory; the preview carries them as data URIs (the email attaches them).
+    for (const c of r.charts) html = html.split('src="cid:' + c.cid + '"').join('src="data:image/png;base64,' + c.data.toString("base64") + '"');
     return new NextResponse(html, { headers: { "content-type": "text/html; charset=utf-8", "x-weekly-report-subject": encodeURIComponent(r.subject), "x-weekly-report-theme": r.theme, "x-weekly-report-narrative": r.narrative ? "included" : `omitted: ${encodeURIComponent(r.narrativeSkipped ?? "")}` } });
   } catch (err) {
     return NextResponse.json({ ok: false, error: (err as Error).message }, { status: 400 });
