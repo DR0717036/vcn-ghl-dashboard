@@ -1155,3 +1155,12 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     address, which must be a configured recipient or an allowed sign-in
     address; both require a historyImportAdmins user. The schedule ships
     with enabled: false until the owner approves the test send.
+    Theme (owner request 2026-10-24): config/weekly-report.json has
+    "theme": "light" | "dark". Light is the dashboard's light bands; dark is
+    its dark bands (near-black navy page, deep-navy gradient cards with
+    #223750 borders, white headings, yellow section kickers, cyan goal bars,
+    green/red pills re-tinted for contrast, light-gray body text, all from
+    src/styles/tokens.css). The layout is identical; only the palette in
+    src/lib/weeklyReport/render.ts changes. The preview route takes
+    ?theme=light|dark (and POST {theme}) to compare; test subjects carry
+    [light] / [dark]. Default stays light until the owner chooses.

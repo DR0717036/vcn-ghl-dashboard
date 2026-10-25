@@ -10,7 +10,7 @@ import path from "node:path";
 import { abandonStaleWeeklyReportSends, claimWeeklyReportSend, finishWeeklyReportSend, getState } from "@/lib/db";
 import { fmtRange } from "@/lib/dates";
 import { gmailConfigured, sendGmail, type MailMessage } from "@/lib/mailer";
-import { dueWeekStart, weekKeyOf, weekRange, weeklyReportConfig } from "./config";
+import { dueWeekStart, weekKeyOf, weekRange, weeklyReportConfig, type ReportTheme } from "./config";
 import { buildWeeklyReport, type WeeklyReportData } from "./data";
 import { generateNarrative, type Narrative } from "./narrative";
 import { LOGO_CID, renderHtml, renderText, repPhotoAssets } from "./render";
@@ -24,18 +24,20 @@ export interface Rendered {
   narrativeSkipped?: string;
   narrativeMs: number;
   subject: string;
+  theme: ReportTheme;
   html: string;
   text: string;
 }
 
-/** Computes the report and renders both parts; `withNarrative` false skips the Anthropic call (cheap preview). */
-export async function renderWeeklyReport(weekStart: Date, now: Date, withNarrative: boolean): Promise<Rendered> {
+/** Computes the report and renders both parts; `withNarrative` false skips the Anthropic call (cheap preview). `theme` overrides config/weekly-report.json (previews and tests). */
+export async function renderWeeklyReport(weekStart: Date, now: Date, withNarrative: boolean, theme?: ReportTheme): Promise<Rendered> {
   const cfg = weeklyReportConfig();
+  const useTheme = theme ?? cfg.theme;
   const data = buildWeeklyReport(weekStart, now);
   const outcome = withNarrative ? await generateNarrative(data) : { narrative: null, skipped: "narrative not requested", durationMs: 0 };
   const r = weekRange(weekStart, now);
   const subject = cfg.subject.replace("{range}", fmtRange(r.start, r.end, false));
-  return { data, narrative: outcome.narrative, narrativeSkipped: outcome.skipped, narrativeMs: outcome.durationMs, subject, html: renderHtml(data, outcome.narrative), text: renderText(data, outcome.narrative) };
+  return { data, narrative: outcome.narrative, narrativeSkipped: outcome.skipped, narrativeMs: outcome.durationMs, subject, theme: useTheme, html: renderHtml(data, outcome.narrative, useTheme), text: renderText(data, outcome.narrative) };
 }
 
 function logo(): MailMessage["inline"] {
@@ -73,7 +75,7 @@ export interface SendOutcome {
  * and does nothing when it is already taken; "test" always sends (to the
  * addresses given) and is logged as a test. SMTP failures are retried once.
  */
-export async function sendWeeklyReport(opts: { weekStart: Date; now: Date; kind: "scheduled" | "test"; to: string[]; triggeredBy: string; withNarrative?: boolean }): Promise<SendOutcome | { skipped: string }> {
+export async function sendWeeklyReport(opts: { weekStart: Date; now: Date; kind: "scheduled" | "test"; to: string[]; triggeredBy: string; withNarrative?: boolean; theme?: ReportTheme }): Promise<SendOutcome | { skipped: string }> {
   const cfg = weeklyReportConfig();
   const key = weekKeyOf(opts.weekStart);
   const t0 = Date.now();
@@ -87,10 +89,10 @@ export async function sendWeeklyReport(opts: { weekStart: Date; now: Date; kind:
   try {
     const smtp = gmailConfigured();
     if (!smtp.ok) throw new Error(`${smtp.reason}; the report was built but not sent`);
-    const r = await renderWeeklyReport(opts.weekStart, opts.now, opts.withNarrative !== false);
+    const r = await renderWeeklyReport(opts.weekStart, opts.now, opts.withNarrative !== false, opts.theme);
     narrative = r.narrative !== null;
     narrativeSkipped = r.narrativeSkipped;
-    const msg: MailMessage = { from: cfg.from, to: opts.to, subject: opts.kind === "test" ? `[TEST] ${r.subject}` : r.subject, text: r.text, html: r.html, inline: inlineImages(r.data) };
+    const msg: MailMessage = { from: cfg.from, to: opts.to, subject: opts.kind === "test" ? `[TEST] [${r.theme}] ${r.subject}` : r.subject, text: r.text, html: r.html, inline: inlineImages(r.data) };
     for (attempts = 1; attempts <= 2; attempts++) {
       try {
         const res = await sendGmail(msg);

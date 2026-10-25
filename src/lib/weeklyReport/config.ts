@@ -9,8 +9,12 @@ import { addDays, nyDate, nyParts, parseNyDay, startOfWeek, nyDayKey, resolveRan
 
 const FILE = path.join(process.cwd(), "config", "weekly-report.json");
 
+/** Email colors: the dashboard's light bands or its dark bands. */
+export type ReportTheme = "light" | "dark";
+
 export interface WeeklyReportConfig {
   enabled: boolean;
+  theme: ReportTheme;
   sendTime: { weekday: number; hour: number; minute: number };
   catchUpHours: number;
   recipients: string[];
@@ -37,6 +41,7 @@ export function weeklyReportConfig(): WeeklyReportConfig {
   const flags = (raw.flags ?? {}) as Record<string, unknown>;
   const cfg: WeeklyReportConfig = {
     enabled: raw.enabled === true,
+    theme: raw.theme === "dark" ? "dark" : "light",
     sendTime: { weekday: int(st.weekday, 0, 6, 0), hour: int(st.hour, 0, 23, 17), minute: int(st.minute, 0, 59, 0) },
     catchUpHours: num(raw.catchUpHours, 0, 24 * 6, 48),
     recipients: emails(raw.recipients),

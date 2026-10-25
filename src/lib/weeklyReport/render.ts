@@ -6,23 +6,71 @@
 
 import { fmtDateTime } from "@/lib/dates";
 import { fmtValue, type Flag, type Headline, type Kind, type RepRow, type WeeklyReportData } from "./data";
+import type { ReportTheme } from "./config";
 import type { Narrative } from "./narrative";
 
 export const LOGO_CID = "vcn-logo";
 
 // Brand tokens (tokens.css): page #05080d, card surfaces #f4f7fb/#ffffff, ink #182536/#46566a/#5b6b7f,
 // blue #1677ff, yellow #ffd51f, status good #15803d / warn #8a5b00 / bad #c62828 on light surfaces.
-const C = {
+const FONT = "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+/** The email's colors. Light = the dashboard's light bands; dark = its dark bands (tokens.css). */
+interface Palette {
+  scheme: ReportTheme;
+  page: string;
+  card: string;
+  /** CSS background-image for cards and the header ("" = flat). Clients that ignore it fall back to `card`. */
+  cardImage: string;
+  dark: string;
+  inset: string;
+  border: string;
+  rowLine: string;
+  neutralBg: string;
+  ink: string;
+  body: string;
+  secondary: string;
+  muted: string;
+  /** Section kicker ("1 · Headline numbers"): muted on light, yellow on dark, as the dashboard's eyebrows. */
+  kicker: string;
+  onDark: string;
+  headerSub: string;
+  /** Rank badge and initials circle background. */
+  badge: string;
+  blue: string;
+  /** In-progress goal bar fill: blue on light, cyan on dark (blue is too dim on navy). */
+  bar: string;
+  blueText: string;
+  yellow: string;
+  good: string;
+  goodBg: string;
+  warn: string;
+  warnBg: string;
+  bad: string;
+  badBg: string;
+  info: string;
+  infoBg: string;
+}
+
+const LIGHT: Palette = {
+  scheme: "light",
   page: "#e4eaf1",
-  dark: "#0c1d33",
   card: "#ffffff",
+  cardImage: "",
+  dark: "#0c1d33",
   inset: "#f4f7fb",
   border: "#d0d9e4",
+  rowLine: "#eef2f6",
+  neutralBg: "#eef2f6",
   ink: "#182536",
   body: "#2f3f52",
   secondary: "#46566a",
   muted: "#5b6b7f",
+  kicker: "#5b6b7f",
+  onDark: "#ffffff",
+  headerSub: "#aab6c4",
+  badge: "#0c1d33",
   blue: "#1677ff",
+  bar: "#1677ff",
   blueText: "#0f5fd1",
   yellow: "#ffd51f",
   good: "#15803d",
@@ -34,7 +82,63 @@ const C = {
   info: "#0f5fd1",
   infoBg: "#e8f0fe",
 };
-const FONT = "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+
+const DARK: Palette = {
+  scheme: "dark",
+  page: "#05080d",
+  card: "#0c1d33",
+  cardImage: "linear-gradient(135deg, #0f2342 0%, #091730 45%, #060d19 100%)",
+  dark: "#0c1d33",
+  inset: "#13263d",
+  border: "#223750",
+  rowLine: "#1b2e47",
+  neutralBg: "#1c2f47",
+  ink: "#ffffff",
+  body: "#c6cfda",
+  secondary: "#a7b3c2",
+  muted: "#8b98a9",
+  kicker: "#ffd51f",
+  onDark: "#ffffff",
+  headerSub: "#aab6c4",
+  badge: "#1677ff",
+  blue: "#1677ff",
+  bar: "#19c6f4",
+  blueText: "#7fb0ff",
+  yellow: "#ffd51f",
+  good: "#3ccf7a",
+  goodBg: "#143826",
+  warn: "#ffc83d",
+  warnBg: "#3a2d0f",
+  bad: "#ff7676",
+  badBg: "#3d1c22",
+  info: "#7fb0ff",
+  infoBg: "#16294a",
+};
+
+// The active palette and the table-cell styles derived from it. renderHtml sets them for the
+// theme it was asked for and restores light afterwards; rendering is synchronous, so nothing
+// else can observe the switch.
+let C: Palette = LIGHT;
+let TH = "";
+let THL = "";
+let TD = "";
+let TDL = "";
+let TDB = "";
+
+function applyTheme(theme: ReportTheme): void {
+  C = theme === "dark" ? DARK : LIGHT;
+  TH = `style="font:700 11px/1.3 ${FONT};letter-spacing:0.04em;text-transform:uppercase;color:${C.muted};text-align:right;padding:6px 6px;border-bottom:1px solid ${C.border};white-space:nowrap"`;
+  THL = TH.replace("text-align:right", "text-align:left");
+  TD = `style="font:500 13px/1.35 ${FONT};color:${C.body};text-align:right;padding:7px 6px;border-bottom:1px solid ${C.rowLine};white-space:nowrap"`;
+  TDL = TD.replace("text-align:right", "text-align:left").replace("white-space:nowrap", "");
+  TDB = TD.replace("font:500", "font:800").replace(C.body, C.ink);
+}
+applyTheme("light");
+
+/** Card surface: flat on light, the dashboard's deep-navy gradient on dark (with a flat fallback). */
+function cardBg(): string {
+  return `background:${C.card};${C.cardImage ? `background-image:${C.cardImage};` : ""}`;
+}
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const n = (v: number) => v.toLocaleString("en-US");
@@ -84,18 +188,12 @@ const levelColor = (l: Flag["level"]) => (l === "bad" ? { fg: C.bad, bg: C.badBg
 
 function section(kicker: string, title: string, body: string): string {
   return `<tr><td style="padding:0 0 12px 0">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.card};border:1px solid ${C.border};border-radius:14px"><tr><td style="padding:18px 20px">
-<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.12em;text-transform:uppercase;color:${C.muted};margin-bottom:4px">${esc(kicker)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${cardBg()}border:1px solid ${C.border};border-radius:14px"><tr><td style="padding:18px 20px">
+<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.12em;text-transform:uppercase;color:${C.kicker};margin-bottom:4px">${esc(kicker)}</div>
 <div style="font:800 18px/1.15 ${FONT};letter-spacing:-0.02em;color:${C.ink};margin-bottom:12px">${esc(title)}</div>
 ${body}
 </td></tr></table></td></tr>`;
 }
-
-const TH = `style="font:700 11px/1.3 ${FONT};letter-spacing:0.04em;text-transform:uppercase;color:${C.muted};text-align:right;padding:6px 6px;border-bottom:1px solid ${C.border};white-space:nowrap"`;
-const THL = TH.replace("text-align:right", "text-align:left");
-const TD = `style="font:500 13px/1.35 ${FONT};color:${C.body};text-align:right;padding:7px 6px;border-bottom:1px solid #eef2f6;white-space:nowrap"`;
-const TDL = TD.replace("text-align:right", "text-align:left").replace("white-space:nowrap", "");
-const TDB = TD.replace("font:500", "font:800").replace(C.body, C.ink);
 
 function table(head: string[], rows: string[][], opts: { firstLeft?: boolean; boldFirst?: boolean } = { firstLeft: true }): string {
   const h = head.map((x, i) => `<th ${i === 0 && opts.firstLeft !== false ? THL : TH}>${x}</th>`).join("");
@@ -135,8 +233,8 @@ function changePill(h: Headline): string {
 
 function changePillFor(kind: Kind, value: number | null, prev: number | null, lowerIsBetter = false): string {
   const c = change(kind, value, prev, lowerIsBetter);
-  if (!c) return `<span style="display:inline-block;font:700 11px/1 ${FONT};color:${C.muted};background:#eef2f6;border-radius:999px;padding:4px 8px;white-space:nowrap">no comparison</span>`;
-  const bg = c.arrow === "■" ? "#eef2f6" : c.color === C.good ? C.goodBg : C.badBg;
+  if (!c) return `<span style="display:inline-block;font:700 11px/1 ${FONT};color:${C.muted};background:${C.neutralBg};border-radius:999px;padding:4px 8px;white-space:nowrap">no comparison</span>`;
+  const bg = c.arrow === "■" ? C.neutralBg : c.color === C.good ? C.goodBg : C.badBg;
   return `<span style="display:inline-block;font:700 11px/1 ${FONT};color:${c.color};background:${bg};border-radius:999px;padding:4px 8px;white-space:nowrap">${c.arrow} ${esc(c.text)}</span>`;
 }
 
@@ -146,7 +244,7 @@ function goalBar(h: Headline): string {
   const v = h.value ?? 0;
   const pct = Math.round((v / h.goal) * 100);
   const fill = Math.max(v > 0 ? 2 : 0, Math.min(100, Math.round((v / h.goal) * 100)));
-  const color = v >= h.goal - 1e-9 ? C.good : C.blue;
+  const color = v >= h.goal - 1e-9 ? C.good : C.bar;
   const goalText = h.kind === "count" ? n(Math.round(h.goal)) : fmtValue(h.kind, h.goal);
   const bar =
     fill >= 100
@@ -196,7 +294,7 @@ export function repPhotoAssets(d: WeeklyReportData): { cid: string; publicPath: 
 /** Round rep photo, or an initials circle when there is no photo. Plain img / table cell, so it renders everywhere. */
 function avatar(r: RepRow, size: number): string {
   if (r.photo) return `<img src="cid:${repPhotoCid(r.userId)}" width="${size}" height="${size}" alt="${esc(r.initials)}" style="display:block;width:${size}px;height:${size}px;border-radius:50%;border:0">`;
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr><td width="${size}" height="${size}" align="center" valign="middle" bgcolor="${C.dark}" style="width:${size}px;height:${size}px;border-radius:50%;font:800 ${Math.round(size * 0.36)}px/1 ${FONT};color:#ffffff">${esc(r.initials)}</td></tr></table>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr><td width="${size}" height="${size}" align="center" valign="middle" bgcolor="${C.badge}" style="width:${size}px;height:${size}px;border-radius:50%;font:800 ${Math.round(size * 0.36)}px/1 ${FONT};color:${C.onDark}">${esc(r.initials)}</td></tr></table>`;
 }
 
 /** Green at or above goal, yellow from half, red below half (the leaderboard's attainment colors). */
@@ -224,7 +322,16 @@ export function leaderboardFallback(d: WeeklyReportData): string {
   return `${top.name} led with ${n(top.combined)} submissions and ${bottom.name} had ${n(bottom.combined)}; ${n(met)} of ${n(d.reps.length)} reps met their weekly goal.`;
 }
 
-export function renderHtml(d: WeeklyReportData, narrative: Narrative | null): string {
+export function renderHtml(d: WeeklyReportData, narrative: Narrative | null, theme: ReportTheme = "light"): string {
+  applyTheme(theme);
+  try {
+    return renderHtmlBody(d, narrative);
+  } finally {
+    applyTheme("light");
+  }
+}
+
+function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): string {
   const dash = d.dashboardUrl;
   const link = (path: string, label: string) => (dash ? `<a href="${esc(dash + path)}" style="color:${C.blueText};font-weight:700">${esc(label)}</a>` : esc(label));
   const parts: string[] = [];
@@ -265,7 +372,7 @@ export function renderHtml(d: WeeklyReportData, narrative: Narrative | null): st
       `<div><span style="font:800 30px/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${n(r.combined)}</span> <span style="font:600 13px/1.2 ${FONT};color:${C.muted}">${esc(goalText)}</span> &nbsp;${changePillFor("count", r.combined, r.combinedPrev)}</div>` +
       (r.combinedGoal !== null && r.combinedGoal > 0 ? `<div style="margin-top:8px">${bar(r.combined / r.combinedGoal, attainColor(att))}</div>${attLine}` : "") +
       `<div style="font:700 13px/1.5 ${FONT};color:${C.ink};margin-top:4px">Army ${n(r.ca101)} · Veteran ${n(r.iau)}</div>`;
-    const rankBadge = `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr><td width="22" height="22" align="center" valign="middle" bgcolor="${C.dark}" style="width:22px;height:22px;border-radius:50%;font:800 11px/1 ${FONT};color:#ffffff">${n(r.rank)}</td></tr></table>`;
+    const rankBadge = `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr><td width="22" height="22" align="center" valign="middle" bgcolor="${C.badge}" style="width:22px;height:22px;border-radius:50%;font:800 11px/1 ${FONT};color:${C.onDark}">${n(r.rank)}</td></tr></table>`;
     const left = `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding:0 8px 0 0">${rankBadge}</td><td valign="middle">${avatar(r, 48)}</td></tr></table><div style="font:800 15px/1.3 ${FONT};color:${C.ink};margin-top:8px">${esc(r.name)}</div><div style="font:600 11px/1.3 ${FONT};color:${C.muted}">${esc(r.role.toLowerCase())}</div>`;
     const dialsSub = r.dialsGoal !== null && r.dialsGoal > 0 ? `of ${n(Math.round(r.dialsGoal))} · ${n(Math.round((r.dials / r.dialsGoal) * 100))}%` : "no goal";
     const miniRow = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${C.border}"><tr>${mini("Dials", n(r.dials), dialsSub, false)}${mini("Talk time", fmtValue("minutes", r.talkMinutes), "", false)}${mini("Appointments booked", n(r.booked), "", false)}${mini("Won", n(r.won), r.won > 0 ? `${fmtValue("usd", r.wonValue)} Opportunity Value` : "", true)}</tr></table>`;
@@ -372,15 +479,15 @@ ${d.notes.map((x) => esc(x)).join("<br>")}
 </div></td></tr>`;
 
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(`VCN Weekly Sales Report: ${d.rangeText}`)}</title></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${C.scheme}"><meta name="supported-color-schemes" content="${C.scheme}"><title>${esc(`VCN Weekly Sales Report: ${d.rangeText}`)}</title></head>
 <body style="margin:0;padding:0;background:${C.page};-webkit-text-size-adjust:100%">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.page}"><tr><td align="center" style="padding:16px 8px">
 <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%">
 <tr><td style="padding:0 0 12px 0">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.dark};border-radius:14px"><tr>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.dark};${C.cardImage ? `background-image:${C.cardImage};border:1px solid ${C.border};` : ""}border-radius:14px"><tr>
 <td style="padding:18px 20px" valign="middle"><table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td valign="middle" style="padding-right:12px"><img src="cid:${LOGO_CID}" width="44" height="44" alt="Veteran Careers Network" style="display:block;border:0;border-radius:8px"></td>
-<td valign="middle"><div style="font:800 20px/1.15 ${FONT};letter-spacing:-0.02em;color:#ffffff">VCN Weekly Sales Report</div><div style="font:700 13px/1.4 ${FONT};color:${C.yellow}">${esc(d.rangeText)}</div><div style="font:500 11px/1.4 ${FONT};color:#aab6c4">by Intelagent Media · data as of ${d.dataAsOf ? esc(fmtDateTime(d.dataAsOf)) : "no completed sync"}</div></td>
+<td valign="middle"><div style="font:800 20px/1.15 ${FONT};letter-spacing:-0.02em;color:${C.onDark}">VCN Weekly Sales Report</div><div style="font:700 13px/1.4 ${FONT};color:${C.yellow}">${esc(d.rangeText)}</div><div style="font:500 11px/1.4 ${FONT};color:${C.headerSub}">by Intelagent Media · data as of ${d.dataAsOf ? esc(fmtDateTime(d.dataAsOf)) : "no completed sync"}</div></td>
 </tr></table></td></tr></table></td></tr>
 ${parts.join("\n")}
 ${footer}

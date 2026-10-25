@@ -15,7 +15,7 @@
 import { NextResponse } from "next/server";
 import { isDenied, requireApiUser } from "@/lib/guard";
 import { allowedEmails, isHistoryImportAdmin } from "@/lib/users";
-import { lastCompletedWeekStart, weekStartFromKey, weeklyReportConfig } from "@/lib/weeklyReport/config";
+import { lastCompletedWeekStart, weekStartFromKey, weeklyReportConfig, type ReportTheme } from "@/lib/weeklyReport/config";
 import { repPhotoAssets } from "@/lib/weeklyReport/render";
 import { renderWeeklyReport, sendWeeklyReport } from "@/lib/weeklyReport/send";
 
@@ -41,16 +41,23 @@ export async function GET(req: Request): Promise<NextResponse> {
   try {
     const weekStart = weekFrom(sp.get("week"), now);
     const format = sp.get("format") ?? "html";
-    const r = await renderWeeklyReport(weekStart, now, sp.get("narrative") !== "0");
-    if (format === "json") return NextResponse.json({ ok: true, subject: r.subject, narrative: r.narrative, narrativeSkipped: r.narrativeSkipped, data: r.data });
+    const r = await renderWeeklyReport(weekStart, now, sp.get("narrative") !== "0", themeFrom(sp.get("theme")));
+    if (format === "json") return NextResponse.json({ ok: true, subject: r.subject, theme: r.theme, narrative: r.narrative, narrativeSkipped: r.narrativeSkipped, data: r.data });
     if (format === "text") return new NextResponse(r.text, { headers: { "content-type": "text/plain; charset=utf-8" } });
     // The logo and rep photos are inline attachments in the email; in the browser preview they are served from the site.
     let html = r.html.replace(/src="cid:vcn-logo"/g, 'src="/vcn-logo.png"');
     for (const a of repPhotoAssets(r.data)) html = html.split('src="cid:' + a.cid + '"').join('src="' + a.publicPath + '"');
-    return new NextResponse(html, { headers: { "content-type": "text/html; charset=utf-8", "x-weekly-report-subject": encodeURIComponent(r.subject), "x-weekly-report-narrative": r.narrative ? "included" : `omitted: ${encodeURIComponent(r.narrativeSkipped ?? "")}` } });
+    return new NextResponse(html, { headers: { "content-type": "text/html; charset=utf-8", "x-weekly-report-subject": encodeURIComponent(r.subject), "x-weekly-report-theme": r.theme, "x-weekly-report-narrative": r.narrative ? "included" : `omitted: ${encodeURIComponent(r.narrativeSkipped ?? "")}` } });
   } catch (err) {
     return NextResponse.json({ ok: false, error: (err as Error).message }, { status: 400 });
   }
+}
+
+/** ?theme= / body.theme: light or dark; absent = the theme in config/weekly-report.json. */
+function themeFrom(v: unknown): ReportTheme | undefined {
+  if (v === undefined || v === null || v === "") return undefined;
+  if (v === "light" || v === "dark") return v;
+  throw new Error('"theme" must be "light" or "dark"');
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
@@ -58,13 +65,13 @@ export async function POST(req: Request): Promise<NextResponse> {
   if (isDenied(user)) return user;
   const now = new Date();
   try {
-    const body = (await req.json().catch(() => ({}))) as { week?: unknown; to?: unknown; narrative?: unknown };
+    const body = (await req.json().catch(() => ({}))) as { week?: unknown; to?: unknown; narrative?: unknown; theme?: unknown };
     const to = typeof body.to === "string" ? body.to.trim().toLowerCase() : "";
     if (!to) throw new Error('"to" (one email address) is required');
     const cfg = weeklyReportConfig();
     if (!cfg.recipients.includes(to) && !allowedEmails().has(to)) throw new Error("the test address must be a configured recipient (config/weekly-report.json) or an allowed sign-in address (config/users.json)");
     const weekStart = weekFrom(typeof body.week === "string" ? body.week : undefined, now);
-    const r = await sendWeeklyReport({ weekStart, now, kind: "test", to: [to], triggeredBy: user.email, withNarrative: body.narrative !== false });
+    const r = await sendWeeklyReport({ weekStart, now, kind: "test", to: [to], triggeredBy: user.email, withNarrative: body.narrative !== false, theme: themeFrom(body.theme) });
     if ("skipped" in r) return NextResponse.json({ ok: false, error: r.skipped }, { status: 409 });
     return NextResponse.json(r, { status: r.ok ? 200 : 502 });
   } catch (err) {

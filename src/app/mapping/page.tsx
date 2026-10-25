@@ -340,6 +340,9 @@ export default async function MappingPage() {
             {reportCfg.enabled ? <span className="pill pill-ok">enabled</span> : <span className="pill pill-warn">off (enabled: false)</span>}
           </span>
           <span>
+            <b>Theme:</b> {reportCfg.theme}
+          </span>
+          <span>
             <b>Recipients:</b> {reportCfg.recipients.length ? reportCfg.recipients.join(", ") : "none configured"}
           </span>
           <span>
