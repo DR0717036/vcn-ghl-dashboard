@@ -14,7 +14,7 @@ import { computeRates, computeRepAppointments, computeStatusCards } from "@/lib/
 import { computeCommission } from "@/lib/commission";
 import { computeResponseTimes, computeStale } from "@/lib/conversations";
 import { getDb, getState, latestSyncRuns } from "@/lib/db";
-import { addDays, dayKeysBetween, fmtDateTime, fmtDay, fmtRange, nyParts, parseNyDay, resolveRange, startOfDay, type DateRange } from "@/lib/dates";
+import { addDays, dayKeysBetween, fmtDateTime, fmtDay, fmtRange, fmtRangeShort, nyParts, parseNyDay, resolveRange, startOfDay, type DateRange } from "@/lib/dates";
 import { buildLeads, computeAssignedByUser, computeOutcomes, computeStaleLeads } from "@/lib/leads";
 import { semesters, trackedMilestones } from "@/lib/mapping-config";
 import { analyzeMessaging, keywordCard, replyRateCard } from "@/lib/messaging";
@@ -85,6 +85,9 @@ export interface RepRow {
 export interface RepPace {
   userId: string;
   name: string;
+  initials: string;
+  photo: string | null;
+  role: string;
   mtd: number;
   quota: number;
   quotaPct: number | null;
@@ -127,6 +130,9 @@ export interface WeeklyReportData {
   rangeLabel: string;
   rangeText: string;
   prevRangeText: string;
+  /** The same ranges without the year, for headings. */
+  rangeShort: string;
+  prevRangeShort: string;
   partial: boolean;
   generatedAt: string;
   dataAsOf: string | null;
@@ -137,10 +143,13 @@ export interface WeeklyReportData {
   biggestImprover: { rep: RepRow; delta: number } | null;
   pace: {
     monthLabel: string;
+    monthShort: string;
     asOf: string;
     workingDaysTotal: number;
     workingDaysElapsed: number;
     workingDaysRemaining: number;
+    /** Where the team would be if quota were spread evenly over the month's working days (quota × elapsed ÷ total); null without a quota. */
+    expectedToday: number | null;
     team: { mtd: number; quota: number; projected: number | null; neededPerDay: number | null; othersMtd: number };
     reps: RepPace[];
     semesters: { key: string; label: string; short: string; submittedMtd: number | null; acceptedMtd: number | null; submittedToDate: number | null; acceptedToDate: number | null }[];
@@ -153,6 +162,7 @@ export interface WeeklyReportData {
   };
   pipeline: {
     windowLabel: string;
+    windowShort: string;
     stale: { count: number; staleAfterDays: number; estimated: number; byUser: { name: string; count: number; oldestDays: number }[] };
     untouched: { count: number; cohort: number; days: number };
     approval: { inStage: number; value: number; buckets: { label: string; count: number }[]; oldestDays: number | null; unknownAge: number };
@@ -357,9 +367,13 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
     const r = commission.reps[rep.userId];
     const mtd = r?.submissionsMtd ?? 0;
     const quota = r?.monthlyQuota ?? 0;
+    const row = reps.find((x) => x.userId === rep.userId);
     return {
       userId: rep.userId,
       name: rep.name,
+      initials: row?.initials ?? (rep.name.replace(/[.]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?"),
+      photo: row?.photo ?? null,
+      role: row?.role ?? ((rep.kpiMultiplier ?? 1) >= 1 ? "Full-time" : "Part-time"),
       mtd,
       quota,
       quotaPct: quota > 0 ? mtd / quota : null,
@@ -448,6 +462,7 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
   const staleConv = computeStale(now);
   const pipeline: WeeklyReportData["pipeline"] = {
     windowLabel: `leads created ${fmtRange(fourWeeks.start, fourWeeks.end, false)}`,
+    windowShort: fmtRangeShort(fourWeeks.start, fourWeeks.end),
     stale: { count: stale4w.count, staleAfterDays: stale4w.staleAfterDays, estimated: stale4w.estimated, byUser: stale4w.byUser.slice(0, 6).map((u) => ({ name: u.name, count: u.count, oldestDays: Math.round(u.oldestDays) })) },
     untouched: { count: outcomes4w.cohort - touchedRow, cohort: outcomes4w.cohort, days: outcomes4w.touchWindowDays },
     approval: { inStage: approval?.currentInStage ?? 0, value: approval?.currentValue ?? 0, buckets, oldestDays: oldestDays === null ? null : Math.round(oldestDays), unknownAge },
@@ -524,6 +539,8 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
     rangeLabel: week.label,
     rangeText: fmtRange(week.start, week.end, week.partial),
     prevRangeText: fmtRange(week.prevStart, week.prevEnd, week.partial),
+    rangeShort: fmtRangeShort(week.start, week.end),
+    prevRangeShort: fmtRangeShort(week.prevStart, week.prevEnd),
     partial: week.partial,
     generatedAt: now.toISOString(),
     dataAsOf: cov.lastCoreSyncOkAt ?? null,
@@ -534,10 +551,12 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
     biggestImprover,
     pace: {
       monthLabel: commission.monthLabel,
+      monthShort: fmtRangeShort(month.start, month.end),
       asOf: now.toISOString(),
       workingDaysTotal: allWd.length,
       workingDaysElapsed: elapsedWd.length,
       workingDaysRemaining: remainingWd,
+      expectedToday: teamQuota > 0 && allWd.length > 0 ? (teamQuota * elapsedWd.length) / allWd.length : null,
       team: { mtd: teamMtd, quota: teamQuota, projected: project(teamMtd), neededPerDay: teamQuota > 0 ? needed(teamMtd, teamQuota) : null, othersMtd: monthSubs.others?.total ?? 0 },
       reps: [...paceReps].sort((a, b) => (b.quotaPct ?? -1) - (a.quotaPct ?? -1) || b.mtd - a.mtd),
       semesters: semRows,

@@ -241,6 +241,15 @@ export function fmtRange(start: Date, end: Date, partial: boolean): string {
   return a === b ? a : `${a} – ${b}`;
 }
 
+const dayShortFmt = new Intl.DateTimeFormat("en-US", { timeZone: REPORTING_TZ, month: "short", day: "numeric" });
+
+/** "Oct 12 – Oct 18" style description of a range without the year (end exclusive). */
+export function fmtRangeShort(start: Date, end: Date): string {
+  const a = dayShortFmt.format(start);
+  const b = dayShortFmt.format(new Date(end.getTime() - 1));
+  return a === b ? a : `${a} – ${b}`;
+}
+
 /** "YYYY-MM-DD" in New York for a given instant. */
 export function nyDayKey(d: Date): string {
   const p = nyParts(d);

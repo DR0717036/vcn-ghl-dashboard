@@ -13,7 +13,9 @@ export const LOGO_CID = "vcn-logo";
 
 // Brand tokens (tokens.css): page #05080d, card surfaces #f4f7fb/#ffffff, ink #182536/#46566a/#5b6b7f,
 // blue #1677ff, yellow #ffd51f, status good #15803d / warn #8a5b00 / bad #c62828 on light surfaces.
-const FONT = "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+// Manrope where the client loads web fonts (Apple Mail, iPhone Mail, Outlook for Mac); Gmail and Outlook for Windows fall back to Helvetica Neue / Arial.
+const FONT = "Manrope, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+const FONT_URL = "https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap";
 /** The email's colors. Light = the dashboard's light bands; dark = its dark bands (tokens.css). */
 interface Palette {
   scheme: ReportTheme;
@@ -49,6 +51,10 @@ interface Palette {
   badBg: string;
   info: string;
   infoBg: string;
+  /** Pace / projection markers on bars. */
+  marker: string;
+  /** Funnel bar colors, one blue step per stage (top to bottom). */
+  funnel: string[];
 }
 
 const LIGHT: Palette = {
@@ -81,6 +87,8 @@ const LIGHT: Palette = {
   badBg: "#fbe9e9",
   info: "#0f5fd1",
   infoBg: "#e8f0fe",
+  marker: "#182536",
+  funnel: ["#5598e7", "#3987e5", "#256abf", "#1c5cab", "#184f95"],
 };
 
 const DARK: Palette = {
@@ -113,6 +121,8 @@ const DARK: Palette = {
   badBg: "#3d1c22",
   info: "#7fb0ff",
   infoBg: "#16294a",
+  marker: "#ffffff",
+  funnel: ["#7fb0ff", "#5a9cf5", "#3d86ea", "#2a79d6", "#1677ff"],
 };
 
 // The active palette and the table-cell styles derived from it. renderHtml sets them for the
@@ -186,11 +196,11 @@ const levelColor = (l: Flag["level"]) => (l === "bad" ? { fg: C.bad, bg: C.badBg
 
 // ---- HTML --------------------------------------------------------------------------------------
 
-function section(kicker: string, title: string, body: string): string {
+function section(kicker: string, title: string, body: string, subtitle?: string): string {
   return `<tr><td style="padding:0 0 12px 0">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${cardBg()}border:1px solid ${C.border};border-radius:14px"><tr><td style="padding:18px 20px">
 <div style="font:700 11px/1.2 ${FONT};letter-spacing:0.12em;text-transform:uppercase;color:${C.kicker};margin-bottom:4px">${esc(kicker)}</div>
-<div style="font:800 18px/1.15 ${FONT};letter-spacing:-0.02em;color:${C.ink};margin-bottom:12px">${esc(title)}</div>
+<div style="font:800 18px/1.15 ${FONT};letter-spacing:-0.02em;color:${C.ink};margin-bottom:${subtitle ? "2px" : "12px"}">${esc(title)}</div>${subtitle ? `<div style="font:600 13px/1.3 ${FONT};color:${C.muted};margin-bottom:12px">${esc(subtitle)}</div>` : ""}
 ${body}
 </td></tr></table></td></tr>`;
 }
@@ -292,7 +302,7 @@ export function repPhotoAssets(d: WeeklyReportData): { cid: string; publicPath: 
 }
 
 /** Round rep photo, or an initials circle when there is no photo. Plain img / table cell, so it renders everywhere. */
-function avatar(r: RepRow, size: number): string {
+function avatar(r: { userId: string; photo: string | null; initials: string }, size: number): string {
   if (r.photo) return `<img src="cid:${repPhotoCid(r.userId)}" width="${size}" height="${size}" alt="${esc(r.initials)}" style="display:block;width:${size}px;height:${size}px;border-radius:50%;border:0">`;
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr><td width="${size}" height="${size}" align="center" valign="middle" bgcolor="${C.badge}" style="width:${size}px;height:${size}px;border-radius:50%;font:800 ${Math.round(size * 0.36)}px/1 ${FONT};color:${C.onDark}">${esc(r.initials)}</td></tr></table>`;
 }
@@ -322,6 +332,57 @@ export function leaderboardFallback(d: WeeklyReportData): string {
   return `${top.name} led with ${n(top.combined)} submissions and ${bottom.name} had ${n(bottom.combined)}; ${n(met)} of ${n(d.reps.length)} reps met their weekly goal.`;
 }
 
+/** A small labelled statistic cell for mini rows (label, value, optional sub-line). */
+function statCell(label: string, value: string, sub: string, width: string, last: boolean): string {
+  return `<td width="${width}" valign="top" style="padding:8px 6px 8px 10px;${last ? "" : `border-right:1px solid ${C.border};`}"><div style="font:700 10px/1.2 ${FONT};letter-spacing:0.06em;text-transform:uppercase;color:${C.muted}">${esc(label)}</div><div style="font:800 15px/1.3 ${FONT};color:${C.ink};margin-top:2px">${esc(value)}</div>${sub ? `<div style="font:500 11px/1.3 ${FONT};color:${C.muted}">${esc(sub)}</div>` : ""}</td>`;
+}
+
+/**
+ * A progress bar made of table cells (no images): filled to `fillPct` (0..1) in `color`, with an
+ * optional solid marker (where pace should be) and an optional hollow marker (a projection),
+ * each given as 0..1 of the track. Anything past the end of the track is pinned to the end.
+ */
+function markedBar(fillPct: number, color: string, opts: { solid?: number | null; hollow?: number | null; height?: number } = {}): string {
+  const h = opts.height ?? 8;
+  const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v * 100)));
+  const f = clamp(fillPct);
+  const marks: { at: number; kind: "solid" | "hollow" }[] = [];
+  if (typeof opts.solid === "number") marks.push({ at: clamp(opts.solid), kind: "solid" });
+  if (typeof opts.hollow === "number") marks.push({ at: clamp(opts.hollow), kind: "hollow" });
+  marks.sort((a, b) => a.at - b.at);
+  const segs: { w: number; kind: "fill" | "track" | "solid" | "hollow" }[] = [];
+  let pos = 0;
+  const advance = (to: number) => {
+    if (to <= pos) return;
+    if (pos < f && to > f) {
+      segs.push({ w: f - pos, kind: "fill" });
+      segs.push({ w: to - f, kind: "track" });
+    } else segs.push({ w: to - pos, kind: pos < f ? "fill" : "track" });
+    pos = to;
+  };
+  for (const m of marks) {
+    const at = Math.max(pos, Math.min(m.at, 97));
+    advance(at);
+    segs.push({ w: 3, kind: m.kind });
+    pos = at + 3;
+  }
+  advance(100);
+  const base = `height:${h}px;font-size:0;line-height:0`;
+  const cells = segs
+    .map((s) => {
+      if (s.kind === "hollow") return `<td width="${s.w}%" height="${h}" style="${base};border:2px solid ${C.marker};background:transparent">&nbsp;</td>`;
+      const bg = s.kind === "fill" ? color : s.kind === "solid" ? C.marker : C.border;
+      return `<td width="${s.w}%" height="${h}" bgcolor="${bg}" style="${base}">&nbsp;</td>`;
+    })
+    .join("");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-radius:4px;overflow:hidden"><tr>${cells}</tr></table>`;
+}
+
+/** Green at or above the quota, yellow from half, red below half (the pace table's rule). */
+function paceColor(pct: number | null): string {
+  return pct === null ? C.border : pct >= 1 ? C.good : pct >= 0.5 ? C.yellow : C.bad;
+}
+
 export function renderHtml(d: WeeklyReportData, narrative: Narrative | null, theme: ReportTheme = "light"): string {
   applyTheme(theme);
   try {
@@ -349,7 +410,7 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
     [tile(H("booked"), `last week ${fmtValue("count", H("booked").prev)}`), tile(H("newLeads"), `last week ${fmtValue("count", H("newLeads").prev)}`)],
   ];
   const tileTable = (rows: string[][]) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows.map((r) => `<tr>${r.map((t, i) => `<td width="50%" valign="top" style="padding:0 ${i === 0 ? "5px" : "0"} 10px ${i === 0 ? "0" : "5px"}">${t}</td>`).join("")}</tr>`).join("")}</table>`;
-  parts.push(section("1 · Headline numbers", `${d.rangeText} vs ${d.prevRangeText}`, briefHtml + tileTable(tileRows) + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`)));
+  parts.push(section("1 · Headline numbers", d.rangeShort, briefHtml + tileTable(tileRows) + note(`Goals are the dashboard's weekly rates summed across reps${d.partial ? ", pro-rated to the week so far" : ""}; change is against the previous Monday-to-Sunday week${d.partial ? " over the same elapsed portion" : ""}; submissions count CA 101 plus IAU App for every semester.`), `vs ${d.prevRangeShort}`));
 
   // 2. leaderboard: two highlight tiles with photos, one sentence on the spread, then one full-width card per rep
   const highlight = (label: string, r: RepRow | null, line: string, empty: string) =>
@@ -372,7 +433,7 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
       `<div><span style="font:800 30px/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${n(r.combined)}</span> <span style="font:600 13px/1.2 ${FONT};color:${C.muted}">${esc(goalText)}</span> &nbsp;${changePillFor("count", r.combined, r.combinedPrev)}</div>` +
       (r.combinedGoal !== null && r.combinedGoal > 0 ? `<div style="margin-top:8px">${bar(r.combined / r.combinedGoal, attainColor(att))}</div>${attLine}` : "") +
       `<div style="font:700 13px/1.5 ${FONT};color:${C.ink};margin-top:4px">Army ${n(r.ca101)} · Veteran ${n(r.iau)}</div>`;
-    const rankBadge = `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr><td width="22" height="22" align="center" valign="middle" bgcolor="${C.badge}" style="width:22px;height:22px;border-radius:50%;font:800 11px/1 ${FONT};color:${C.onDark}">${n(r.rank)}</td></tr></table>`;
+    const rankBadge = `<div style="font:800 16px/1 ${FONT};color:${C.muted};min-width:16px">${n(r.rank)}</div>`;
     const left = `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding:0 8px 0 0">${rankBadge}</td><td valign="middle">${avatar(r, 48)}</td></tr></table><div style="font:800 15px/1.3 ${FONT};color:${C.ink};margin-top:8px">${esc(r.name)}</div><div style="font:600 11px/1.3 ${FONT};color:${C.muted}">${esc(r.role.toLowerCase())}</div>`;
     const dialsSub = r.dialsGoal !== null && r.dialsGoal > 0 ? `of ${n(Math.round(r.dialsGoal))} · ${n(Math.round((r.dials / r.dialsGoal) * 100))}%` : "no goal";
     const miniRow = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${C.border}"><tr>${mini("Dials", n(r.dials), dialsSub, false)}${mini("Talk time", fmtValue("minutes", r.talkMinutes), "", false)}${mini("Appointments booked", n(r.booked), "", false)}${mini("Won", n(r.won), r.won > 0 ? `${fmtValue("usd", r.wonValue)} Opportunity Value` : "", true)}</tr></table>`;
@@ -390,58 +451,166 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null): strin
     ),
   );
 
-  // 3. month-to-date pace
+  // 3. month-to-date pace: team hero tile with a pace marker, the narrative, one slim row per rep, semester tiles
   const p = d.pace;
   const t = p.team;
-  const teamLine = `<div style="background:${C.inset};border-radius:10px;padding:12px 14px;margin-bottom:12px"><div style="font:800 22px/1.2 ${FONT};color:${C.ink}">${n(t.mtd)} <span style="font:600 14px/1.2 ${FONT};color:${C.secondary}">of ${n(t.quota)} team quota · ${t.quota > 0 ? Math.round((t.mtd / t.quota) * 100) : 0}%</span></div><div style="font:500 13px/1.5 ${FONT};color:${C.secondary};margin-top:4px">Projected month end at current pace: <b style="color:${C.ink}">${t.projected === null ? "unavailable" : n(t.projected)}</b> · needed per working day to hit quota: <b style="color:${C.ink}">${t.neededPerDay === null ? (t.mtd >= t.quota ? "met" : "no working days left") : t.neededPerDay.toFixed(1)}</b> · ${n(p.workingDaysRemaining)} of ${n(p.workingDaysTotal)} working days left in ${esc(p.monthLabel)}${t.othersMtd > 0 ? ` · plus ${n(t.othersMtd)} by users who are not configured reps` : ""}</div></div>`;
-  const paceRows = p.reps.map((r) => [
-    `<span style="font-weight:700;color:${C.ink}">${esc(r.name)}</span>${r.planLabel ? `<br><span style="font-size:11px;color:${C.muted}">${esc(r.planLabel)}</span>` : ""}`,
-    `<span style="font-weight:800;color:${C.ink}">${n(r.mtd)}</span> <span style="color:${C.muted}">/ ${n(r.quota)}</span>`,
-    r.quotaPct === null ? "—" : `<span style="color:${r.quotaPct >= 1 ? C.good : r.quotaPct >= 0.5 ? C.warn : C.bad};font-weight:700">${Math.round(r.quotaPct * 100)}%</span>`,
-    r.projected === null ? "—" : n(r.projected),
-    r.neededPerDay === null ? (r.quota > 0 && r.mtd >= r.quota ? "met" : "—") : r.neededPerDay.toFixed(1),
-    r.commissionMtd === null ? "—" : `${esc(fmtValue("usd", r.commissionMtd))}<br><span style="font-size:11px;color:${C.muted}">${esc(r.commissionLabel)}</span>`,
-  ]);
-  const semRows = p.semesters.map((s) => [`<span style="font-weight:700;color:${C.ink}">${esc(s.label)}</span>`, esc(fmtValue("count", s.submittedMtd)), esc(fmtValue("count", s.acceptedMtd)), esc(fmtValue("count", s.submittedToDate)), esc(fmtValue("count", s.acceptedToDate))]);
+  const teamPct = t.quota > 0 ? t.mtd / t.quota : null;
+  const needText = (mtd: number, quota: number, need: number | null) => (need === null ? (quota > 0 && mtd >= quota ? "quota met" : "no working days left") : `${need.toFixed(1)}/day`);
+  const expected = p.expectedToday;
+  const heroHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px;margin-bottom:12px"><tr><td style="padding:14px 14px 10px">
+<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">Team · ${esc(p.monthShort)}</div>
+<div><span style="font:800 30px/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${n(t.mtd)}</span> <span style="font:600 14px/1.2 ${FONT};color:${C.muted}">of ${n(t.quota)} quota${teamPct === null ? "" : ` · ${n(Math.round(teamPct * 100))}%`}</span></div>
+<div style="margin-top:10px">${markedBar(teamPct ?? 0, paceColor(teamPct), { solid: expected !== null && t.quota > 0 ? expected / t.quota : null, height: 10 })}</div>
+<div style="font:500 11px/1.4 ${FONT};color:${C.muted};margin-top:4px">${expected !== null ? `▮ marker = on pace today (${n(Math.round(expected))} after ${n(p.workingDaysElapsed)} of ${n(p.workingDaysTotal)} working days)` : "no quota configured"}${t.othersMtd > 0 ? ` · plus ${n(t.othersMtd)} by users who are not configured reps` : ""}</div>
+</td></tr><tr><td style="padding:0 4px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${C.border}"><tr>${statCell("Projected month-end", t.projected === null ? "unavailable" : n(t.projected), "at the current pace", "34%", false)}${statCell("Needed per working day", needText(t.mtd, t.quota, t.neededPerDay), "to reach quota", "33%", false)}${statCell("Working days left", n(p.workingDaysRemaining), `of ${n(p.workingDaysTotal)} this month`, "33%", true)}</tr></table></td></tr></table>`;
+  const repPaceRows = p.reps
+    .map((r, i) => {
+      const pct = r.quotaPct;
+      const proj = r.projected !== null && r.quota > 0 ? r.projected / r.quota : null;
+      return `<tr${i ? ` style="border-top:1px solid ${C.border}"` : ""}>
+<td width="32" valign="middle" style="padding:8px 8px 8px 0">${avatar(r, 32)}</td>
+<td width="112" valign="middle" style="padding:8px 8px 8px 0"><div style="font:800 13px/1.3 ${FONT};color:${C.ink}">${esc(r.name)}</div><div style="font:600 11px/1.3 ${FONT};color:${C.muted}">${esc(r.role.toLowerCase())}</div></td>
+<td valign="middle" style="padding:8px 8px 8px 0">${markedBar(pct ?? 0, paceColor(pct), { hollow: proj })}<div style="font:600 11px/1.4 ${FONT};color:${C.secondary};margin-top:4px">${n(r.mtd)} / ${n(r.quota)} quota${pct === null ? "" : ` · ${n(Math.round(pct * 100))}%`} · need ${esc(needText(r.mtd, r.quota, r.neededPerDay))}${r.projected !== null ? ` · ▢ projected ${n(r.projected)}` : ""}</div></td>
+<td width="104" align="right" valign="middle" style="padding:8px 0 8px 6px"><div style="font:700 13px/1.3 ${FONT};color:${C.muted}">${r.commissionMtd === null ? "—" : esc(fmtValue("usd", r.commissionMtd))}</div><div style="font:500 10px/1.3 ${FONT};color:${C.muted}">${esc(r.commissionLabel)}</div></td>
+</tr>`;
+    })
+    .join("");
+  const repPaceHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td colspan="3" style="padding:0 0 4px;font:700 10px/1.2 ${FONT};letter-spacing:0.06em;text-transform:uppercase;color:${C.muted}">Submissions vs monthly quota</td><td align="right" style="padding:0 0 4px;font:700 10px/1.2 ${FONT};letter-spacing:0.06em;text-transform:uppercase;color:${C.muted}">Est. commission</td></tr>${repPaceRows}</table>`;
+  const semTile = (s: (typeof p.semesters)[number]) =>
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px"><tr><td style="padding:12px 14px">
+<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">${esc(s.label)}</div>
+<div style="white-space:nowrap"><span style="font:800 24px/1.1 ${FONT};color:${C.ink}">${esc(fmtValue("count", s.submittedMtd))}</span> <span style="font:600 11px/1.2 ${FONT};color:${C.muted}">submitted</span> &nbsp; <span style="font:800 24px/1.1 ${FONT};color:${C.ink}">${esc(fmtValue("count", s.acceptedMtd))}</span> <span style="font:600 11px/1.2 ${FONT};color:${C.muted}">accepted</span></div>
+<div style="font:500 11px/1.4 ${FONT};color:${C.muted};margin-top:6px">month to date · since ${esc(p.toDateSince ?? "tracking began")}: ${esc(fmtValue("count", s.submittedToDate))} submitted, ${esc(fmtValue("count", s.acceptedToDate))} accepted</div>
+</td></tr></table>`;
+  const semTiles = p.semesters.map(semTile);
+  const semRowsHtml: string[][] = [];
+  for (let i = 0; i < semTiles.length; i += 2) semRowsHtml.push(semTiles.slice(i, i + 2));
   parts.push(
     section(
       "3 · Month-to-date pace",
-      `${p.monthLabel}, as of ${fmtDateTime(p.asOf)}`,
-      teamLine +
+      p.monthShort,
+      heroHtml +
         (narrative ? paragraph(narrative.projections) : "") +
-        table(["Rep", "Submissions / quota", "Pace", "Projected", "Need / day", "Est. commission"], paceRows) +
-        `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:14px 0 6px">Semester totals (Veteran G.I. Bill)</div>` +
-        table(["Semester", "Submitted MTD", "Accepted MTD", `Submitted since ${esc(p.toDateSince ?? "tracking began")}`, `Accepted since ${esc(p.toDateSince ?? "tracking began")}`], semRows) +
-        `<div style="font:700 14px/1.4 ${FONT};color:${C.ink};margin-top:12px">Estimated commission to date: ${esc(fmtValue("usd", p.commissionMtd))} <span style="font-weight:500;color:${C.muted}">(estimated from dashboard counts; official calculation is done outside the dashboard)</span></div>` +
-        note(`Projection = month-to-date submissions ÷ working days elapsed × working days in the month (Monday to Friday calendar). Need / day = the gap to quota spread over the working days left. Quota and commission count every semester.`),
+        repPaceHtml +
+        `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:14px 0 8px">Semester totals (Veteran G.I. Bill)</div>` +
+        tileTable(semRowsHtml) +
+        `<div style="font:700 13px/1.4 ${FONT};color:${C.ink};margin-top:2px">Estimated commission to date: ${esc(fmtValue("usd", p.commissionMtd))} <span style="font-weight:500;color:${C.muted}">(estimates from dashboard counts; the official calculation is done outside the dashboard)</span></div>` +
+        note("Projection = month-to-date submissions ÷ working days elapsed × working days in the month (Monday to Friday); need/day = the gap to quota over the working days left; the pace marker = quota × working days elapsed ÷ working days in the month; quota and commission count every semester."),
+      `as of ${fmtDateTime(p.asOf)}`,
     ),
   );
 
-  // 4. funnel
-  const stepRate = (steps: typeof d.funnel.steps, i: number, which: "cur" | "prev") => {
-    if (i === 0) return "";
-    const a = steps[i][which];
-    const b = steps[0][which];
-    return a === null || b === null ? "—" : b > 0 ? `${Math.round((a / b) * 100)}%` : "—";
-  };
-  const funnelRows = d.funnel.steps.map((s, i) => [`<span style="font-weight:700;color:${C.ink}">${esc(s.label)}</span>`, `<span style="font-weight:800;color:${C.ink}">${esc(fmtValue("count", s.cur))}</span>`, esc(fmtValue("count", s.prev)), changeHtml(change("count", s.cur, s.prev), s.unavailable), stepRate(d.funnel.steps, i, "cur"), stepRate(d.funnel.steps, i, "prev")]);
-  const cohortLines = d.funnel.cohort
-    .map((c) => `<li style="margin:0 0 4px">${esc(c.label)} (${n(c.leads)}): ${n(c.appointment)} booked an appointment (${c.leads > 0 ? Math.round((c.appointment / c.leads) * 100) : 0}%), ${n(c.submitted)} submitted (${c.leads > 0 ? Math.round((c.submitted / c.leads) * 100) : 0}%), ${n(c.won)} won (${c.leads > 0 ? Math.round((c.won / c.leads) * 100) : 0}%), as of today${c.historyUnavailable > 0 ? `; history unavailable for ${n(c.historyUnavailable)}` : ""}.</li>`)
+  // 4. funnel: five bars shrinking with the count, the step-to-step rate between them, last week beside each; two cohort cards
+  const steps = d.funnel.steps;
+  const maxCur = Math.max(1, ...steps.map((s) => s.cur ?? 0));
+  const ratePct = (a: number | null, b: number | null) => (a === null || b === null || b <= 0 ? null : Math.round((a / b) * 100));
+  const shortLabel = (label: string) => label.replace(/\s*\(.*\)\s*$/, "");
+  const funnelRows = steps
+    .map((s, i) => {
+      const w = s.cur === null ? 0 : Math.max(12, Math.round((s.cur / maxCur) * 100));
+      const color = C.funnel[Math.min(i, C.funnel.length - 1)];
+      const barCells =
+        s.cur === null
+          ? `<td style="font:600 12px/1.3 ${FONT};color:${C.muted}" title="${esc(s.unavailable ?? "")}">unavailable</td>`
+          : `<td width="${w}%" height="24" bgcolor="${color}" style="height:24px;border-radius:4px;font-size:0;line-height:0">&nbsp;</td><td style="font:800 14px/24px ${FONT};color:${C.ink};padding:0 0 0 8px;white-space:nowrap">${n(s.cur)}</td>`;
+      const barRow = `<tr><td width="150" valign="middle" style="padding:5px 10px 5px 0;font:700 12px/1.3 ${FONT};color:${C.ink}">${esc(shortLabel(s.label))}</td><td valign="middle" style="padding:5px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>${barCells}<td align="right" style="font:500 11px/1.3 ${FONT};color:${C.muted};padding:0 0 0 10px;white-space:nowrap">last wk ${esc(fmtValue("count", s.prev))}</td></tr></table></td></tr>`;
+      if (i === 0) return barRow;
+      const cur = ratePct(s.cur, steps[i - 1].cur);
+      const prev = ratePct(s.prev, steps[i - 1].prev);
+      // A step that can exceed the one above it (Won includes Army CA, which never passes IAU Accepted) has no step-to-step rate.
+      const subset = (cur === null || cur <= 100) && (prev === null || prev <= 100);
+      const rateText = subset
+        ? `↓ ${cur === null ? "—" : `${n(cur)}%`} of the step above <span style="font-weight:500;color:${C.muted}">(last wk ${prev === null ? "—" : `${n(prev)}%`})</span>`
+        : `↓ <span style="font-weight:500;color:${C.muted}">n/a: not a subset of the step above (Won includes Army CA, which never passes IAU Accepted)</span>`;
+      return `<tr><td></td><td style="padding:0;font:600 11px/1.3 ${FONT};color:${C.secondary}">${rateText}</td></tr>` + barRow;
+    })
     .join("");
-  parts.push(section("4 · Funnel conversion", "Leads → appointments → submissions → accepted → won", table(["Step", "This week", "Last week", "Change", "Of leads", "Last wk"], funnelRows) + `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:14px 0 6px">Matched cohorts (Lead Outcomes)</div><ul style="font:400 13px/1.5 ${FONT};color:${C.body};margin:0;padding-left:18px">${cohortLines}</ul>` + note("Of leads = the step's weekly count ÷ the week's new leads. The steps are the week's own event counts (different contacts at each step), not one group of leads followed through, so read them as throughput. The cohort lines follow one week's new leads and say what happened to them so far.")));
+  const funnelHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:12px">${funnelRows}</table>`;
+  const cohortCard = (c: (typeof d.funnel.cohort)[number]) => {
+    const pct = (v: number) => (c.leads > 0 ? `${n(Math.round((v / c.leads) * 100))}%` : "—");
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-radius:12px"><tr><td style="padding:10px 12px">
+<div style="font:700 10px/1.2 ${FONT};letter-spacing:0.06em;text-transform:uppercase;color:${C.muted}">${esc(c.label)}</div>
+<div style="font:800 18px/1.3 ${FONT};color:${C.ink}">${n(c.leads)} <span style="font:600 11px/1.2 ${FONT};color:${C.muted}">leads</span></div>
+<div style="font:500 12px/1.45 ${FONT};color:${C.secondary}">${n(c.appointment)} booked an appointment (${pct(c.appointment)}) · ${n(c.submitted)} submitted (${pct(c.submitted)}) · ${n(c.won)} won (${pct(c.won)})${c.historyUnavailable > 0 ? ` · history unavailable for ${n(c.historyUnavailable)}` : ""}</div>
+</td></tr></table>`;
+  };
+  const cohortTiles = d.funnel.cohort.slice(0, 2).map(cohortCard);
+  parts.push(
+    section(
+      "4 · Funnel conversion",
+      "Leads → appointments → submissions → accepted → won",
+      funnelHtml +
+        (cohortTiles.length ? `<div style="font:800 14px/1.3 ${FONT};color:${C.ink};margin:0 0 8px">Matched cohorts (Lead Outcomes), as of today</div>` + tileTable([cohortTiles]) : "") +
+        note("Each bar is the week's own event count (different contacts at each step), so read the funnel as throughput, not one group followed through; the cohort cards do follow one week's new leads. Submissions = CA 101 + IAU App, Accepted = IAU App Accepted, Won = Army CA + Veteran G.I. Bill, every semester."),
+    ),
+  );
 
-  // 5. pipeline health
+  // 5. pipeline health: six tiles, left edge colored by severity (thresholds in the note)
   const ph = d.pipeline;
-  const bucketText = ph.approval.buckets.map((b) => `${n(b.count)} ${b.label}`).join(", ");
-  const healthRows: [string, string][] = [
-    [`Stale leads (in New Lead over ${n(ph.stale.staleAfterDays)} days)`, `${n(ph.stale.count)}${ph.stale.byUser.length ? ` · ${ph.stale.byUser.map((u) => `${esc(u.name)} ${n(u.count)}${u.oldestDays ? ` (oldest ${n(u.oldestDays)}d)` : ""}`).join(", ")}` : ""}${ph.stale.estimated ? ` · ${n(ph.stale.estimated)} estimated from creation time` : ""}`],
-    [`Not touched in the last ${n(ph.untouched.days)} days`, `${n(ph.untouched.count)} of ${n(ph.untouched.cohort)} leads`],
-    ["Awaiting Supervisor Approval (Army CA, now)", `${n(ph.approval.inStage)} · ${esc(fmtValue("usd", ph.approval.value))} Opportunity Value · ${bucketText}${ph.approval.unknownAge ? `, ${n(ph.approval.unknownAge)} with no stage-entry time` : ""}${ph.approval.oldestDays !== null ? ` · oldest ${n(ph.approval.oldestDays)} days` : ""}`],
-    ["Unassigned leads", `${n(ph.unassigned.fourWeeks)} of the last four weeks' new leads (${n(ph.unassigned.thisWeek)} from this week)`],
-    ["Dead-end and lost", `${n(ph.deadEnd.parked)} parked in a dead-end stage · ${n(ph.deadEnd.lost)} lost · ${n(ph.deadEnd.stillNewLead)} still in New Lead, of ${n(ph.deadEnd.cohort)} leads`],
-    [`Stale conversations (unread inbound over ${n(ph.staleConversations.afterMinutes)} min)`, `${n(ph.staleConversations.conversations)} conversations, ${n(ph.staleConversations.unread)} unread messages${ph.staleConversations.oldestMinutes !== null ? ` · oldest waiting ${waitText(ph.staleConversations.oldestMinutes)}` : ""}`],
+  const share = (num: number, den: number) => (den > 0 ? num / den : 0);
+  type Sev = "good" | "warn" | "bad";
+  const sevColor = (s: Sev) => (s === "good" ? C.good : s === "warn" ? C.yellow : C.bad);
+  const bucketText = ph.approval.buckets
+    .filter((b) => b.count > 0)
+    .map((b) => `${n(b.count)} ${b.label}`)
+    .join(", ");
+  const healthTiles: { label: string; value: string; sub: string; sev: Sev }[] = [
+    {
+      label: "Stale leads",
+      value: n(ph.stale.count),
+      sub: `in New Lead over ${n(ph.stale.staleAfterDays)} days${ph.stale.byUser.length ? ` · ${ph.stale.byUser.slice(0, 3).map((u) => `${u.name} ${n(u.count)}`).join(", ")}` : ""}${ph.stale.estimated ? ` · ${n(ph.stale.estimated)} estimated from creation time` : ""}`,
+      sev: ph.stale.count === 0 ? "good" : share(ph.stale.count, ph.untouched.cohort) <= 0.05 ? "warn" : "bad",
+    },
+    {
+      label: `Untouched ${n(ph.untouched.days)} days`,
+      value: n(ph.untouched.count),
+      sub: `of ${n(ph.untouched.cohort)} leads with no call, SMS, or email in the last ${n(ph.untouched.days)} days`,
+      sev: share(ph.untouched.count, ph.untouched.cohort) < 0.25 ? "good" : share(ph.untouched.count, ph.untouched.cohort) < 0.5 ? "warn" : "bad",
+    },
+    {
+      label: "Awaiting supervisor approval",
+      value: n(ph.approval.inStage),
+      sub: `${fmtValue("usd", ph.approval.value)} Opportunity Value${ph.approval.oldestDays !== null ? ` · oldest ${n(Math.round(ph.approval.oldestDays))} days` : ""}${bucketText ? ` · ${bucketText}` : ""}${ph.approval.unknownAge ? ` · ${n(ph.approval.unknownAge)} with no stage-entry time` : ""}`,
+      sev: ph.approval.inStage === 0 || ph.approval.oldestDays === null || ph.approval.oldestDays < 7 ? "good" : ph.approval.oldestDays < 14 ? "warn" : "bad",
+    },
+    {
+      label: "Unassigned leads",
+      value: n(ph.unassigned.fourWeeks),
+      sub: `of the last four weeks' new leads · ${n(ph.unassigned.thisWeek)} from this week`,
+      sev: ph.unassigned.fourWeeks === 0 ? "good" : share(ph.unassigned.fourWeeks, ph.untouched.cohort) <= 0.01 ? "warn" : "bad",
+    },
+    {
+      label: "Dead-end / lost",
+      value: n(ph.deadEnd.parked),
+      sub: `parked in a dead-end stage · ${n(ph.deadEnd.lost)} lost · ${n(ph.deadEnd.stillNewLead)} still in New Lead · of ${n(ph.deadEnd.cohort)} leads`,
+      sev: share(ph.deadEnd.parked, ph.deadEnd.cohort) < 0.05 ? "good" : share(ph.deadEnd.parked, ph.deadEnd.cohort) < 0.15 ? "warn" : "bad",
+    },
+    {
+      label: "Stale conversations",
+      value: n(ph.staleConversations.conversations),
+      sub: `${n(ph.staleConversations.unread)} unread inbound messages waiting over ${n(ph.staleConversations.afterMinutes)} min${ph.staleConversations.oldestMinutes !== null ? ` · oldest ${waitText(ph.staleConversations.oldestMinutes)}` : ""}`,
+      sev: ph.staleConversations.conversations === 0 ? "good" : ph.staleConversations.conversations < 10 ? "warn" : "bad",
+    },
   ];
-  parts.push(section("5 · Pipeline health", `Snapshot as of the last sync · ${esc(ph.windowLabel)}`, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${healthRows.map(([k, v]) => `<tr><td ${TDL.replace("white-space:nowrap", "")} width="42%"><b style="color:${C.ink}">${k}</b></td><td ${TDL}>${v}</td></tr>`).join("")}</table>` + note("Stale, untouched, unassigned, and dead-end figures follow the Leads row rules (config/leads.json) over leads created in the last four weeks. Approval aging uses GHL's stage-entry time on each open opportunity in the stage.")));
+  const healthTile = (x: (typeof healthTiles)[number]) =>
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.inset};border:1px solid ${C.border};border-left:4px solid ${sevColor(x.sev)};border-radius:12px"><tr><td style="padding:12px 14px">
+<div style="font:700 11px/1.2 ${FONT};letter-spacing:0.08em;text-transform:uppercase;color:${C.muted};margin-bottom:6px">${esc(x.label)}</div>
+<div style="font:800 26px/1.1 ${FONT};letter-spacing:-0.02em;color:${C.ink}">${esc(x.value)}</div>
+<div style="font:500 11px/1.45 ${FONT};color:${C.secondary};margin-top:4px">${esc(x.sub)}</div>
+</td></tr></table>`;
+  const healthRows: string[][] = [];
+  for (let i = 0; i < healthTiles.length; i += 2) healthRows.push(healthTiles.slice(i, i + 2).map(healthTile));
+  parts.push(
+    section(
+      "5 · Pipeline health",
+      `Leads created ${ph.windowShort}`,
+      tileTable(healthRows) +
+        note(
+          "Stale, untouched, unassigned, and dead-end figures follow the Leads row rules (config/leads.json) over leads created in the last four weeks; approval aging uses GHL's stage-entry time. Edge color green / yellow / red: stale leads none / up to 5% of the leads / more; untouched under 25% / under 50% / more; approval oldest under 7 / under 14 / more days; unassigned none / up to 1% / more; dead-end under 5% / under 15% / more parked; stale conversations none / under 10 / more.",
+        ),
+      "Snapshot as of the last sync",
+    ),
+  );
 
   // 6. trend
   const trendRows = d.trend.map((w, i) => {
@@ -479,7 +648,7 @@ ${d.notes.map((x) => esc(x)).join("<br>")}
 </div></td></tr>`;
 
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${C.scheme}"><meta name="supported-color-schemes" content="${C.scheme}"><title>${esc(`VCN Weekly Sales Report: ${d.rangeText}`)}</title></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${C.scheme}"><meta name="supported-color-schemes" content="${C.scheme}"><!--[if !mso]><!--><link rel="preconnect" href="https://fonts.googleapis.com"><link href="${FONT_URL}" rel="stylesheet"><style>@import url('${FONT_URL}');</style><!--<![endif]--><title>${esc(`VCN Weekly Sales Report: ${d.rangeText}`)}</title></head>
 <body style="margin:0;padding:0;background:${C.page};-webkit-text-size-adjust:100%">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.page}"><tr><td align="center" style="padding:16px 8px">
 <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%">
