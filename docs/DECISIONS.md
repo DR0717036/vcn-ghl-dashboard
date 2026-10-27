@@ -1266,3 +1266,29 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     decision). Best call times: the rep's own heat map (heatBundle filtered
     to their dials), opening on the connected rate. The semester picker and
     range picker are path-aware so they stay on /me.
+
+85. **Invoices (owner request 2026-10-26).** A rep's invoice for a month is
+    the commission estimate from their plan for that month, itemized by the
+    contacts that earned it (src/lib/invoices/lines.ts prices each
+    submission or won with the same rules as commissionBetween and reconciles
+    its total against it; a mismatch blocks sending). Months become available
+    on the 1st of the following month; the current month is a live preview;
+    a month with nothing to invoice cannot be sent. "Send for review" (rep
+    only, never an admin viewing as the rep) freezes the amount and the
+    lines, renders a PDF with a dependency-free writer (src/lib/invoices/
+    pdf.ts: Letter, Helvetica, WinAnsi), stores it with status Submitted in
+    the new invoices / invoice_events tables, and emails it from the
+    configured sender (config/invoices.json; Gmail setup as the weekly
+    report) to the review recipients with an approve link and the PDF
+    attached (src/lib/mailer.ts gained attachments). Every approver listed
+    in config/invoices.json (diego@ and dante@) must approve before the
+    status becomes Approved; any admin may then mark it paid. The rep is
+    emailed (at their signInEmail) when it is sent, at each approval, when
+    approved, and when paid; failures are recorded as events and shown on
+    the invoice. Pages: /invoices (reps: their months and statuses; admins:
+    every rep × month with Draft / Submitted / Approved / Paid, the live
+    draft estimate, Approve / Mark paid / PDF; ?as=<user id> opens a rep's
+    view) and /invoices/<YYYY-MM> (the itemized invoice with its status
+    history). Routes: POST /api/me/invoices, GET /api/me/invoices/pdf, POST
+    /api/admin/invoices. All invoice data lives in the dashboard's cache;
+    nothing touches GHL.

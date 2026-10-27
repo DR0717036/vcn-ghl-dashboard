@@ -2,7 +2,8 @@
 // using the account in GMAIL_USER with the app password in GMAIL_APP_PASSWORD.
 // A small SMTP client on Node's built-in tls module, so no mail library is
 // added to the project. Builds a multipart message with a plain-text part,
-// an HTML part, and optional inline images (referenced as cid:<id>).
+// an HTML part, optional inline images (referenced as cid:<id>), and
+// optional file attachments (e.g. an invoice PDF).
 // Never logs or returns the credentials. Server-only.
 
 import { randomUUID } from "node:crypto";
@@ -15,6 +16,13 @@ export interface InlineImage {
   data: Buffer;
 }
 
+/** A file attached to the message (shown as a download, not inline). */
+export interface Attachment {
+  filename: string;
+  contentType: string;
+  data: Buffer;
+}
+
 export interface MailMessage {
   from: { name: string; address: string };
   to: string[];
@@ -22,6 +30,7 @@ export interface MailMessage {
   text: string;
   html: string;
   inline?: InlineImage[];
+  attachments?: Attachment[];
 }
 
 export interface MailResult {
@@ -144,10 +153,10 @@ export function buildMime(msg: MailMessage, messageId: string, opts: { eightBit?
     `--${alt}--`,
   ];
   const inline = msg.inline ?? [];
-  if (inline.length === 0) {
-    return [...headers, `Content-Type: multipart/alternative; boundary="${alt}"`, "", ...alternative, ""].join(CRLF);
-  }
-  const related = [
+  const attachments = msg.attachments ?? [];
+  // The text/HTML pair, wrapped in multipart/related when there are inline images.
+  const inner: { type: string; lines: string[] } = inline.length === 0 ? { type: `multipart/alternative; boundary="${alt}"`, lines: alternative } : { type: `multipart/related; boundary="${rel}"; type="multipart/alternative"`, lines: [] };
+  if (inline.length > 0) inner.lines = [
     `--${rel}`,
     `Content-Type: multipart/alternative; boundary="${alt}"`,
     "",
@@ -163,7 +172,22 @@ export function buildMime(msg: MailMessage, messageId: string, opts: { eightBit?
     ]),
     `--${rel}--`,
   ];
-  return [...headers, `Content-Type: multipart/related; boundary="${rel}"; type="multipart/alternative"`, "", ...related, ""].join(CRLF);
+  if (attachments.length === 0) return [...headers, `Content-Type: ${inner.type}`, "", ...inner.lines, ""].join(CRLF);
+  // Attachments: multipart/mixed around the message body plus one part per file.
+  const mixed = `mixed-${randomUUID()}`;
+  const safeName = (n: string) => n.replace(/["\r\n]/g, "");
+  return [
+    ...headers,
+    `Content-Type: multipart/mixed; boundary="${mixed}"`,
+    "",
+    `--${mixed}`,
+    `Content-Type: ${inner.type}`,
+    "",
+    ...inner.lines,
+    ...attachments.flatMap((a) => [`--${mixed}`, `Content-Type: ${a.contentType}; name="${safeName(a.filename)}"`, "Content-Transfer-Encoding: base64", `Content-Disposition: attachment; filename="${safeName(a.filename)}"`, "", b64(a.data)]),
+    `--${mixed}--`,
+    "",
+  ].join(CRLF);
 }
 
 class SmtpError extends Error {

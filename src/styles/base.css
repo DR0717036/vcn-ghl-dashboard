@@ -5096,3 +5096,57 @@ tr:hover .lb-viewas,
 .me-card .kpi-body {
   margin-top: var(--s-3);
 }
+
+/* invoices */
+.inv-page {
+  min-height: 60vh;
+}
+
+.inv-intro {
+  max-width: 900px;
+  margin: 0 auto var(--s-5);
+  text-align: center;
+}
+
+.inv-table td {
+  vertical-align: middle;
+}
+
+.inv-actions {
+  white-space: nowrap;
+}
+
+.inv-btn {
+  height: 30px;
+  padding: 6px 12px;
+  font-size: 13px;
+  margin-right: 6px;
+}
+
+.inv-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+.inv-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  max-width: 460px;
+}
+
+.inv-focus td {
+  background: var(--accent-yellow-soft);
+}
+
+.inv-history {
+  margin-top: var(--s-4);
+}
+
+.inv-detail tfoot td {
+  border-top: 2px solid var(--border-strong);
+  padding-top: 10px;
+}

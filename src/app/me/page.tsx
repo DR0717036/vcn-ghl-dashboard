@@ -127,7 +127,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
         <div className="band-inner">
           <BandHeading s={sections[2]} />
           <div className="kpi-row cols-1">
-            <CommissionCard c={commission} />
+            <CommissionCard c={commission} invoicesHref={view.viewingAs ? `/invoices?as=${encodeURIComponent(view.userId)}` : "/invoices"} />
           </div>
         </div>
       </section>

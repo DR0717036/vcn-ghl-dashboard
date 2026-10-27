@@ -342,6 +342,41 @@ export function getDb(): DatabaseSync {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS weekly_report_scheduled_once ON weekly_report_sends(week_start) WHERE kind = 'scheduled';
     CREATE UNIQUE INDEX IF NOT EXISTS weekly_report_midweek_once ON weekly_report_sends(week_start) WHERE kind = 'midweek';
+
+    -- Rep commission invoices (owner request 2026-10-26): one row per rep and
+    -- calendar month once the rep sends it for review. The amount, the
+    -- calculation, the line items, and the PDF are frozen at submission.
+    -- Lives only in this cache; nothing here touches GHL.
+    CREATE TABLE IF NOT EXISTS invoices (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id       TEXT NOT NULL,      -- the rep's GHL user id
+      rep_name      TEXT NOT NULL,
+      month         TEXT NOT NULL,      -- YYYY-MM, America/New_York calendar month
+      status        TEXT NOT NULL,      -- submitted | approved | paid
+      number        TEXT,               -- VCN-YYYYMM-<id>
+      amount        REAL NOT NULL,
+      calc          TEXT NOT NULL,
+      plan_key      TEXT NOT NULL,
+      lines         TEXT NOT NULL,      -- JSON array of line items
+      pdf           BLOB,
+      pdf_name      TEXT,
+      submitted_at  TEXT NOT NULL,
+      submitted_by  TEXT NOT NULL,
+      approvals     TEXT NOT NULL DEFAULT '[]',   -- JSON [{ email, at }]
+      approved_at   TEXT,
+      paid_at       TEXT,
+      paid_by       TEXT,
+      UNIQUE(user_id, month)
+    );
+    CREATE TABLE IF NOT EXISTS invoice_events (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id  INTEGER NOT NULL,
+      at          TEXT NOT NULL,
+      kind        TEXT NOT NULL,        -- submitted | approval | approved | paid | email | email_failed
+      actor       TEXT,
+      detail      TEXT
+    );
+    CREATE INDEX IF NOT EXISTS invoice_events_invoice ON invoice_events(invoice_id);
   `);
   return db;
 }

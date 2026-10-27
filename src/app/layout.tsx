@@ -41,9 +41,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                   <>
                     <a href="/">Scorecard</a>
                     <a href="/mapping">Mapping</a>
+                    <a href="/invoices">Invoices</a>
                   </>
                 ) : (
-                  <a href="/me">My dashboard</a>
+                  <>
+                    <a href="/me">My dashboard</a>
+                    <a href="/invoices">My invoices</a>
+                  </>
                 )}
               </nav>
             ) : null}

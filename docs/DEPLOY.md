@@ -93,3 +93,17 @@ folder: the server listened on 3456, created `cache.sqlite` with its `-wal` and
 `-shm` companions (journal mode `wal`), answered `/login` with 200, `/` with a
 307 redirect to `/login`, and API routes with 401 when signed out, and the
 scheduler started its first sync five seconds after boot and recorded the run.
+
+## Rep sign-in and invoices (added 2026-10-26)
+
+Admins are the addresses under `admins` in `config/users.json`. Each sales
+rep signs in with the Google account in the `signInEmail` field of their
+entry in `config/sales-reps.json` (empty = cannot sign in); both files are
+read from disk with a change check, so editing them needs no restart, but a
+push is what gets them to the host. Reps only ever see /me and /invoices.
+`GET /api/me/whoami` shows the caller's role. Invoice settings (approvers,
+review recipients, sender, payer line, months of history) live in
+`config/invoices.json`; the invoices and invoice_events tables are created
+automatically when the server starts, and invoice PDFs are stored in the
+same cache file. Invoice emails use the same Gmail variables as the weekly
+report; nothing new in the environment.

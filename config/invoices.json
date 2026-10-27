@@ -1,0 +1,17 @@
+{
+  "_comment": "Rep commission invoices (owner request 2026-10-26). A rep's invoice for a month is the commission estimate from their plan for that month, itemized by the contacts that earned it; it lives only in this dashboard's own cache, never in GHL. approvers: every address here must approve a submitted invoice before its status becomes Approved (they must also be admins in users.json). reviewRecipients: who receives the 'sent for review' email with the PDF and the approve link. from: the sender shown on invoice emails; the Gmail account that sends them is GMAIL_USER in .env (must be this address or one of its aliases). payee/payer: the names printed on the PDF. historyMonths: how many past months the invoice pages list. A month becomes available to send on the 1st of the following month; the current month shows as a live preview.",
+  "approvers": [
+    "diego@intelagentmedia.com",
+    "dante@intelagentmedia.com"
+  ],
+  "reviewRecipients": [
+    "diego@intelagentmedia.com",
+    "dante@intelagentmedia.com"
+  ],
+  "from": {
+    "name": "VCN Sales Dashboard",
+    "address": "info@intelagentmedia.com"
+  },
+  "payer": "Intelagent Media · Veteran Careers Network",
+  "historyMonths": 12
+}

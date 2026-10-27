@@ -8,7 +8,7 @@ import Notes from "../Notes";
 const n = (v: number) => v.toLocaleString("en-US");
 const usd = (v: number) => v.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
-export default function CommissionCard({ c }: { c: RepCommissionData }) {
+export default function CommissionCard({ c, invoicesHref = "/invoices" }: { c: RepCommissionData; invoicesHref?: string }) {
   const m = c.thisMonth;
   return (
     <div className="stat kpi kpi-title-xl reveal me-card" data-kpi="me-commission">
@@ -32,7 +32,10 @@ export default function CommissionCard({ c }: { c: RepCommissionData }) {
         </div>
       </div>
       <p className="note me-plan-text">
-        <b>Your plan:</b> {c.planText}
+        <b>Your plan:</b> {c.planText}{" "}
+        <a className="me-link" href={invoicesHref}>
+          Invoices and their status →
+        </a>
       </p>
       <div className="scroll kpi-body">
         <table className="stat-breakdown me-list">

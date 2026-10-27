@@ -10,7 +10,10 @@ export interface Rep {
   name: string;
   /** GHL user id (the id in GHL's user list). */
   userId: string;
+  /** The address on the GHL user record (informational). */
   email?: string;
+  /** The Google account the rep signs in with (config/sales-reps.json); empty = cannot sign in yet. */
+  signInEmail?: string;
   /** Scales every per-rep goal rate: 1.0 full-time, 0.5 part-time. */
   kpiMultiplier: number;
   /** Combined submissions expected in a calendar month. */
