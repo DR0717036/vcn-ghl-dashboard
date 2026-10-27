@@ -1,13 +1,14 @@
-// "My scorecard" for one rep: today, this week, this month (and the selected
-// range when it is a different period), each figure taken from the SAME
-// per-rep rows the admin scorecard shows (Rep Call Activity, Rep
-// Appointments, Program Submissions, the Won row in period mode) with the
-// rep's own goals (per-rep rate × multiplier or override, pro-rated to the
-// period). Nothing is recomputed with different rules. Reads the cache only.
+// "My scorecard" for one rep over the date range selected in the control
+// bar: each figure is the rep's own row of the matching team-scorecard
+// function (Rep Call Activity, Rep Appointments, Program Submissions, the
+// Won row in period mode), with the rep's own goal pro-rated to the range,
+// the Met / On Track / Missed status against the elapsed portion, and the
+// previous-period comparison, exactly as the team's KPI cards work. Reads
+// the cache only.
 
 import { computeRepAppointments } from "@/lib/appointments";
-import { resolveRange, type DateRange, type RangeKey } from "@/lib/dates";
-import { goalFor } from "@/lib/goals";
+import type { DateRange } from "@/lib/dates";
+import { goalFor, repGoalStatus, type Goal, type GoalStatus } from "@/lib/goals";
 import { semesters } from "@/lib/mapping-config";
 import { fmtMinutes } from "@/lib/metrics";
 import { computeRepCalls } from "@/lib/repCalls";
@@ -17,43 +18,31 @@ import { wonOpps } from "@/lib/wonRow";
 
 export type Kind = "count" | "minutes" | "pct" | "usd";
 
-export interface Cell {
-  value: number | null;
-  text: string;
-  /** The rep's own goal for the whole period (null = no goal for this KPI). */
-  goal: number | null;
-  /** The rep's goal for the elapsed part of an in-progress period. */
-  goalByNow: number | null;
-  /** value ÷ goal, or null. */
-  attainment: number | null;
-  /** Shown in place of the bar when there is no goal for the period (e.g. "Weekly goal 4" on the Today column). */
-  goalNote?: string;
-  /** A smaller line under the figure. */
-  sub?: string;
-  /** Lines listed under the figure (e.g. the semester split). */
-  parts?: { label: string; text: string }[];
-}
-
-export interface ScoreRow {
+export interface ScoreMetric {
   key: string;
   label: string;
   kind: Kind;
-  /** Where the figure comes from on the admin scorecard. */
+  /** Where the figure comes from on the team scorecard. */
   source: string;
-  cells: Cell[];
-}
-
-export interface ScorePeriod {
-  key: RangeKey;
-  label: string;
-  /** "Oct 20 – Oct 26, 2:15 PM" style, as the control bar shows it. */
+  value: number | null;
   text: string;
-  partial: boolean;
+  unavailable?: string;
+  /** The previous period's figure (null = not comparable). */
+  prev: number | null;
+  prevUnavailable?: string;
+  /** The rep's own goal for the whole range and for the elapsed part of it. */
+  goal: { full: number; scaled: number } | null;
+  status: GoalStatus | null;
+  /** Shown instead of a goal when a weekly-rate goal has no sensible one-day share. */
+  goalNote?: string;
+  sub?: string;
+  parts?: { label: string; text: string }[];
 }
 
 export interface RepScorecard {
-  periods: ScorePeriod[];
-  rows: ScoreRow[];
+  rangeLabel: string;
+  partial: boolean;
+  metrics: ScoreMetric[];
   notes: string[];
 }
 
@@ -68,93 +57,105 @@ export function fmtKind(kind: Kind, v: number | null): string {
   return n(v);
 }
 
-/**
- * A weekly goal has no sensible one-day share (4 bookings a week is not 0.57
- * a day), so for a single-day period a weekly-rate goal is shown as text
- * ("weekly goal 4") instead of a bar. `rate` is the rep's own rate in the
- * goal's unit.
- */
-function cell(kind: Kind, value: number | null, goal: { full: number; scaled: number; rate?: number; unit?: "day" | "week" | "team-week" } | null | undefined, singleDay: boolean, extra?: Partial<Cell>): Cell {
-  const g = goal && goal.full > 0 ? goal : null;
-  if (g && singleDay && g.unit === "week" && g.rate !== undefined) {
-    return { value, text: fmtKind(kind, value), goal: null, goalByNow: null, attainment: null, goalNote: `Weekly goal ${fmtKind(kind, Math.round(g.rate))}`, ...extra };
-  }
-  return {
-    value,
-    text: fmtKind(kind, value),
-    goal: g ? g.full : null,
-    goalByNow: g ? g.scaled : null,
-    attainment: g && value !== null ? value / g.full : null,
-    ...extra,
-  };
+interface Figures {
+  dials: number;
+  conversations: number;
+  talk: number;
+  connected: number;
+  booked: number;
+  showed: number;
+  noshow: number;
+  showRate: number | null;
+  submissions: number | null;
+  subsUnavailable?: string;
+  ca101: number;
+  semParts: { label: string; text: string }[];
+  won: number;
+  wonValue: number;
+  goals: { calls: Goal | null; talk: Goal | null; booked: Goal | null; completed: Goal | null; subs: Goal | null };
 }
 
-/** The figures for one rep over one range. */
-function periodFigures(rep: Rep, range: DateRange): Record<string, Cell> {
+/** The rep's figures over one range, from the team functions. */
+function figures(rep: Rep, range: DateRange): Figures {
   const calls = computeRepCalls(range);
   const appts = computeRepAppointments(range);
   const subs = computeSubmissions(range, "all");
-  const completedGoal = goalFor("appointmentsCompleted", range);
   const c = calls.rows.find((r) => r.userId === rep.userId);
   const a = appts.rows.find((r) => r.userId === rep.userId);
   const s = subs.rows.find((r) => r.userId === rep.userId);
-  const subGoal = subs.goal?.perRep[rep.userId];
   const won = wonOpps("period", range).filter((o) => o.assignedTo === rep.userId);
-  const singleDay = range.key === "today" || range.key === "yesterday";
-  const withUnit = (g: { full: number; scaled: number } | null | undefined, goal: ReturnType<typeof goalFor>) => (g && goal ? { ...g, rate: goal.perRep[rep.userId]?.rate, unit: goal.unit } : g);
-  const bookedGoal = goalFor("appointmentsBooked", range);
-  const callsGoal = goalFor("callsMade", range);
-  const talkGoal = goalFor("talkTimeMinutes", range);
-  const wonValue = won.reduce((t, o) => t + (o.value ?? 0), 0);
-  const marked = (a?.showed ?? 0) + (a?.noshow ?? 0);
-  // IAU App Submitted per semester for this rep (the parts behind the combined count).
-  const semParts = (subs.parts?.iau ?? []).map((p) => {
-    const sem = semesters().find((x) => x.submittedKey === p.key);
-    return { label: `Veteran IAU · ${sem?.short ?? p.reportingGroup}`, text: n(p.reps.find((r) => r.userId === rep.userId)?.contacts ?? 0) };
-  });
-  const subsUnavailable = subs.value === null;
   return {
-    dials: cell("count", c?.dials ?? 0, withUnit(c?.callGoal, callsGoal), singleDay, { sub: c ? `${n(c.conversations)} conversations` : undefined }),
-    talk: cell("minutes", c ? Math.round(c.talkSeconds / 60) : 0, withUnit(c?.talkGoalMinutes, talkGoal), singleDay, { sub: c && c.connected > 0 ? `${n(c.connected)} connected calls` : undefined }),
-    booked: cell("count", a?.booked ?? 0, withUnit(a?.bookedGoal, bookedGoal), singleDay),
-    completed: cell("count", a?.showed ?? 0, withUnit(completedGoal?.perRep[rep.userId] ?? null, completedGoal), singleDay, { sub: a ? `no-show ${n(a.noshow)}` : undefined }),
-    showRate: cell("pct", a && a.showRate !== null ? a.showRate : null, null, singleDay, { sub: marked > 0 ? `${n(a?.showed ?? 0)} of ${n(marked)} marked` : "none marked yet" }),
-    submissions: subsUnavailable
-      ? { value: null, text: "unavailable", goal: null, goalByNow: null, attainment: null, sub: subs.unavailableReason }
-      : cell("count", s?.total ?? 0, withUnit(subGoal ? { full: subGoal.full, scaled: subGoal.scaled } : null, subs.goal), singleDay, { parts: [{ label: "Army CA 101", text: n(s?.ca101 ?? 0) }, ...semParts] }),
-    won: cell("count", won.length, null, singleDay, { sub: `Opportunity Value ${usd(wonValue)}` }),
+    dials: c?.dials ?? 0,
+    conversations: c?.conversations ?? 0,
+    talk: c ? Math.round(c.talkSeconds / 60) : 0,
+    connected: c?.connected ?? 0,
+    booked: a?.booked ?? 0,
+    showed: a?.showed ?? 0,
+    noshow: a?.noshow ?? 0,
+    showRate: a && a.showRate !== null ? a.showRate : null,
+    submissions: subs.value === null ? null : (s?.total ?? 0),
+    subsUnavailable: subs.unavailableReason,
+    ca101: s?.ca101 ?? 0,
+    semParts: (subs.parts?.iau ?? []).map((p) => {
+      const sem = semesters().find((x) => x.submittedKey === p.key);
+      return { label: `Veteran IAU · ${sem?.short ?? p.reportingGroup}`, text: n(p.reps.find((r) => r.userId === rep.userId)?.contacts ?? 0) };
+    }),
+    won: won.length,
+    wonValue: won.reduce((t, o) => t + (o.value ?? 0), 0),
+    goals: { calls: calls.callsGoal, talk: calls.talkGoal, booked: appts.bookedGoal, completed: goalFor("appointmentsCompleted", range), subs: subs.goal },
   };
 }
 
-const ROWS: { key: string; label: string; kind: Kind; source: string }[] = [
-  { key: "dials", label: "Dials", kind: "count", source: "Rep Call Activity (outbound human call attempts)" },
-  { key: "talk", label: "Talk time", kind: "minutes", source: "Rep Call Activity (recorded duration of connected calls)" },
-  { key: "booked", label: "Appointments booked", kind: "count", source: "Rep Appointments, as host (bookings created in the period)" },
-  { key: "completed", label: "Appointments completed", kind: "count", source: "Rep Appointments (scheduled in the period and marked Showed)" },
-  { key: "showRate", label: "Show rate", kind: "pct", source: "Rep Appointments (Showed ÷ Showed + No-show)" },
-  { key: "submissions", label: "Submissions", kind: "count", source: "Program Submissions (CA 101 + IAU App, every semester; first entry per contact, credited to the owner at the event)" },
-  { key: "won", label: "Won", kind: "count", source: "Won row, Became Won During Period (first won transition per opportunity, credited to the owner at the event)" },
-];
-
-/** Today, this week, this month, plus the selected range when it is none of those. */
-export function scorecardPeriods(now: Date, selected: DateRange): DateRange[] {
-  const fixed: RangeKey[] = ["today", "this_week", "this_month"];
-  const list = fixed.map((k) => resolveRange(k, now));
-  if (!fixed.includes(selected.key)) list.push(selected);
-  return list;
+/** The comparison period as a range of its own (values only; goals are not needed for it). */
+function prevRangeOf(range: DateRange): DateRange {
+  return { ...range, start: range.prevStart, end: range.prevEnd, fullEnd: range.prevEnd, partial: false };
 }
 
-export function computeRepScorecard(rep: Rep, now: Date, selected: DateRange, rangeText: (r: DateRange) => string): RepScorecard {
-  const periods = scorecardPeriods(now, selected);
-  const figures = periods.map((r) => periodFigures(rep, r));
+export function computeRepScorecard(rep: Rep, range: DateRange): RepScorecard {
+  const cur = figures(rep, range);
+  const prev = figures(rep, prevRangeOf(range));
+  const singleDay = range.key === "today" || range.key === "yesterday";
+
+  const goalOf = (g: Goal | null, value: number | null): Pick<ScoreMetric, "goal" | "status" | "goalNote"> => {
+    const r = g?.perRep[rep.userId];
+    if (!g || !r || r.full <= 0) return { goal: null, status: null };
+    // A weekly rate has no sensible one-day share (4 bookings a week is not 0.57 a day): show it as text for a single day.
+    if (singleDay && g.unit === "week") return { goal: null, status: null, goalNote: `Weekly goal ${n(Math.round(r.rate))}` };
+    return { goal: { full: r.full, scaled: r.scaled }, status: value === null ? null : repGoalStatus(value, g, rep.userId) };
+  };
+  const marked = cur.showed + cur.noshow;
+
+  const metrics: ScoreMetric[] = [
+    { key: "dials", label: "Dials", kind: "count", source: "Rep Call Activity (outbound human call attempts)", value: cur.dials, text: n(cur.dials), prev: prev.dials, ...goalOf(cur.goals.calls, cur.dials), sub: `${n(cur.conversations)} conversations` },
+    { key: "talk", label: "Talk time", kind: "minutes", source: "Rep Call Activity (recorded duration of connected calls)", value: cur.talk, text: fmtMinutes(cur.talk), prev: prev.talk, ...goalOf(cur.goals.talk, cur.talk), sub: cur.connected > 0 ? `${n(cur.connected)} connected calls` : undefined },
+    { key: "booked", label: "Appointments booked", kind: "count", source: "Rep Appointments, as host (bookings created in the period)", value: cur.booked, text: n(cur.booked), prev: prev.booked, ...goalOf(cur.goals.booked, cur.booked) },
+    { key: "completed", label: "Appointments completed", kind: "count", source: "Rep Appointments (scheduled in the period and marked Showed)", value: cur.showed, text: n(cur.showed), prev: prev.showed, ...goalOf(cur.goals.completed, cur.showed), sub: `no-show ${n(cur.noshow)}` },
+    { key: "showRate", label: "Show rate", kind: "pct", source: "Rep Appointments (Showed ÷ Showed + No-show)", value: cur.showRate, text: fmtKind("pct", cur.showRate), prev: prev.showRate, prevUnavailable: prev.showRate === null ? "No appointments marked in the previous period." : undefined, goal: null, status: null, sub: marked > 0 ? `${n(cur.showed)} of ${n(marked)} marked` : "none marked yet" },
+    {
+      key: "submissions",
+      label: "Submissions",
+      kind: "count",
+      source: "Program Submissions (CA 101 + IAU App, every semester; first entry per contact, credited to the owner at the event)",
+      value: cur.submissions,
+      text: cur.submissions === null ? "unavailable" : n(cur.submissions),
+      unavailable: cur.subsUnavailable,
+      prev: prev.submissions,
+      ...goalOf(cur.goals.subs, cur.submissions),
+      parts: [{ label: "Army CA 101", text: n(cur.ca101) }, ...cur.semParts],
+    },
+    { key: "won", label: "Won", kind: "count", source: "Won row, Became Won During Period (first won transition per opportunity, credited to the owner at the event)", value: cur.won, text: n(cur.won), prev: prev.won, goal: null, status: null, sub: `Opportunity Value ${usd(cur.wonValue)}` },
+  ];
+
   return {
-    periods: periods.map((r) => ({ key: r.key, label: r.label, text: rangeText(r), partial: r.partial })),
-    rows: ROWS.map((row) => ({ ...row, cells: figures.map((f) => f[row.key]) })),
+    rangeLabel: range.label,
+    partial: range.partial,
+    metrics,
     notes: [
-      "Every figure equals your row in the matching section of the team scorecard for the same period; the counting rules are the same.",
-      "Goals are your own: the team rate scaled by your plan (full-time or part-time) or a fixed override, pro-rated to the period. The bar fills toward the whole period's goal; 'by now' is the share of the goal for the time elapsed so far.",
+      "Every figure equals your row in the matching section of the team scorecard for the selected date range; the counting rules are the same. Change the range in the bar at the top.",
+      "Goals are your own: the team rate scaled by your plan (full-time or part-time) or a fixed override, pro-rated to the range. Met = at or above the whole range's goal; On Track = at or above the goal for the time elapsed so far ('by now', the mark on the bar); Missed = below it.",
+      "Comparison — the same length of time just before the range (the same elapsed portion while the range is still in progress), as the team cards compare.",
       "Dials are outbound human call attempts, one per call ID. Talk time is the recorded duration of calls with status completed or answered, both directions.",
-      "Appointments booked are bookings created in the period where you are the host. Completed are appointments scheduled in the period marked Showed; the show rate leaves out appointments not yet marked.",
+      "Appointments booked are bookings created in the range where you are the host. Completed are appointments scheduled in the range marked Showed; the show rate leaves out appointments not yet marked.",
       "Submissions are the first entry into CA 101 submitted (Army) or IAU App Submitted (Veteran, every semester) per contact, credited to the opportunity owner at the time of the event.",
       "Won means opportunity status = won, once per opportunity id, credited to the owner at the won event. Dollar figures are Opportunity Value, never cash collected or commission.",
     ],

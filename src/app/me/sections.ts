@@ -5,8 +5,9 @@
 import type { Section } from "../sections";
 
 export const ME_SECTIONS: Section[] = [
-  { id: "me-scorecard", name: "My scorecard", desc: "Today, this week, this month, against your own goals", icon: "activity" },
-  { id: "me-pace", name: "My pace", desc: "Month to date vs quota, projection, needed per day, weekly streak", icon: "submissions" },
+  { id: "me-overview", name: "My overview", desc: "Commission this month, next milestone, your rank", icon: "won" },
+  { id: "me-pace", name: "My pace", desc: "Month to date vs quota, projection, needed per day, weekly goal", icon: "submissions" },
+  { id: "me-scorecard", name: "My scorecard", desc: "The selected date range against your own goals, vs the previous period", icon: "activity" },
   { id: "me-commission", name: "My commission", desc: "This month's estimate with the calculation, month by month", icon: "won" },
   { id: "me-leads", name: "My leads", desc: "Assigned leads that need action", icon: "leads" },
   { id: "me-appointments", name: "My appointments", desc: "Upcoming this week and outcomes to mark", icon: "appointments" },

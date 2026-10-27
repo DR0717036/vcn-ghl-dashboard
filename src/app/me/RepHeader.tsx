@@ -1,5 +1,6 @@
-// The top of the rep dashboard: photo (or initials), name, plan, and, when an
-// admin is looking, a notice with the way back to the Rep Performance section.
+// The top of the rep dashboard: a large photo (or initials), name, plan
+// badge, and the quota / plan line, left-aligned with the page content; and,
+// when an admin is looking, a notice with the way back to Rep Performance.
 
 import type { RepView } from "@/lib/me/context";
 
@@ -15,9 +16,9 @@ export default function RepHeader({ view }: { view: RepView }) {
         <span className="rep-avatar me-avatar">
           {view.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={view.photoUrl} alt="" width={72} height={72} />
+            <img src={view.photoUrl} alt="" width={144} height={144} />
           ) : (
-            <span className="rep-avatar-initials" style={{ fontSize: 26 }}>
+            <span className="rep-avatar-initials" style={{ fontSize: 52 }}>
               {view.initials}
             </span>
           )}

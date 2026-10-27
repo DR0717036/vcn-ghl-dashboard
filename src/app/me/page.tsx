@@ -12,6 +12,7 @@ import { computeMyAppointments } from "@/lib/me/appointments";
 import { computeRepCommission } from "@/lib/me/commission";
 import { requireRepView } from "@/lib/me/context";
 import { computeRepLeads } from "@/lib/me/leads";
+import { computeRepOverview } from "@/lib/me/overview";
 import { computeRepPace } from "@/lib/me/pace";
 import { computeRepPipeline } from "@/lib/me/pipeline";
 import { computeRepScorecard } from "@/lib/me/scorecard";
@@ -32,6 +33,7 @@ import SemesterPicker from "../SemesterPicker";
 import AppointmentsCards from "./AppointmentsCards";
 import CommissionCard from "./CommissionCard";
 import LeadsCards from "./LeadsCards";
+import OverviewCard from "./OverviewCard";
 import PaceCard from "./PaceCard";
 import PipelineCard from "./PipelineCard";
 import RepHeader from "./RepHeader";
@@ -61,7 +63,8 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
   const lastRun = latestSyncRuns(CORE_SYNC_KIND, 1)[0];
   const diskWarning = getState("disk_warning");
   const hasData = Boolean(cov.lastCoreSyncOkAt);
-  const scorecard = computeRepScorecard(view.rep, now, range, (r) => fmtRange(r.start, r.end, r.partial));
+  const scorecard = computeRepScorecard(view.rep, range);
+  const overview = computeRepOverview(view.rep, now);
   const pace = computeRepPace(view.rep, now);
   const commission = computeRepCommission(view.rep, now);
   const leads = computeRepLeads(view.rep, now);
@@ -94,6 +97,10 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
           <span>
             <b>Date range:</b> {range.label}, {fmtRange(range.start, range.end, range.partial)}
           </span>
+          <span>
+            <b>Compared with:</b> {fmtRange(range.prevStart, range.prevEnd, range.partial)}
+            {range.partial ? " (same elapsed portion)" : ""}
+          </span>
         </div>
         <RangePicker active={key} from={from} to={to} basePath="/me" />
       </ControlBar>
@@ -109,7 +116,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
           <RepHeader view={view} />
           <BandHeading s={sections[0]} />
           <div className="kpi-row cols-1">
-            <ScorecardCard s={scorecard} name={view.name} />
+            <OverviewCard o={overview} />
           </div>
         </div>
       </section>
@@ -127,7 +134,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
         <div className="band-inner">
           <BandHeading s={sections[2]} />
           <div className="kpi-row cols-1">
-            <CommissionCard c={commission} invoicesHref={view.viewingAs ? `/invoices?as=${encodeURIComponent(view.userId)}` : "/invoices"} />
+            <ScorecardCard s={scorecard} name={view.name} rangeText={fmtRange(range.start, range.end, range.partial)} prevText={fmtRange(range.prevStart, range.prevEnd, range.partial)} />
           </div>
         </div>
       </section>
@@ -135,27 +142,36 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
       <section className="band band-light" id={sections[3].id}>
         <div className="band-inner">
           <BandHeading s={sections[3]} />
-          <LeadsCards d={leads} />
+          <div className="kpi-row cols-1">
+            <CommissionCard c={commission} invoicesHref={view.viewingAs ? `/invoices?as=${encodeURIComponent(view.userId)}` : "/invoices"} />
+          </div>
         </div>
       </section>
 
       <section className="band band-dark" id={sections[4].id}>
         <div className="band-inner">
           <BandHeading s={sections[4]} />
-          <AppointmentsCards d={appts} />
+          <LeadsCards d={leads} />
         </div>
       </section>
 
       <section className="band band-light" id={sections[5].id}>
         <div className="band-inner">
           <BandHeading s={sections[5]} />
-          <PipelineCard d={pipeline} />
+          <AppointmentsCards d={appts} />
         </div>
       </section>
 
       <section className="band band-dark" id={sections[6].id}>
         <div className="band-inner">
           <BandHeading s={sections[6]} />
+          <PipelineCard d={pipeline} />
+        </div>
+      </section>
+
+      <section className="band band-light" id={sections[7].id}>
+        <div className="band-inner">
+          <BandHeading s={sections[7]} />
           <div className="me-toolbar">
             <SemesterPicker options={semesterOptions} active={semester.key} hint="Switches the IAU App column of the leaderboard to the chosen semester." basePath="/me" anchor="me-leaderboard" />
           </div>
@@ -163,9 +179,9 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
         </div>
       </section>
 
-      <section className="band band-light" id={sections[7].id}>
+      <section className="band band-dark" id={sections[8].id}>
         <div className="band-inner">
-          <BandHeading s={sections[7]} />
+          <BandHeading s={sections[8]} />
           <div className="kpi-row cols-1">
             <div className="stat kpi kpi-title-xl reveal me-card" data-kpi="me-calltimes">
               <div className="kpi-head">

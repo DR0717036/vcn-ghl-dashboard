@@ -5150,3 +5150,137 @@ tr:hover .lb-viewas,
   border-top: 2px solid var(--border-strong);
   padding-top: 10px;
 }
+
+/* rep dashboard edits 2026-10-27: larger left-aligned header, overview tiles, scorecard tiles, weekly bar chart */
+.me-identity {
+  justify-content: flex-start;
+  gap: var(--s-5);
+}
+
+.me-avatar {
+  width: 144px;
+  height: 144px;
+}
+
+.me-overview {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.me-milestone {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-top: 6px;
+  line-height: 1.25;
+}
+
+.me-milestone.is-done {
+  color: var(--status-good);
+}
+
+.me-bar-accent > span {
+  background: var(--accent-blue);
+}
+
+.me-hero-value {
+  display: inline-block;
+  margin-left: var(--s-4);
+  font-size: 24px;
+}
+
+.me-tiles {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.me-tile-value {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.me-tile .stat-value {
+  font-size: 28px;
+}
+
+.me-tile-delta {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.me-weeks {
+  margin-top: var(--s-4);
+}
+
+.me-weeks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.me-weekchart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.me-weekchart-axis {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.me-weekchart-goal {
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 5;
+}
+
+.me-weekchart-goal-label,
+.me-weekchart-label,
+.me-weekchart-value {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  fill: var(--text-secondary);
+}
+
+.me-weekchart-value {
+  font-weight: 800;
+  fill: var(--text-primary);
+}
+
+.me-weekchart-now {
+  fill: var(--accent-blue-text);
+  font-weight: 700;
+}
+
+.me-weekbar rect {
+  fill: var(--border-strong);
+}
+
+.me-weekbar.is-met rect {
+  fill: var(--status-good);
+}
+
+.me-weekbar.is-current rect {
+  stroke: var(--text-primary);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+@media (max-width: 1100px) {
+  .me-overview,
+  .me-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .me-overview,
+  .me-tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1292,3 +1292,23 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     history). Routes: POST /api/me/invoices, GET /api/me/invoices/pdf, POST
     /api/admin/invoices. All invoice data lives in the dashboard's cache;
     nothing touches GHL.
+
+86. **Rep dashboard edits (owner request 2026-10-27).** Header: photo at
+    144 px, the block left-aligned with the content. New first section "My
+    overview" with three tiles: commission earned this month (the month-to-
+    date estimate with its calculation), the next milestone under the rep's
+    plan (submission-retro: submissions left to unlock the retro rate with a
+    progress bar to the threshold, "Retro unlocked" once reached; won-tiered:
+    wons left at the first-tier rate; per-won-flat: the current rate), and
+    the rep's rank by combined submissions this month with the change vs
+    last month. Order is now overview, pace, scorecard, then the rest. My
+    pace: the quota bar is green when at or above the even pace (yellow /
+    red only when behind), the hero shows the Opportunity Value behind the
+    month's submissions and the commission estimate, and the week tiles are
+    replaced by a bar chart of combined submissions per week (last 8 weeks
+    plus the current one, dashed line at the weekly goal, green when met)
+    with a this-week-vs-last-week pill; the streak tile stays. My scorecard:
+    one tile per KPI for the range selected in the control bar (default This
+    Week) with the goal pro-rated to the range, the Met / On Track / Missed
+    pill, the "by now" mark, and the previous-period change inline, as the
+    team's KPI cards do.
