@@ -36,7 +36,7 @@ function fmtAvg(kind: MetricDef["kind"], v: number): string {
   }
 }
 
-export default function Leaderboard({ data, rangeLabel }: { data: RepPerformance; rangeLabel: string }) {
+export default function Leaderboard({ data, rangeLabel, highlight = null, viewAs = true }: { data: RepPerformance; rangeLabel: string; /** GHL user id of the row to tint (the signed-in rep on their own dashboard). */ highlight?: string | null; /** Show the admin-only "View as rep" links. */ viewAs?: boolean }) {
   const [sortKey, setSortKey] = useState(data.defaultSort);
   const [dir, setDir] = useState<"best" | "worst">("best");
   const defs = data.defs;
@@ -127,12 +127,13 @@ export default function Leaderboard({ data, rangeLabel }: { data: RepPerformance
           </thead>
           <tbody>
             {sorted.map((r, i) => (
-              <tr key={r.userId ?? r.name}>
+              <tr key={r.userId ?? r.name} className={highlight && r.userId === highlight ? "lb-me" : undefined}>
                 <td className="rep-name lb-name">
                   <span className="lb-rank">#{i + 1}</span>
                   <Avatar r={r} size={28} />
                   <span>{r.name}</span>
-                  {r.userId ? (
+                  {highlight && r.userId === highlight ? <span className="pill pill-gold lb-you">You</span> : null}
+                  {viewAs && r.userId ? (
                     <a className="lb-viewas" href={`/me?as=${encodeURIComponent(r.userId)}`} title="Open this rep's own dashboard exactly as they see it">
                       View as rep
                     </a>

@@ -1243,3 +1243,26 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     (multiplier or override). A weekly-rate goal is shown as text on the
     Today column instead of a one-day share. GET /api/me/whoami returns the
     caller's own role for checking a new sign-in.
+
+84. **Rep dashboard, step 2: the remaining sections (owner request 2026-10-26).**
+    /me now has all eight sections. My pace: month-to-date combined
+    submissions vs the monthly quota (the Program Submissions month-to-date
+    columns) with an even-pace marker, projected month-end and needed per
+    working day (the weekly report's working-day arithmetic), and a weekly
+    goal streak judged week by week with the rep's own weekly submissions
+    goal. My commission: this month's estimate with the calculation beside it
+    and six months of history, priced by commissionBetween month by month,
+    every amount labeled estimated. My leads: four action lists over the
+    rep's current assignments (replies waiting from the unread inbound
+    conversation snapshot; untouched for touchWindowDays; stale in New Lead;
+    awaiting supervisor approval with age), judged by buildLeads with the
+    Leads section's rules, each row linking to the contact in GHL. My
+    appointments: upcoming this week as host, and past Confirmed/New
+    appointments of the last 60 days to mark in GHL. My pipeline: live
+    opportunities by stage per program pipeline (snapshot, open/won/lost,
+    Opportunity Value). Team leaderboard: the admin's Leaderboard component
+    on computeRepPerformance with the same inputs, the rep's row tinted and
+    tagged "You", drilldown links stripped (full visibility is the owner's
+    decision). Best call times: the rep's own heat map (heatBundle filtered
+    to their dials), opening on the connected rate. The semester picker and
+    range picker are path-aware so they stay on /me.

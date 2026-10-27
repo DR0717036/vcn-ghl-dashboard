@@ -14,6 +14,3 @@ export const ME_SECTIONS: Section[] = [
   { id: "me-leaderboard", name: "Team leaderboard", desc: "The whole team, ranked, with you highlighted", icon: "reps" },
   { id: "me-calltimes", name: "Best call times", desc: "Your own answered-rate heat map", icon: "activity" },
 ];
-
-/** The sections built so far; the rest are added step by step. */
-export const ME_SECTIONS_LIVE: Section[] = ME_SECTIONS.slice(0, 1);

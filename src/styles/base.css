@@ -4902,3 +4902,197 @@ tr:hover .lb-viewas,
 .lb-viewas:focus {
   opacity: 1;
 }
+
+/* rep dashboard: pace, commission, lists, pipeline, leaderboard highlight */
+.me-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+  margin-top: var(--s-2);
+}
+
+.me-hero-main .stat-value {
+  font-size: var(--text-display);
+}
+
+.me-hero-of {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0;
+}
+
+.me-goal-wide {
+  margin-top: var(--s-3);
+}
+
+.me-bar-tall {
+  height: 12px;
+}
+
+.me-streak {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.me-week {
+  flex: 1 1 64px;
+  min-width: 64px;
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+}
+
+.me-week.is-current {
+  border-style: dashed;
+}
+
+.me-week-dot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin: 0 auto 6px;
+  background: var(--border-strong);
+}
+
+.me-week.is-met .me-week-dot {
+  background: var(--status-good);
+}
+
+.me-week.is-missed .me-week-dot {
+  background: var(--status-bad);
+  opacity: 0.75;
+}
+
+.me-week-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.me-week-value {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.me-calc {
+  flex: 1 1 280px;
+  max-width: 460px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface-inset);
+}
+
+.me-calc .label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-secondary);
+}
+
+.me-calc-line {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 4px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.me-plan-text {
+  margin: var(--s-3) 0 0;
+}
+
+.me-list {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.me-list th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-secondary);
+  padding-right: 10px;
+}
+
+.me-list td {
+  padding: 7px 10px 7px 0;
+  vertical-align: top;
+}
+
+.me-list th.num,
+.me-list td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.me-list .plan-label {
+  display: inline-block;
+  margin-left: 6px;
+}
+
+.me-row-current td {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.me-row-empty td {
+  color: var(--text-muted);
+}
+
+.me-link {
+  color: var(--accent-blue-text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.me-link:hover {
+  text-decoration: underline;
+}
+
+.me-stage-name {
+  display: block;
+}
+
+.me-stage-bar {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--surface-inset);
+  max-width: 220px;
+}
+
+.me-stage-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent-blue);
+}
+
+.me-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--s-3);
+}
+
+.leaderboard tr.lb-me td {
+  background: var(--accent-yellow-soft);
+}
+
+.lb-you {
+  margin-left: var(--s-2);
+}
+
+.me-card .kpi-body {
+  margin-top: var(--s-3);
+}

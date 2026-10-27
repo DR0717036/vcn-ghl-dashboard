@@ -17,7 +17,7 @@ export interface SemesterOption {
   isDefault: boolean;
 }
 
-export default function SemesterPicker({ options, active, hint }: { options: SemesterOption[]; active: string; hint: string }) {
+export default function SemesterPicker({ options, active, hint, basePath = "/", anchor = "sec-submissions" }: { options: SemesterOption[]; active: string; hint: string; basePath?: string; anchor?: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const choose = (key: string) => {
@@ -26,7 +26,7 @@ export default function SemesterPicker({ options, active, hint }: { options: Sem
     if (!opt || opt.isDefault) next.delete("semester");
     else next.set("semester", key);
     const qs = next.toString();
-    router.push(qs ? `/?${qs}#sec-submissions` : "/#sec-submissions");
+    router.push(qs ? `${basePath}?${qs}#${anchor}` : `${basePath}#${anchor}`);
   };
   return (
     <label className="semester-picker" title={hint} onClick={(e) => e.stopPropagation()}>

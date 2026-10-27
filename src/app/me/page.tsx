@@ -7,9 +7,17 @@
 
 import { getState, latestSyncRuns } from "@/lib/db";
 import { fmtDateTime, fmtRange, isRangeKey, resolveRange, type RangeKey } from "@/lib/dates";
+import { semesterFor, semesters } from "@/lib/mapping-config";
+import { computeMyAppointments } from "@/lib/me/appointments";
+import { computeRepCommission } from "@/lib/me/commission";
 import { requireRepView } from "@/lib/me/context";
+import { computeRepLeads } from "@/lib/me/leads";
+import { computeRepPace } from "@/lib/me/pace";
+import { computeRepPipeline } from "@/lib/me/pipeline";
 import { computeRepScorecard } from "@/lib/me/scorecard";
+import { computeTeamLeaderboard } from "@/lib/me/team";
 import { coverage } from "@/lib/metrics";
+import { heatBundle } from "@/lib/repCalls";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { explainSyncSummary, runningTooLong } from "@/lib/syncStatus";
 import BandHeading from "../BandHeading";
@@ -18,9 +26,17 @@ import Dock from "../Dock";
 import Motion from "../Motion";
 import RangePicker from "../RangePicker";
 import Reveal from "../Reveal";
+import HeatMap from "../charts/HeatMap";
+import Leaderboard from "../Leaderboard";
+import SemesterPicker from "../SemesterPicker";
+import AppointmentsCards from "./AppointmentsCards";
+import CommissionCard from "./CommissionCard";
+import LeadsCards from "./LeadsCards";
+import PaceCard from "./PaceCard";
+import PipelineCard from "./PipelineCard";
 import RepHeader from "./RepHeader";
 import ScorecardCard from "./ScorecardCard";
-import { ME_SECTIONS_LIVE } from "./sections";
+import { ME_SECTIONS } from "./sections";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +62,17 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
   const diskWarning = getState("disk_warning");
   const hasData = Boolean(cov.lastCoreSyncOkAt);
   const scorecard = computeRepScorecard(view.rep, now, range, (r) => fmtRange(r.start, r.end, r.partial));
-  const sections = ME_SECTIONS_LIVE;
+  const pace = computeRepPace(view.rep, now);
+  const commission = computeRepCommission(view.rep, now);
+  const leads = computeRepLeads(view.rep, now);
+  const appts = computeMyAppointments(view.rep, now);
+  const pipeline = computeRepPipeline(view.rep);
+  // The leaderboard shows the IAU column for the chosen semester, like the admin's (?semester=KEY; the default otherwise).
+  const semester = semesterFor(first(sp.semester));
+  const team = computeTeamLeaderboard(range, now, semester);
+  const heat = heatBundle(range, (u) => u === view.userId);
+  const sections = ME_SECTIONS;
+  const semesterOptions = semesters().map((s) => ({ key: s.key, label: s.label, isDefault: Boolean(s.default) }));
 
   return (
     <>
@@ -84,6 +110,70 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
           <BandHeading s={sections[0]} />
           <div className="kpi-row cols-1">
             <ScorecardCard s={scorecard} name={view.name} />
+          </div>
+        </div>
+      </section>
+
+      <section className="band band-light" id={sections[1].id}>
+        <div className="band-inner">
+          <BandHeading s={sections[1]} />
+          <div className="kpi-row cols-1">
+            <PaceCard p={pace} />
+          </div>
+        </div>
+      </section>
+
+      <section className="band band-dark" id={sections[2].id}>
+        <div className="band-inner">
+          <BandHeading s={sections[2]} />
+          <div className="kpi-row cols-1">
+            <CommissionCard c={commission} />
+          </div>
+        </div>
+      </section>
+
+      <section className="band band-light" id={sections[3].id}>
+        <div className="band-inner">
+          <BandHeading s={sections[3]} />
+          <LeadsCards d={leads} />
+        </div>
+      </section>
+
+      <section className="band band-dark" id={sections[4].id}>
+        <div className="band-inner">
+          <BandHeading s={sections[4]} />
+          <AppointmentsCards d={appts} />
+        </div>
+      </section>
+
+      <section className="band band-light" id={sections[5].id}>
+        <div className="band-inner">
+          <BandHeading s={sections[5]} />
+          <PipelineCard d={pipeline} />
+        </div>
+      </section>
+
+      <section className="band band-dark" id={sections[6].id}>
+        <div className="band-inner">
+          <BandHeading s={sections[6]} />
+          <div className="me-toolbar">
+            <SemesterPicker options={semesterOptions} active={semester.key} hint="Switches the IAU App column of the leaderboard to the chosen semester." basePath="/me" anchor="me-leaderboard" />
+          </div>
+          <Leaderboard data={team} rangeLabel={range.label} highlight={view.userId} viewAs={view.viewer.role === "admin"} />
+        </div>
+      </section>
+
+      <section className="band band-light" id={sections[7].id}>
+        <div className="band-inner">
+          <BandHeading s={sections[7]} />
+          <div className="kpi-row cols-1">
+            <div className="stat kpi kpi-title-xl reveal me-card" data-kpi="me-calltimes">
+              <div className="kpi-head">
+                <div className="label">Best times to call</div>
+                <div className="kpi-sub note">Your own outbound dials by weekday and hour · colored by the share that connected · {range.label} or the last 90 days</div>
+              </div>
+              <HeatMap bundle={heat} title="When your calls get answered" defaultMetric="connected" />
+            </div>
           </div>
         </div>
       </section>

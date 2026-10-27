@@ -21,8 +21,8 @@ const METRICS: [HeatMetric, string][] = [
   ["dials", "Dial volume"],
 ];
 
-export default function HeatMap({ bundle, title = "Best times to call", showPeriodToggle = true }: { bundle: HeatBundle; title?: string; showPeriodToggle?: boolean }) {
-  const [metric, setMetric] = useState<HeatMetric>("conversation");
+export default function HeatMap({ bundle, title = "Best times to call", showPeriodToggle = true, defaultMetric = "conversation" }: { bundle: HeatBundle; title?: string; showPeriodToggle?: boolean; defaultMetric?: HeatMetric }) {
+  const [metric, setMetric] = useState<HeatMetric>(defaultMetric);
   const [period, setPeriod] = useState<"range" | "last90">("range");
   const data: HeatData = period === "range" ? bundle.range : bundle.last90;
   const hours = Array.from({ length: bundle.endHour - bundle.startHour + 1 }, (_, i) => bundle.startHour + i);
