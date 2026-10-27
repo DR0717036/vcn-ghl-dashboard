@@ -46,6 +46,8 @@ export interface Goal {
   partial: boolean;
   /** Snapshot KPIs compare the current value with the full weekly goal; nothing is scaled. */
   snapshot: boolean;
+  /** How the rate is configured: per rep per day, per rep per week, or team-wide per week. */
+  unit: "day" | "week" | "team-week";
 }
 
 /** Seconds a completed outbound call must last to count as a Conversation (config/goals.json, default 60). */
@@ -95,7 +97,7 @@ export function goalFor(kpiKey: string, range: DateRange): Goal | null {
     const perRep: Record<string, RepGoal> = {};
     for (const x of r.rates) perRep[x.userId] = { full: x.rate * days, scaled: x.rate * days * elapsedFraction, rate: x.rate };
     const full = r.team * days;
-    return { kpiKey, full, scaled: full * elapsedFraction, perRep, basis: `${r.basis} × ${days} ${dayWord}`, elapsedFraction, partial: range.partial, snapshot: false };
+    return { kpiKey, full, scaled: full * elapsedFraction, perRep, basis: `${r.basis} × ${days} ${dayWord}`, elapsedFraction, partial: range.partial, snapshot: false, unit: "day" };
   }
 
   const perWeek = num(goals.perRepPerWeek?.[kpiKey]);
@@ -113,6 +115,7 @@ export function goalFor(kpiKey: string, range: DateRange): Goal | null {
         elapsedFraction: 1,
         partial: false,
         snapshot: true,
+        unit: "week",
       };
     }
     for (const x of r.rates) {
@@ -120,7 +123,7 @@ export function goalFor(kpiKey: string, range: DateRange): Goal | null {
       perRep[x.userId] = { full, scaled: full * elapsedFraction, rate: x.rate };
     }
     const full = (r.team / 7) * days;
-    return { kpiKey, full, scaled: full * elapsedFraction, perRep, basis: `${r.basis}, pro-rated to ${days} ${dayWord}`, elapsedFraction, partial: range.partial, snapshot: false };
+    return { kpiKey, full, scaled: full * elapsedFraction, perRep, basis: `${r.basis}, pro-rated to ${days} ${dayWord}`, elapsedFraction, partial: range.partial, snapshot: false, unit: "week" };
   }
 
   const team = num(goals.teamPerWeek?.[kpiKey]);
@@ -135,6 +138,7 @@ export function goalFor(kpiKey: string, range: DateRange): Goal | null {
       elapsedFraction,
       partial: range.partial,
       snapshot: false,
+      unit: "team-week",
     };
   }
 

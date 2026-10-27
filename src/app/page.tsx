@@ -50,7 +50,7 @@ import Leaderboard from "./Leaderboard";
 import { computeRepPerformance } from "@/lib/repPerformance";
 import { CloseRateCard, CurrentProgramsCard, PastSemestersCard, WonByCampaignCard, WonHeadlineCard, WonMonthlyCard } from "./WonCards";
 import WonModeSwitch from "./WonModeSwitch";
-import { requirePageUser } from "@/lib/guard";
+import { requireAdminPage } from "@/lib/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +62,7 @@ function first(v: string | string[] | undefined): string | undefined {
 
 export default async function ScorecardPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
-  await requirePageUser("/");
+  await requireAdminPage("/");
   const rangeParam = first(sp.range);
   const key: RangeKey = isRangeKey(rangeParam) ? rangeParam : "this_month";
   const from = first(sp.from);

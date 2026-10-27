@@ -14,7 +14,7 @@ const SHORTCUTS: [string, string][] = [
   ["last_year", "Last Year"],
 ];
 
-export default function RangePicker({ active, from, to }: { active: string; from?: string; to?: string }) {
+export default function RangePicker({ active, from, to, basePath = "/" }: { active: string; from?: string; to?: string; basePath?: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const [customFrom, setCustomFrom] = useState(from ?? "");
@@ -26,7 +26,7 @@ export default function RangePicker({ active, from, to }: { active: string; from
     next.delete("from");
     next.delete("to");
     for (const [k, v] of Object.entries(extra ?? {})) next.set(k, v);
-    router.push(`/?${next.toString()}`);
+    router.push(`${basePath}?${next.toString()}`);
   }
 
   return (

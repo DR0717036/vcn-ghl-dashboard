@@ -12,14 +12,14 @@
 //   messages — reset the SMS and email message cursors (default false)
 
 import { NextResponse } from "next/server";
-import { isDenied, requireApiUser } from "@/lib/guard";
+import { isDenied, requireAdminApi } from "@/lib/guard";
 import { isHistoryImportAdmin } from "@/lib/users";
 import { resetIncrementalCursors } from "@/lib/sync/core";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request): Promise<NextResponse> {
-  const user = await requireApiUser();
+  const user = await requireAdminApi();
   if (isDenied(user)) return user;
   if (!isHistoryImportAdmin(user.email)) {
     return NextResponse.json({ ok: false, error: "Only an address listed under historyImportAdmins in config/users.json may trigger a re-pull." }, { status: 403 });

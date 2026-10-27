@@ -29,7 +29,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <header className="topbar topbar-sticky">
           <div className="topbar-inner">
-            <a className="brand" href="/">
+            <a className="brand" href={user?.role === "rep" ? "/me" : "/"}>
               {/* VCN logo (public/vcn-logo.png), left of the title; Intelagent branding everywhere else. */}
               <img className="brand-logo" src="/vcn-logo.png" alt="Veteran Careers Network" width={44} height={44} />
               <span>VCN Sales Dashboard</span>
@@ -37,8 +37,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <span className="brand-sub">by Intelagent Media</span>
             {user ? (
               <nav className="nav">
-                <a href="/">Scorecard</a>
-                <a href="/mapping">Mapping</a>
+                {user.role === "admin" ? (
+                  <>
+                    <a href="/">Scorecard</a>
+                    <a href="/mapping">Mapping</a>
+                  </>
+                ) : (
+                  <a href="/me">My dashboard</a>
+                )}
               </nav>
             ) : null}
             {user ? <UserMenu user={user} /> : null}

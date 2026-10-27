@@ -132,6 +132,11 @@ export default function Leaderboard({ data, rangeLabel }: { data: RepPerformance
                   <span className="lb-rank">#{i + 1}</span>
                   <Avatar r={r} size={28} />
                   <span>{r.name}</span>
+                  {r.userId ? (
+                    <a className="lb-viewas" href={`/me?as=${encodeURIComponent(r.userId)}`} title="Open this rep's own dashboard exactly as they see it">
+                      View as rep
+                    </a>
+                  ) : null}
                 </td>
                 {defs.map((d) => cell(r, d, true))}
               </tr>

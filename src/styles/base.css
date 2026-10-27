@@ -4712,3 +4712,193 @@ html.anim .anim-root:not(.chart-in) .heat-cell {
     min-width: 0;
   }
 }
+
+/* =====================================================================
+   Rep dashboard (/me), owner request 2026-10-26. Same tokens and card
+   anatomy as the scorecard; only the scorecard grid and goal bars are new.
+   ===================================================================== */
+.me-header {
+  margin-bottom: var(--s-5);
+}
+
+.me-viewing {
+  margin: 0 0 var(--s-5);
+}
+
+.me-viewing a {
+  color: var(--accent-blue-text);
+  font-weight: 700;
+  margin-left: var(--s-2);
+}
+
+.me-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  justify-content: center;
+  margin-bottom: var(--s-6);
+}
+
+.me-avatar {
+  width: 72px;
+  height: 72px;
+  flex: none;
+}
+
+.me-title {
+  text-align: left;
+  margin: 0;
+}
+
+.me-plan {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-1);
+  color: var(--text-secondary);
+}
+
+.me-score {
+  display: grid;
+  gap: 0;
+  min-width: 720px;
+  margin-top: var(--s-3);
+}
+
+.me-score-row {
+  display: contents;
+}
+
+.me-score-corner,
+.me-score-head {
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.me-score-head .label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-secondary);
+}
+
+.me-score-label,
+.me-score-cell {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  min-width: 0;
+}
+
+.me-score-row:last-child .me-score-label,
+.me-score-row:last-child .me-score-cell {
+  border-bottom: 0;
+}
+
+.me-score-label b {
+  display: block;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.me-score-label .note {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.me-score-cell .stat-value {
+  font-size: 28px;
+}
+
+.me-score-cell .stat-value.unavailable {
+  font-size: 16px;
+}
+
+.me-goal {
+  margin-top: 8px;
+}
+
+.me-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-inset);
+  overflow: hidden;
+}
+
+.me-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--status-good);
+  transition: width 400ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.me-bar-warn > span {
+  background: var(--status-warn);
+}
+
+.me-bar-bad > span {
+  background: var(--status-bad);
+}
+
+.me-bar-none > span {
+  background: var(--border-strong);
+}
+
+.me-bar-mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text-primary);
+  opacity: 0.7;
+}
+
+.me-goal-text {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.me-sub {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.me-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.me-parts b {
+  color: var(--text-primary);
+}
+
+.rep-viewas,
+.lb-viewas {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.rep-viewas:hover {
+  border-color: var(--accent-blue-border);
+  color: var(--accent-blue-text);
+}
+
+.lb-viewas {
+  margin-left: var(--s-2);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-blue-text);
+  opacity: 0;
+}
+
+tr:hover .lb-viewas,
+.lb-viewas:focus {
+  opacity: 1;
+}

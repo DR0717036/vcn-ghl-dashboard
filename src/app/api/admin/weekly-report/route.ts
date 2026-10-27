@@ -23,7 +23,7 @@
 import { NextResponse } from "next/server";
 import { latestWeeklyReportSends, weeklyReportIdempotencyProbe } from "@/lib/db";
 import { fmtDateTime } from "@/lib/dates";
-import { isDenied, requireApiUser } from "@/lib/guard";
+import { isDenied, requireAdminApi } from "@/lib/guard";
 import { verifyGmail } from "@/lib/mailer";
 import { allowedEmails, isHistoryImportAdmin } from "@/lib/users";
 import { nextScheduledInstant, scheduleLabel, weekStartFromKey, weeklyReportConfig, type ReportTheme } from "@/lib/weeklyReport/config";
@@ -34,7 +34,7 @@ import { defaultWeekStart, renderReport, sendWeeklyReport, type ReportKind } fro
 export const dynamic = "force-dynamic";
 
 async function admin(): Promise<{ email: string } | NextResponse> {
-  const user = await requireApiUser();
+  const user = await requireAdminApi();
   if (isDenied(user)) return user;
   if (!isHistoryImportAdmin(user.email)) return NextResponse.json({ ok: false, error: "Only an address listed under historyImportAdmins in config/users.json may use the weekly report route." }, { status: 403 });
   return { email: user.email };

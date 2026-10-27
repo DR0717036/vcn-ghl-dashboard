@@ -5,14 +5,14 @@
 // are sensitive, so this requires a signed-in user (src/lib/guard.ts).
 
 import { NextResponse } from "next/server";
-import { isDenied, requireApiUser } from "@/lib/guard";
+import { isDenied, requireAdminApi } from "@/lib/guard";
 import { getDb } from "@/lib/db";
 import { getCallRecording } from "@/lib/ghl/read";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request): Promise<Response> {
-  const user = await requireApiUser();
+  const user = await requireAdminApi();
   if (isDenied(user)) return user;
   const id = new URL(req.url).searchParams.get("id") ?? "";
   if (!/^[A-Za-z0-9_-]{6,80}$/.test(id)) return NextResponse.json({ ok: false, error: "Missing or malformed call id." }, { status: 400 });

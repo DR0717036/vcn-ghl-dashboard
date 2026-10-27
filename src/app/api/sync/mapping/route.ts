@@ -3,13 +3,13 @@
 // only; it never writes to GHL.
 
 import { NextResponse } from "next/server";
-import { isDenied, requireApiUser } from "@/lib/guard";
+import { isDenied, requireAdminApi } from "@/lib/guard";
 import { runMappingSync } from "@/lib/sync/mapping";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(): Promise<NextResponse> {
-  const user = await requireApiUser();
+  const user = await requireAdminApi();
   if (isDenied(user)) return user;
   try {
     const result = await runMappingSync();

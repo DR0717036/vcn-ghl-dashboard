@@ -1219,3 +1219,27 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     scheduled send is Wednesday 2026-10-28 at 3:00 PM New York to the same three
     recipients, dark theme. Verified on the host with
     /api/admin/weekly-report?action=check after the deploy.
+
+83. **Roles and the rep dashboard, step 1 (owner request 2026-10-26).**
+    Two roles. Admins are the addresses under admins in config/users.json
+    (diego@, dante@, tonyn@intelagentmedia.com; the old allowedEmails name is
+    still read) and keep everything they had. Sales reps sign in with the
+    Google account in the new signInEmail field of their entry in
+    config/sales-reps.json (empty until the owner supplies the seven
+    addresses; both files are read from disk with a change check, so no
+    restart is needed). The role is looked up on every request, never stored
+    in the session cookie. src/proxy.ts and src/lib/guard.ts enforce it: a
+    rep may open only /me, /invoices, and /api/me/*; every other page sends
+    them to /me and every other route answers 403, so a rep can only ever
+    receive their own data (?as= is ignored for reps). Admins open any rep's
+    view with "View as rep" on the Rep Performance cards and leaderboard
+    (/me?as=<GHL user id>). /me uses the same design system (control bar
+    with the date-range picker, bands, dock) and its first section, My
+    scorecard, shows Today / This Week / This Month (plus the selected range
+    when it is a different period) for dials, talk time, appointments booked,
+    completed, show rate, submissions split Army CA 101 / Veteran IAU per
+    semester, and won with Opportunity Value, each figure taken from the
+    rep's own row of the team scorecard's functions with the rep's own goals
+    (multiplier or override). A weekly-rate goal is shown as text on the
+    Today column instead of a one-day share. GET /api/me/whoami returns the
+    caller's own role for checking a new sign-in.

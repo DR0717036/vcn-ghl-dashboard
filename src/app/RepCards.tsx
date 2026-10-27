@@ -180,6 +180,11 @@ function RepCard({ r, rank, def, rangeLabel, defs }: { r: RepScore; rank: number
               <span className={`pill ${rank === 1 ? "pill-gold" : "pill-info"} rep-rank`} title={`Rank by ${def.label}`}>
                 #{rank}
               </span>
+              {r.userId ? (
+                <a className="pill pill-neutral rep-viewas" href={`/me?as=${encodeURIComponent(r.userId)}`} title="Open this rep's own dashboard exactly as they see it" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  View as rep
+                </a>
+              ) : null}
             </div>
             <div className="rep-card-sortval">
               <span className="note">{def.label}:</span> <b>{sortMetric?.text ?? "—"}</b>

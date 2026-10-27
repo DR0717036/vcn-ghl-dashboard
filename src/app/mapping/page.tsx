@@ -23,7 +23,7 @@ import {
   type UsersSnapshot,
 } from "@/lib/sync/mapping";
 import RefreshButton from "./RefreshButton";
-import { requirePageUser } from "@/lib/guard";
+import { requireAdminPage } from "@/lib/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -113,7 +113,7 @@ function CountTable({ title, map }: { title: string; map: Record<string, number>
 }
 
 export default async function MappingPage() {
-  await requirePageUser("/mapping");
+  await requireAdminPage("/mapping");
   const rows = readSnapshots(KEY_PREFIX);
   const lastOk = lastSuccessfulSync(MAPPING_SYNC_KIND);
   const runs = latestSyncRuns(MAPPING_SYNC_KIND, 1);

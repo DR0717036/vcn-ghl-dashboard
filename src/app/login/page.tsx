@@ -62,7 +62,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             Sign in with Google
           </button>
         </form>
-        <div className="login-foot">Access is limited to the Intelagent Media team. Read-only view of Go High Level.</div>
+        <div className="login-foot">Access is limited to the Intelagent Media team and VCN sales reps. Read-only view of Go High Level.</div>
       </div>
     </div>
   );

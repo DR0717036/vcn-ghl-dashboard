@@ -2,13 +2,13 @@
 // to the local cache; never to GHL. Requires a signed-in user.
 
 import { NextResponse } from "next/server";
-import { isDenied, requireApiUser } from "@/lib/guard";
+import { isDenied, requireAdminApi } from "@/lib/guard";
 import { isCoreSyncRunning, runCoreSync } from "@/lib/sync/core";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(): Promise<NextResponse> {
-  const user = await requireApiUser();
+  const user = await requireAdminApi();
   if (isDenied(user)) return user;
   if (isCoreSyncRunning()) {
     return NextResponse.json({ ok: false, error: "A sync is already running." }, { status: 409 });

@@ -1,11 +1,11 @@
 {
-  "_comment": "Google accounts allowed to sign in. Edit this list, no restart needed. Matching ignores upper/lower case.",
-  "allowedEmails": [
+  "_comment": "Who may sign in with Google and what they may see. admins: the owner and team members; they see the whole dashboard (scorecard, Mapping, admin routes, invoice approvals) and can open any rep's view. Sales reps sign in with the signInEmail on their entry in config/sales-reps.json and only ever see their own data at /me. Everyone else is refused at sign-in. Edit the admin list here, no restart needed; matching ignores upper/lower case.",
+  "admins": [
     "diego@intelagentmedia.com",
     "dante@intelagentmedia.com",
     "tonyn@intelagentmedia.com"
   ],
-  "_comment2": "Signed-in users who may merge event history from another copy of the dashboard (POST /api/admin/import-history).",
+  "_comment2": "Admins who may merge event history from another copy of the dashboard (POST /api/admin/import-history) and use the weekly-report admin route.",
   "historyImportAdmins": [
     "diego@intelagentmedia.com"
   ]

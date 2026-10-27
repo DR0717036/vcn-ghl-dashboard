@@ -1,14 +1,17 @@
-// Sign in with Google (Auth.js). Only the addresses in config/users.json may
-// sign in; everyone else is refused before a session is ever created, so
-// there is nothing to sign out of. Sessions are signed cookies (JWT) that
-// last 30 days. Nothing here touches Go High Level.
+// Sign in with Google (Auth.js). Only admins (config/users.json) and sales
+// reps with a signInEmail (config/sales-reps.json) may sign in; everyone else
+// is refused before a session is ever created, so there is nothing to sign
+// out of. Sessions are signed cookies (JWT) that last 30 days. The role is
+// never stored in the cookie: it is looked up from the config files on every
+// request, so removing an address or changing a role takes effect at once.
+// Nothing here touches Go High Level.
 //
 // Secrets (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AUTH_SECRET) are read by
 // Auth.js from .env automatically. Never log them.
 
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
-import { isAllowedEmail } from "@/lib/users";
+import { isAllowedEmail, repForEmail, roleFor, type Role } from "@/lib/users";
 
 const THIRTY_DAYS = 30 * 24 * 60 * 60;
 
@@ -24,8 +27,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const p = profile as { email?: string; email_verified?: boolean } | undefined;
       return Boolean(p?.email_verified) && isAllowedEmail(p?.email);
     },
-    // Runs on every request that reads the session: re-check the allow-list
-    // so removing an address from config/users.json takes effect at once.
+    // Runs on every request that reads the session: re-check the allow-lists
+    // so removing an address from the config takes effect at once.
     session({ session }) {
       if (!isAllowedEmail(session.user?.email)) {
         return { ...session, user: { ...session.user, email: "", name: "", image: null } };
@@ -39,12 +42,17 @@ export interface SignedInUser {
   name: string;
   email: string;
   image: string | null;
+  role: Role;
+  /** For a rep: their GHL user id (the key every per-rep figure is credited to). Null for admins. */
+  repUserId: string | null;
 }
 
-/** The signed-in, allow-listed user, or null. */
+/** The signed-in, allow-listed user with their role, or null. */
 export async function currentUser(): Promise<SignedInUser | null> {
   const session = await auth();
   const email = session?.user?.email;
-  if (!email || !isAllowedEmail(email)) return null;
-  return { name: session.user?.name || email, email, image: session.user?.image ?? null };
+  const role = roleFor(email);
+  if (!email || !role) return null;
+  const rep = role === "rep" ? repForEmail(email) : null;
+  return { name: session.user?.name || email, email, image: session.user?.image ?? null, role, repUserId: rep?.userId ?? null };
 }

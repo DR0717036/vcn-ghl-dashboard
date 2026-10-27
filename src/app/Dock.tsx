@@ -17,11 +17,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import SectionIcon from "./SectionIcon";
-import { SECTIONS } from "./sections";
+import { SECTIONS, type Section } from "./sections";
 
 const CLOSE_DELAY_MS = 400;
 
-export default function Dock() {
+export default function Dock({ sections = SECTIONS }: { sections?: Section[] }) {
   const [open, setOpen] = useState(false);
   const [hot, setHot] = useState<number | null>(null); // magnified tile
   const [over, setOver] = useState(false); // pointer or focus inside the dock
@@ -88,12 +88,12 @@ export default function Dock() {
       },
       { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1], rootMargin: "-120px 0px -30% 0px" },
     );
-    for (const s of SECTIONS) {
+    for (const s of sections) {
       const el = document.getElementById(s.id);
       if (el) io.observe(el);
     }
     return () => io.disconnect();
-  }, []);
+  }, [sections]);
 
   // open: Escape closes (focus back on the handle); touch: a tap outside closes
   useEffect(() => {
@@ -191,7 +191,7 @@ export default function Dock() {
         }}
       >
         <ul className="dock-list">
-          {SECTIONS.map((s, i) => {
+          {sections.map((s, i) => {
             const labelled = hoverMode ? hot === i : touchSel === s.id;
             return (
               <li key={s.id} className={`dock-item${hot === i ? " is-hot" : ""}${labelled ? " is-labelled" : ""}${active === s.id ? " is-active" : ""}`} style={{ "--s": scaleOf(i) } as React.CSSProperties}>

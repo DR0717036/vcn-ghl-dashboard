@@ -5,14 +5,14 @@
 // dryRun=1 reports what would change without writing.
 
 import { NextResponse } from "next/server";
-import { isDenied, requireApiUser } from "@/lib/guard";
+import { isDenied, requireAdminApi } from "@/lib/guard";
 import { importHistory, validateExport } from "@/lib/historyImport";
 import { isHistoryImportAdmin } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request): Promise<NextResponse> {
-  const user = await requireApiUser();
+  const user = await requireAdminApi();
   if (isDenied(user)) return user;
   if (!isHistoryImportAdmin(user.email)) {
     return NextResponse.json({ ok: false, error: "Only an address listed under historyImportAdmins in config/users.json may import history." }, { status: 403 });

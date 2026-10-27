@@ -5,14 +5,14 @@
 // so it requires a signed-in user (src/lib/guard.ts).
 
 import { NextResponse } from "next/server";
-import { isDenied, requireApiUser } from "@/lib/guard";
+import { isDenied, requireAdminApi } from "@/lib/guard";
 import { isRangeKey, resolveRange } from "@/lib/dates";
 import { emailTemplateDrilldown, sanitizeEmailHtml } from "@/lib/emailTemplate";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request): Promise<NextResponse> {
-  const user = await requireApiUser();
+  const user = await requireAdminApi();
   if (isDenied(user)) return user;
   const sp = new URL(req.url).searchParams;
   const rangeParam = sp.get("range") ?? undefined;
