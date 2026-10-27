@@ -1312,3 +1312,24 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     Week) with the goal pro-rated to the range, the Met / On Track / Missed
     pill, the "by now" mark, and the previous-period change inline, as the
     team's KPI cards do.
+
+87. **Rep dashboard edits, round 2 (owner request 2026-10-27).** My overview:
+    the commission figure counts up from $0 and the milestone bar fills from
+    0 on first reveal (1.2 s, eased; src/app/me/Animate.tsx), both skipped
+    under prefers-reduced-motion. Bands on /me alternate every two sections
+    (overview and pace dark, scorecard and commission light, and so on); the
+    admin scorecard is unchanged. My pace: the quota bar is the accent blue
+    with the even-pace mark; the headline is "15 of 20" plus this month's
+    commission estimate with its calculation as the sub-line (the
+    Opportunity Value line is gone); a "Potential" line states what the
+    month pays at the plan's next threshold (retro threshold for
+    submission-retro reps, the first-tier count for won-tiered reps, none
+    for per-won-flat) and how much more than today; the weekly chart
+    (src/app/me/WeekChart.tsx, client) brightens and lifts a hovered bar with
+    a tooltip (week, count, commission earned that week) and opens a modal in
+    the admin drilldown style listing the week's submissions with the
+    commission each earned, priced by its month's rules (lines.ts
+    repSubmissions plus the invoice line pricing), with a monotone trend
+    curve across the bar tops; a motivational line from a set of 30 original
+    lines (src/lib/me/mottos.ts) rotates daily under the chart title in the
+    yellow accent.

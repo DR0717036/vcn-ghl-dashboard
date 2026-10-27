@@ -5,6 +5,7 @@
 
 import type { RepOverview } from "@/lib/me/overview";
 import Notes from "../Notes";
+import { CountUp, FillBar } from "./Animate";
 
 const n = (v: number) => v.toLocaleString("en-US");
 const usd = (v: number) => v.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -22,7 +23,7 @@ export default function OverviewCard({ o }: { o: RepOverview }) {
       <div className="stat-tiles me-overview">
         <div className="stat-tile">
           <div className="label">Commission earned this month</div>
-          <div className="stat-value">{o.commission.amount === null ? "—" : usd(o.commission.amount)}</div>
+          <div className="stat-value">{o.commission.amount === null ? "—" : <CountUp value={o.commission.amount} />}</div>
           <div className="note stat-tile-caption">
             estimated · {o.commission.calc}
             {o.commission.planLabel ? ` · ${o.commission.planLabel}` : ""}
@@ -33,9 +34,7 @@ export default function OverviewCard({ o }: { o: RepOverview }) {
           <div className={`me-milestone${m.done ? " is-done" : ""}`}>{m.text}</div>
           {m.progress ? (
             <div className="me-goal" title={`${n(m.progress.value)} of ${n(m.progress.max)}`}>
-              <div className={`me-bar ${m.done ? "me-bar-good" : "me-bar-accent"}`} role="img" aria-label={`${n(m.progress.value)} of ${n(m.progress.max)}`}>
-                <span style={{ width: `${Math.min(100, Math.round((m.progress.value / Math.max(1, m.progress.max)) * 100))}%` }} />
-              </div>
+              <FillBar pct={(m.progress.value / Math.max(1, m.progress.max)) * 100} className={m.done ? "me-bar-good" : "me-bar-accent"} label={`${n(m.progress.value)} of ${n(m.progress.max)}`} />
               <div className="note me-goal-text">
                 {n(m.progress.value)} of {n(m.progress.max)} this month
               </div>

@@ -121,7 +121,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
         </div>
       </section>
 
-      <section className="band band-light" id={sections[1].id}>
+      <section className="band band-dark" id={sections[1].id}>
         <div className="band-inner">
           <BandHeading s={sections[1]} />
           <div className="kpi-row cols-1">
@@ -130,7 +130,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
         </div>
       </section>
 
-      <section className="band band-dark" id={sections[2].id}>
+      <section className="band band-light" id={sections[2].id}>
         <div className="band-inner">
           <BandHeading s={sections[2]} />
           <div className="kpi-row cols-1">
@@ -155,14 +155,14 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
         </div>
       </section>
 
-      <section className="band band-light" id={sections[5].id}>
+      <section className="band band-dark" id={sections[5].id}>
         <div className="band-inner">
           <BandHeading s={sections[5]} />
           <AppointmentsCards d={appts} />
         </div>
       </section>
 
-      <section className="band band-dark" id={sections[6].id}>
+      <section className="band band-light" id={sections[6].id}>
         <div className="band-inner">
           <BandHeading s={sections[6]} />
           <PipelineCard d={pipeline} />

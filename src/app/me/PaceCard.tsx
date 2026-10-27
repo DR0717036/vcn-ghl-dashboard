@@ -1,71 +1,24 @@
-// "My pace": month-to-date submissions against quota (hero figure, the
-// Opportunity Value behind them, the commission estimate, a goal bar that is
-// green when on pace and yellow / red only when behind), four stat tiles
+// "My pace": month-to-date submissions against quota with this month's
+// commission estimate as the headline dollar figure and its calculation as
+// the sub-line, a "Potential" line (what the month pays at the plan's next
+// threshold), a blue goal bar with the even-pace mark, four stat tiles
 // (projected month-end, needed per working day, working days left, weekly
-// goal streak), and a small bar chart of combined submissions per week for
-// the last 8 weeks plus the week in progress with the weekly goal as a
-// dashed line and a this-week-vs-last-week pill. Server component.
+// goal streak), a daily motivational line, and the interactive weekly chart
+// (WeekChart.tsx). Server component apart from the chart.
 
-import type { RepPaceData, StreakWeek } from "@/lib/me/pace";
+import type { RepPaceData } from "@/lib/me/pace";
 import Notes from "../Notes";
+import WeekChart from "./WeekChart";
 
 const n = (v: number) => v.toLocaleString("en-US");
 const usd = (v: number) => v.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const PILL: Record<string, { cls: string; label: string }> = { good: { cls: "pill-ok", label: "On quota" }, warn: { cls: "pill-info", label: "Halfway or better" }, bad: { cls: "pill-bad", label: "Behind" }, neutral: { cls: "pill-neutral", label: "Early in the month" } };
 
-/** Combined submissions per week as bars, the weekly goal as a dashed line. */
-function WeekChart({ weeks, goal }: { weeks: StreakWeek[]; goal: number | null }) {
-  const W = 1200;
-  const H = 210;
-  const PAD = { l: 12, r: 12, t: 30, b: 40 };
-  const max = Math.max(1, goal ?? 0, ...weeks.map((w) => w.combined ?? 0));
-  const slot = (W - PAD.l - PAD.r) / Math.max(1, weeks.length);
-  const barW = Math.min(64, slot * 0.6);
-  const y = (v: number) => PAD.t + (H - PAD.t - PAD.b) * (1 - v / max);
-  const base = H - PAD.b;
-  return (
-    <svg className="me-weekchart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Combined submissions per week: ${weeks.map((w) => `${w.label}: ${w.combined ?? "unavailable"}`).join("; ")}`}>
-      <line x1={PAD.l} x2={W - PAD.r} y1={base} y2={base} className="me-weekchart-axis" />
-      {goal !== null && goal > 0 ? (
-        <>
-          <line x1={PAD.l} x2={W - PAD.r} y1={y(goal)} y2={y(goal)} className="me-weekchart-goal" />
-          <text x={W - PAD.r} y={y(goal) - 6} textAnchor="end" className="me-weekchart-goal-label">
-            weekly goal {n(Math.round(goal))}
-          </text>
-        </>
-      ) : null}
-      {weeks.map((w, i) => {
-        const cx = PAD.l + slot * i + slot / 2;
-        const v = w.combined ?? 0;
-        const top = y(v);
-        const cls = w.met === true ? "is-met" : "is-not";
-        return (
-          <g key={w.start} className={`me-weekbar ${cls}${w.current ? " is-current" : ""}`}>
-            <title>{`${w.label}: ${w.combined === null ? "unavailable" : n(w.combined)}${w.goal !== null ? ` of ${n(Math.round(w.goal))}` : ""}${w.current ? " (in progress)" : ""}`}</title>
-            <rect x={cx - barW / 2} y={Math.min(top, base - 2)} width={barW} height={Math.max(2, base - top)} rx={4} />
-            <text x={cx} y={top - 8} textAnchor="middle" className="me-weekchart-value">
-              {w.combined === null ? "—" : n(w.combined)}
-            </text>
-            <text x={cx} y={base + 20} textAnchor="middle" className="me-weekchart-label">
-              {w.label.split(" – ")[0]}
-            </text>
-            {w.current ? (
-              <text x={cx} y={base + 36} textAnchor="middle" className="me-weekchart-label me-weekchart-now">
-                this week
-              </text>
-            ) : null}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
 export default function PaceCard({ p }: { p: RepPaceData }) {
   const pct = p.quotaPct === null ? null : Math.round(p.quotaPct * 100);
   const fill = p.quotaPct === null ? 0 : Math.min(1, p.quotaPct);
-  // Green when on pace (or on quota); the yellow / red rule applies only when behind the even pace.
-  const barCls = p.quotaPct === null ? "me-bar-none" : p.onPace || p.quotaPct >= 1 ? "me-bar-good" : p.quotaPct >= 0.5 ? "me-bar-warn" : "me-bar-bad";
+  // The dashboard accent blue (owner edit, round 2); the pace mark shows where an even pace would be.
+  const barCls = p.quotaPct === null ? "me-bar-none" : "me-bar-accent";
   const pill = PILL[p.quotaStatus] ?? PILL.neutral;
   const perDay = p.neededPerDay === null ? (p.quota > 0 && p.mtd >= p.quota ? "Quota met" : "—") : p.neededPerDay >= 20 ? n(Math.round(p.neededPerDay)) : p.neededPerDay.toFixed(1);
   const wk = p.thisWeek !== null && p.lastWeek !== null ? p.thisWeek - p.lastWeek : null;
@@ -80,13 +33,18 @@ export default function PaceCard({ p }: { p: RepPaceData }) {
         <div className="me-hero-main">
           <div className="stat-value">
             {n(p.mtd)} <span className="me-hero-of">of {n(p.quota)}</span>
-            <span className="me-hero-value" title="Opportunity Value on the submitted opportunities at the time of each event; never revenue or commission">
-              {usd(p.oppValue)} <span className="me-hero-of">Opportunity Value</span>
+            <span className="me-hero-value" title="This month's commission estimate under your plan; the official calculation is done outside this dashboard">
+              {p.commissionMtd.amount === null ? "—" : usd(p.commissionMtd.amount)} <span className="me-hero-of">commission</span>
             </span>
           </div>
           <div className="note">
-            month to date · quota {n(p.quota)} · commission estimate <b>{p.commissionMtd.amount === null ? "—" : usd(p.commissionMtd.amount)}</b> ({p.commissionMtd.calc})
+            month to date · quota {n(p.quota)} · commission estimate: {p.commissionMtd.calc}
           </div>
+          {p.potential ? (
+            <div className="me-potential">
+              <span className="label">Potential</span> {p.potential}
+            </div>
+          ) : null}
         </div>
         <div className="kpi-pill">
           <span className={`pill ${pill.cls}`}>{pill.label}</span>
@@ -127,7 +85,10 @@ export default function PaceCard({ p }: { p: RepPaceData }) {
       </div>
       <div className="me-weeks">
         <div className="me-weeks-head">
-          <div className="label kpi-notes-title">Combined submissions per week · last 8 weeks and this week</div>
+          <div>
+            <div className="label kpi-notes-title">Combined submissions per week · last 8 weeks and this week</div>
+            <div className="me-motto">{p.motto}</div>
+          </div>
           {wkPill ? <span className={`pill ${wkPill.cls}`} title={`This week so far ${n(p.thisWeek as number)} vs last week ${n(p.lastWeek as number)}`}>{wkPill.text}</span> : null}
         </div>
         <WeekChart weeks={p.streak.weeks} goal={p.streak.weeklyGoal} />

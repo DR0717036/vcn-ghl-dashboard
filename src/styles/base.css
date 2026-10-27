@@ -5257,15 +5257,15 @@ tr:hover .lb-viewas,
   font-weight: 700;
 }
 
-.me-weekbar rect {
+.me-weekbar .me-weekbar-bar {
   fill: var(--border-strong);
 }
 
-.me-weekbar.is-met rect {
+.me-weekbar.is-met .me-weekbar-bar {
   fill: var(--status-good);
 }
 
-.me-weekbar.is-current rect {
+.me-weekbar.is-current .me-weekbar-bar {
   stroke: var(--text-primary);
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
@@ -5283,4 +5283,118 @@ tr:hover .lb-viewas,
   .me-tiles {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* rep dashboard edits round 2: animations, potential line, interactive weekly chart, motto */
+.me-bar-anim > span {
+  transition: width 1200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .me-bar-anim > span,
+  .me-weekbar,
+  .me-weekbar-bar {
+    transition: none !important;
+  }
+}
+
+.me-potential {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--text-body);
+  max-width: 820px;
+}
+
+.me-potential .label {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--accent-yellow-text);
+}
+
+.me-motto {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--accent-yellow-text);
+}
+
+.me-weekchart-wrap {
+  position: relative;
+}
+
+.me-weekbar {
+  cursor: pointer;
+  outline: none;
+}
+
+.me-weekbar-hit {
+  fill: transparent;
+}
+
+.me-weekbar-bar {
+  transition: transform 160ms ease, filter 160ms ease;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.me-weekbar.is-hot .me-weekbar-bar,
+.me-weekbar:focus-visible .me-weekbar-bar {
+  filter: brightness(1.18) saturate(1.1);
+  transform: translateY(-4px);
+}
+
+.me-weekbar.is-not.is-hot .me-weekbar-bar {
+  fill: var(--accent-blue);
+}
+
+.me-weekchart-trend {
+  fill: none;
+  stroke: var(--accent-blue);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.me-weekchart-dot {
+  fill: var(--surface-card);
+  stroke: var(--accent-blue);
+  stroke-width: 2.5;
+  pointer-events: none;
+}
+
+.me-weektip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 14px));
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: var(--shadow-card);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.me-weektip b {
+  font-size: 13px;
+}
+
+.me-weektip span {
+  color: var(--text-secondary);
+}
+
+.modal-week {
+  max-width: 760px;
 }
