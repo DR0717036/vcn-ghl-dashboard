@@ -71,7 +71,7 @@ export default function MilestoneKpiCard({
     { label: `Current Opportunity Value${m.currentValueMissing > 0 ? ` (${n(m.currentValueMissing)} missing)` : ""}`, value: fmtUsd(m.currentValue) },
     ...(!unavailable ? [{ label: "Distinct opportunities behind the contacts", value: n(m.achievedOpps) }] : []),
     ...(m.currentUnclassified > 0 ? [{ label: `In stage without a ${m.reportingGroup} tag (not counted)`, value: n(m.currentUnclassified) }] : []),
-    ...(m.unclassified > 0 ? [{ label: "Entered in period, no fiscal-year tag (not counted)", value: n(m.unclassified) }] : []),
+    ...(m.unclassified > 0 ? [{ label: `Entered in period, contact has no ${m.reportingGroup} tag yet (not counted; counts once the tag is added in GHL)`, value: n(m.unclassified) }] : []),
   ];
   const notes = [
     ...m.notes,

@@ -68,7 +68,7 @@ export default function MilestoneCard({ m }: { m: MilestoneResult }) {
           ) : null}
           {m.unclassified > 0 ? (
             <tr>
-              <td>Entered in period, no fiscal-year tag (not counted)</td>
+              <td>Entered in period, contact has no {m.reportingGroup} tag yet (not counted; counts once the tag is added in GHL)</td>
               <td className="num">{n(m.unclassified)}</td>
             </tr>
           ) : null}

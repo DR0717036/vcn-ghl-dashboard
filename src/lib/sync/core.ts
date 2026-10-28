@@ -117,6 +117,43 @@ function reportingGroupFor(m: MilestoneMapping, contactTags: string[] | undefine
 }
 
 /**
+ * Re-evaluates the reporting group of every milestone / won event whose
+ * stage is a tag-based milestone, from the contact's tags as cached now.
+ * Returns how many rows changed. Runs inside its own transaction.
+ */
+export function refileTagBasedEvents(db: DatabaseSync): number {
+  const tagMilestones = trackedMilestones().filter((m) => m.reportingGroupBasis === "contact_tag");
+  if (tagMilestones.length === 0) return 0;
+  const byStage = new Map(tagMilestones.map((m) => [m.stageId, m]));
+  const rows = db
+    .prepare(
+      `SELECT e.id, e.stage_id, e.reporting_group, c.tags
+         FROM milestone_events e JOIN contacts c ON c.id = e.contact_id
+        WHERE e.kind IN ('milestone', 'won') AND e.stage_id IN (${tagMilestones.map(() => "?").join(", ")})`,
+    )
+    .all(...tagMilestones.map((m) => m.stageId)) as { id: number; stage_id: string; reporting_group: string | null; tags: string | null }[];
+  const upd = db.prepare(`UPDATE milestone_events SET reporting_group = ? WHERE id = ?`);
+  let moved = 0;
+  db.exec("BEGIN");
+  try {
+    for (const e of rows) {
+      const m = byStage.get(e.stage_id);
+      if (!m) continue;
+      const group = reportingGroupFor(m, e.tags ? (JSON.parse(e.tags) as string[]) : undefined);
+      if (group !== e.reporting_group) {
+        upd.run(group, e.id);
+        moved += 1;
+      }
+    }
+    db.exec("COMMIT");
+  } catch (err) {
+    rollback(db);
+    throw err;
+  }
+  return moved;
+}
+
+/**
  * Ends a transaction after a failed write. When the failure was the disk
  * filling up, SQLite has already rolled back and a second ROLLBACK throws
  * "cannot rollback - no transaction is active", which would hide the real
@@ -442,6 +479,19 @@ async function syncOpportunities(now: string, firstSyncDone: boolean): Promise<P
       }
     }
     if (backfilled > 0) res.warnings.push(`Backfilled ${backfilled} baseline milestone event(s) for newly tracked stages.`);
+
+    // The reporting group of a tag-based milestone follows the contact's
+    // CURRENT tags, not the tags at the moment the event was first seen.
+    // Owner report 2026-10-28: a CA 101 submission observed at 8:07 PM was
+    // filed "unclassified" because the rep added the fy27 tag the next
+    // morning, and nothing ever looked again. Contacts are re-read before
+    // opportunities in every run, so re-evaluate every event in a tag-based
+    // stage against the tags on file now and re-file the ones that differ
+    // (in either direction: a removed tag un-counts too). Idempotent; the
+    // number moved goes to the server log and the manual sync route's reply.
+    const refiled = refileTagBasedEvents(db);
+    if (refiled > 0) console.log(`[sync] re-filed ${refiled} milestone event(s) under the reporting group of the contact's current tags`);
+    if (refiled > 0) res.warnings.push(`Re-filed ${refiled} milestone event(s) under the reporting group of the contact's current tags.`);
     res.ok = true;
   } catch (e) {
     res.error = (e as Error).message;

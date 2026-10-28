@@ -1333,3 +1333,25 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     curve across the bar tops; a motivational line from a set of 30 original
     lines (src/lib/me/mottos.ts) rotates daily under the chart title in the
     yellow accent.
+
+88. **Reporting group follows the contact's current tags (owner report
+    2026-10-28).** Myles Daniels' opportunity "MD Goated" was moved into
+    "CA 101 submitted" at 8:04 PM ET on Oct 27 and the 8:07 PM sync recorded
+    the milestone event, but the contact did not carry the fy27 tag until
+    10:46 AM the next morning, so the event was filed "unclassified" and the
+    Army CA 101 card never counted it: the reporting group used to be
+    evaluated once, at the moment the event was first observed, and never
+    again. Now every sync, after the opportunities phase, re-evaluates every
+    milestone and won event in a tag-based stage (CA 101 submitted,
+    Supervisor Approval) against the contact's tags as cached in that run
+    (contacts are re-read before opportunities) and re-files the ones that
+    differ, in either direction (src/lib/sync/core.ts refileTagBasedEvents).
+    The server log and the manual sync route's reply say how many moved. The card's "not counted" line now
+    says the contact has no FY27 tag yet and that it counts once the tag is
+    added in GHL; the counting notes explain the tag timing. Opportunities
+    created directly in a milestone stage were already recorded (the first
+    sighting of an opportunity in a tracked stage records the event, dated by
+    GHL's stage-entry time or the creation time; the per-run backfill catches
+    any still missing) — verified against the cache: no opportunity in the
+    CA 101 stage lacks an event. Nothing is written to GHL; the dashboard
+    cannot add the tag for a contact that lacks it.

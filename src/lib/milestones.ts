@@ -180,6 +180,11 @@ export function computeMilestone(m: MilestoneMapping, range: DateRange, names: M
 
   const notes = [
     `Counting — the first entry into "${m.stageName}" once per contact in reporting group ${group} (${base.groupBasis}); re-entering the stage does not count again.`,
+    ...(m.reportingGroupBasis === "contact_tag"
+      ? [
+          `Tag timing — the reporting group follows the contact's current tags: an entry recorded before the "${m.reportingGroupTag}" tag was added is counted once the tag is on the contact (at the next sync, within 15 minutes), and an entry whose contact loses the tag stops counting.`,
+        ]
+      : []),
     "Opportunity Value — summed over the distinct opportunities behind these contacts, using the value at the time of the event.",
   ];
   if (partialHistory) {
