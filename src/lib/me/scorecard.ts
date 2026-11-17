@@ -9,7 +9,7 @@
 import { computeRepAppointments } from "@/lib/appointments";
 import type { DateRange } from "@/lib/dates";
 import { goalFor, repGoalStatus, type Goal, type GoalStatus } from "@/lib/goals";
-import { semesters } from "@/lib/mapping-config";
+import { defaultSemester, semesters, type Semester } from "@/lib/mapping-config";
 import { fmtMinutes } from "@/lib/metrics";
 import { computeRepCalls } from "@/lib/repCalls";
 import type { Rep } from "@/lib/reps";
@@ -69,6 +69,10 @@ interface Figures {
   submissions: number | null;
   subsUnavailable?: string;
   ca101: number;
+  /** IAU App Submitted for the chosen semester. */
+  iau: number;
+  /** IAU App Submitted for every other configured semester together. */
+  iauOther: number;
   semParts: { label: string; text: string }[];
   won: number;
   wonValue: number;
@@ -76,7 +80,7 @@ interface Figures {
 }
 
 /** The rep's figures over one range, from the team functions. */
-function figures(rep: Rep, range: DateRange): Figures {
+function figures(rep: Rep, range: DateRange, semester: Semester): Figures {
   const calls = computeRepCalls(range);
   const appts = computeRepAppointments(range);
   const subs = computeSubmissions(range, "all");
@@ -84,6 +88,10 @@ function figures(rep: Rep, range: DateRange): Figures {
   const a = appts.rows.find((r) => r.userId === rep.userId);
   const s = subs.rows.find((r) => r.userId === rep.userId);
   const won = wonOpps("period", range).filter((o) => o.assignedTo === rep.userId);
+  // IAU App Submitted split by semester: the chosen one (its own tile) and the rest together; the Submissions figure keeps every semester.
+  const iauBy = (p: { key: string; reps: { userId: string | null; contacts: number }[] }) => p.reps.find((r) => r.userId === rep.userId)?.contacts ?? 0;
+  const iau = (subs.parts?.iau ?? []).filter((p) => p.key === semester.submittedKey).reduce((t, p) => t + iauBy(p), 0);
+  const iauOther = (subs.parts?.iau ?? []).filter((p) => p.key !== semester.submittedKey && semesters().some((x) => x.submittedKey === p.key)).reduce((t, p) => t + iauBy(p), 0);
   return {
     dials: c?.dials ?? 0,
     conversations: c?.conversations ?? 0,
@@ -96,10 +104,9 @@ function figures(rep: Rep, range: DateRange): Figures {
     submissions: subs.value === null ? null : (s?.total ?? 0),
     subsUnavailable: subs.unavailableReason,
     ca101: s?.ca101 ?? 0,
-    semParts: (subs.parts?.iau ?? []).map((p) => {
-      const sem = semesters().find((x) => x.submittedKey === p.key);
-      return { label: `Veteran IAU · ${sem?.short ?? p.reportingGroup}`, text: n(p.reps.find((r) => r.userId === rep.userId)?.contacts ?? 0) };
-    }),
+    iau,
+    iauOther,
+    semParts: [{ label: `IAU App · ${semester.short}`, text: n(iau) }, ...(iauOther > 0 ? [{ label: "IAU App · other semesters", text: n(iauOther) }] : [])],
     won: won.length,
     wonValue: won.reduce((t, o) => t + (o.value ?? 0), 0),
     goals: { calls: calls.callsGoal, talk: calls.talkGoal, booked: appts.bookedGoal, completed: goalFor("appointmentsCompleted", range), subs: subs.goal },
@@ -111,9 +118,9 @@ function prevRangeOf(range: DateRange): DateRange {
   return { ...range, start: range.prevStart, end: range.prevEnd, fullEnd: range.prevEnd, partial: false };
 }
 
-export function computeRepScorecard(rep: Rep, range: DateRange): RepScorecard {
-  const cur = figures(rep, range);
-  const prev = figures(rep, prevRangeOf(range));
+export function computeRepScorecard(rep: Rep, range: DateRange, semester: Semester = defaultSemester()): RepScorecard {
+  const cur = figures(rep, range, semester);
+  const prev = figures(rep, prevRangeOf(range), semester);
   const singleDay = range.key === "today" || range.key === "yesterday";
 
   const goalOf = (g: Goal | null, value: number | null): Pick<ScoreMetric, "goal" | "status" | "goalNote"> => {
@@ -143,6 +150,7 @@ export function computeRepScorecard(rep: Rep, range: DateRange): RepScorecard {
       ...goalOf(cur.goals.subs, cur.submissions),
       parts: [{ label: "Army CA 101", text: n(cur.ca101) }, ...cur.semParts],
     },
+    { key: "iau", label: `IAU App Submissions · ${semester.short}`, kind: "count", source: `Program Submissions, IAU App Submitted (${semester.label}): the semester chosen in the Semester dropdown; the Submissions tile counts every semester`, value: cur.iau, text: n(cur.iau), prev: prev.iau, goal: null, status: null, sub: cur.iauOther > 0 ? `+ ${n(cur.iauOther)} for other semesters (counted in Submissions)` : undefined },
     { key: "won", label: "Won", kind: "count", source: "Won row, Became Won During Period (first won transition per opportunity, credited to the owner at the event)", value: cur.won, text: n(cur.won), prev: prev.won, goal: null, status: null, sub: `Opportunity Value ${usd(cur.wonValue)}` },
   ];
 
@@ -157,6 +165,7 @@ export function computeRepScorecard(rep: Rep, range: DateRange): RepScorecard {
       "Dials are outbound human call attempts, one per call ID. Talk time is the recorded duration of calls with status completed or answered, both directions.",
       "Appointments booked are bookings created in the range where you are the host. Completed are appointments scheduled in the range marked Showed; the show rate leaves out appointments not yet marked.",
       "Submissions are the first entry into CA 101 submitted (Army) or IAU App Submitted (Veteran, every semester) per contact, credited to the opportunity owner at the time of the event.",
+      `IAU App Submissions · ${semester.short} — the IAU App Submitted entries for ${semester.label} alone; the Semester dropdown on this page switches it (and the leaderboard's IAU tiles) to another semester. Your Submissions figure, goal, quota, and commission count every semester whichever one is shown.`,
       "Won means opportunity status = won, once per opportunity id, credited to the owner at the won event. Dollar figures are Opportunity Value, never cash collected or commission.",
     ],
   };

@@ -771,7 +771,7 @@
   }
  ],
  "semesters": {
-  "_comment": "Veteran G.I. Bill semesters the scorecard can switch between (Submissions section dropdown). Keys are reporting groups; milestone keys point at entries in milestones. The first entry with default: true is shown unless the URL names another (?semester=KEY).",
+  "_comment": "Veteran G.I. Bill semesters the scorecard can switch between (Submissions section dropdown). Keys are reporting groups; milestone keys point at entries in milestones. The first entry with default: true is shown unless the URL names another (?semester=KEY). Default switched from FS2 to SS1-2027 on 2026-11-17 (owner request; docs/DECISIONS.md #90).",
   "list": [
    {
     "key": "FS2",
@@ -781,7 +781,7 @@
     "acceptedKey": "vet_iau_app_accepted",
     "wonKey": "vet_enrolled_won",
     "signedStageId": "0fe9e3a1-f809-43d6-93c5-7768e63597fc",
-    "default": true
+    "default": false
    },
    {
     "key": "SS1-2027",
@@ -791,7 +791,7 @@
     "acceptedKey": "vet_iau_app_accepted_ss1_2027",
     "wonKey": "vet_enrolled_won_ss1_2027",
     "signedStageId": "aef4e006-98b6-42e2-a4a1-f2eb1815b69a",
-    "default": false
+    "default": true
    }
   ]
  }

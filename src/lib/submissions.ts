@@ -1,6 +1,7 @@
 // Program Submissions (combined): CA 101 submitted (Army, FY27) + IAU App
-// Submitted (Veteran, for the selected semester: Fall Session 2 by default,
-// or Spring Session 1 via the Submissions section's semester dropdown), per
+// Submitted (Veteran, for the selected semester: the default in
+// config/ghl-mapping.json semesters.list, Spring Session 1 since 2026-11-17,
+// or another via the Submissions section's semester dropdown), per
 // rep and as a team total. This is the ONLY submissions goal (5 per rep per
 // week, scaled per rep in config/sales-reps.json). Event-based, like the
 // milestone cards it is built from.
@@ -164,7 +165,7 @@ export function computeSubmissions(range: DateRange, sel: SemesterSelection = de
   const semesterNote =
     sel === "all"
       ? `IAU App Submitted counts every configured semester (${semesters().map((s) => `${s.label}: "${trackedMilestones().find((m) => m.key === s.submittedKey)?.stageName ?? s.submittedKey}"`).join("; ")}).`
-      : `Semester — the IAU part is ${sel.label} ("${iauParts[0]?.stageName ?? ""}", reporting group ${sel.key}); pick another semester with the dropdown above the Veteran cards. Fall Session 2 is the default.`;
+      : `Semester — the IAU part is ${sel.label} ("${iauParts[0]?.stageName ?? ""}", reporting group ${sel.key}); pick another semester with the dropdown above the Veteran cards. ${defaultSemester().label} is the default.`;
   return {
     ...base,
     value: (ca.achieved ?? 0) + iauAchieved,

@@ -1391,3 +1391,18 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     submission-retro, sign-in Consistentjorge@gmail.com, photo
     public/reps/jorge-a.jpg (initials until the file is added). His November
     quota and goals are pro-rated from Nov 16 (15 of 30 days: quota 10).
+
+90. **IAU App Submissions tile follows the semester dropdown; Spring Session 1 is
+    the default semester (owner request 2026-11-17).** The default semester in
+    config/ghl-mapping.json semesters.list is now SS1-2027 (Spring Session 1),
+    so the two Veteran cards, the IAU column of Program Submissions, the IAU
+    tile on every Rep Performance card ("IAU App Submissions · SS1 '27"), the
+    rep submissions drilldown, and the rep's /me scorecard open on Spring
+    Session 1; the Semester dropdown (Submissions section on the scorecard;
+    above the scorecard and the leaderboard on /me) switches all of them
+    together, and Fall Session 2 stays one choice away. The /me scorecard
+    gained its own "IAU App Submissions · <semester>" tile (no goal) with the
+    other semesters' count noted under it; its Submissions tile, the combined
+    goal, the monthly quota, commission, and the weekly reports keep counting
+    every semester. The Rep Performance tile label carries the semester's
+    short name instead of "(semester shown)".

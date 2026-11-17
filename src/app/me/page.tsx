@@ -63,19 +63,20 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
   const lastRun = latestSyncRuns(CORE_SYNC_KIND, 1)[0];
   const diskWarning = getState("disk_warning");
   const hasData = Boolean(cov.lastCoreSyncOkAt);
-  const scorecard = computeRepScorecard(view.rep, range);
+  // The IAU App tile of the scorecard and the IAU column of the leaderboard show the chosen semester, like the admin's (?semester=KEY; the default otherwise).
+  const semester = semesterFor(first(sp.semester));
+  const scorecard = computeRepScorecard(view.rep, range, semester);
   const overview = computeRepOverview(view.rep, now);
   const pace = computeRepPace(view.rep, now);
   const commission = computeRepCommission(view.rep, now);
   const leads = computeRepLeads(view.rep, now);
   const appts = computeMyAppointments(view.rep, now);
   const pipeline = computeRepPipeline(view.rep);
-  // The leaderboard shows the IAU column for the chosen semester, like the admin's (?semester=KEY; the default otherwise).
-  const semester = semesterFor(first(sp.semester));
   const team = computeTeamLeaderboard(range, now, semester);
   const heat = heatBundle(range, (u) => u === view.userId);
   const sections = ME_SECTIONS;
   const semesterOptions = semesters().map((s) => ({ key: s.key, label: s.label, isDefault: Boolean(s.default) }));
+  const semesterHint = "Switches the IAU App tile of your scorecard and the IAU App tiles of the leaderboard to the chosen semester; combined submissions always count every semester.";
 
   return (
     <>
@@ -133,6 +134,9 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
       <section className="band band-light" id={sections[2].id}>
         <div className="band-inner">
           <BandHeading s={sections[2]} />
+          <div className="me-toolbar">
+            <SemesterPicker options={semesterOptions} active={semester.key} hint={semesterHint} basePath="/me" anchor={sections[2].id} />
+          </div>
           <div className="kpi-row cols-1">
             <ScorecardCard s={scorecard} name={view.name} rangeText={fmtRange(range.start, range.end, range.partial)} prevText={fmtRange(range.prevStart, range.prevEnd, range.partial)} />
           </div>
@@ -173,7 +177,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
         <div className="band-inner">
           <BandHeading s={sections[7]} />
           <div className="me-toolbar">
-            <SemesterPicker options={semesterOptions} active={semester.key} hint="Switches the IAU App column of the leaderboard to the chosen semester." basePath="/me" anchor="me-leaderboard" />
+            <SemesterPicker options={semesterOptions} active={semester.key} hint={semesterHint} basePath="/me" anchor="me-leaderboard" />
           </div>
           <Leaderboard data={team} rangeLabel={range.label} highlight={view.userId} viewAs={view.viewer.role === "admin"} />
         </div>

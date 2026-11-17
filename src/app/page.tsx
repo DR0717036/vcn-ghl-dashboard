@@ -67,7 +67,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const key: RangeKey = isRangeKey(rangeParam) ? rangeParam : "this_month";
   const from = first(sp.from);
   const to = first(sp.to);
-  // Veteran semester shown on the two Veteran cards and in Program Submissions (?semester=KEY; Fall Session 2 by default).
+  // Veteran semester shown on the two Veteran cards, in Program Submissions, and on the Rep Performance IAU tiles (?semester=KEY; the config default, Spring Session 1, otherwise).
   const semester = semesterFor(first(sp.semester));
   const now = new Date();
   const range = resolveRange(key, now, { from, to });
@@ -97,7 +97,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   const leadsBySource = computeSourceReport(leads, "source");
   const leadsByCampaign = computeSourceReport(leads, "campaign");
   // KPI-row milestone cards, in the owner's order: CA 101, Supervisor Approval, then IAU App Submitted and Accepted
-  // for the selected semester (FS2 by default, Spring Session 1 via the dropdown). FS1 stays tracked in config
+  // for the selected semester (Spring Session 1 by default, FS2 via the dropdown). FS1 stays tracked in config
   // (kpiMilestones) as a historical group but has no card (round 3).
   const kpiMilestoneRows = [
     ["army_ca101", "army_supervisor_approval"],
@@ -174,7 +174,7 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           : `Veteran G.I. Bill · ${semester.label} (${m.reportingGroup}) · "${m.stageName}" · reached in period`;
   const semesterOptions = semesters().map((s) => ({ key: s.key, label: s.label, isDefault: Boolean(s.default) }));
   const semesterHint =
-    "Switches both Veteran G.I. Bill cards, the IAU column of Program Submissions, and their drilldowns to the chosen semester. " +
+    "Switches both Veteran G.I. Bill cards, the IAU column of Program Submissions, the IAU App tile on every Rep Performance card, and their drilldowns to the chosen semester; combined submissions always count every semester. " +
     defaultSemester().label +
     " is the default; the choice is kept in the page address, so a shared link opens on the same semester.";
 

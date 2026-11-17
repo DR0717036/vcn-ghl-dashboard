@@ -1,5 +1,5 @@
 // Program Submissions (combined): CA 101 submitted + IAU App Submitted for the
-// selected semester (FS2 by default; the Semester dropdown above the Veteran
+// selected semester (the config default; the Semester dropdown above the Veteran
 // cards switches it), per rep and team total. Carries the combined weekly rep goal, the only
 // submissions goal. Same card anatomy as every other KPI card; the rep table
 // is the card body.
