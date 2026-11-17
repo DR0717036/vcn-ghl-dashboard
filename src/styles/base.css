@@ -4284,12 +4284,13 @@ html.anim .anim-root:not(.chart-in) .heat-cell {
 
 .rep-stat-label {
   font-size: 11px;
+  line-height: 1.25;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Wrap long labels ("IAU App Submissions · SS1 '27", "Conversations / connected") instead of cutting them with an ellipsis. */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .rep-stat-value {
