@@ -1385,3 +1385,9 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     totals, not sums per rep, and are unchanged; converting them to a per-rep
     rate is an owner decision. (Jorge A., start 2026-11-16, is added in the
     following commit once the owner confirms the GHL user match.)
+    Jorge A. added 2026-11-17 with startDate 2026-11-16, mapped to GHL user
+    R8AguELhlH1L0Pfw8nEk ("Jorge C." in GHL, same email; the owner confirmed
+    the match), full-time (kpiMultiplier 1), monthly quota 20, plan
+    submission-retro, sign-in Consistentjorge@gmail.com, photo
+    public/reps/jorge-a.jpg (initials until the file is added). His November
+    quota and goals are pro-rated from Nov 16 (15 of 30 days: quota 10).

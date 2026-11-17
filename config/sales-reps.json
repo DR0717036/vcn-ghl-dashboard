@@ -73,6 +73,17 @@
         "programSubmissions": 3
       },
       "photo": "reps/sam-rodriguez.jpg"
+    },
+    {
+      "name": "Jorge A.",
+      "userId": "R8AguELhlH1L0Pfw8nEk",
+      "email": "Consistentjorge@gmail.com",
+      "signInEmail": "Consistentjorge@gmail.com",
+      "startDate": "2026-11-16",
+      "kpiMultiplier": 1,
+      "monthlyQuota": 20,
+      "commissionPlan": "submission-retro",
+      "photo": "reps/jorge-a.jpg"
     }
   ]
 }
