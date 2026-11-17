@@ -1,7 +1,9 @@
 // Goals come from config/goals.json as RATES (per rep per day, per rep per
 // week, or team per week). Per-rep rates apply to each rep in
 // config/sales-reps.json scaled by that rep's kpiMultiplier (or replaced by a
-// goalOverrides entry), and the team goal is the SUM of every rep's goal. For
+// goalOverrides entry), for the days the rep was on the team inside the
+// period (startDate / endDate), and the team goal is the SUM of every rep's
+// goal, so it follows the roster on each date rather than a fixed head count. For
 // a selected date range the dashboard turns the rate into a goal for the
 // whole period, then scales it to the elapsed portion so an in-progress
 // period can be judged fairly. Nothing here is invented: a KPI without a
@@ -9,7 +11,7 @@
 
 import raw from "../../config/goals.json";
 import { dayKeysBetween, type DateRange } from "@/lib/dates";
-import { repRate, salesReps } from "@/lib/reps";
+import { activeDays, activeReps, isActiveOn, repRate, rosterDay, salesReps, tenureNote } from "@/lib/reps";
 
 interface GoalsFile {
   perRepPerDay?: Record<string, number>;
@@ -75,13 +77,41 @@ function num(v: unknown): number | null {
 
 const fmt = (v: number) => (Number.isInteger(v) ? v.toLocaleString("en-US") : v.toLocaleString("en-US", { maximumFractionDigits: 2 }));
 
-/** Per-rep rates for a KPI and the plain-language basis for them. */
-function rates(kpiKey: string, base: number, unit: "day" | "week"): { rates: { userId: string; rate: number }[]; team: number; basis: string } {
-  const list = salesReps.map((r) => ({ userId: r.userId, name: r.name, rate: repRate(r, kpiKey, base) }));
-  const team = list.reduce((s, r) => s + r.rate, 0);
-  const exceptions = list.filter((r) => Math.abs(r.rate - base) > 1e-9).map((r) => `${r.name} ${fmt(r.rate)}`);
-  const basis = `${fmt(base)} per rep per ${unit}${exceptions.length ? ` (${exceptions.join(", ")})` : ""}, ${list.length} reps, team ${fmt(team)} per ${unit}`;
-  return { rates: list, team, basis };
+/**
+ * Per-rep goals for a KPI over the range: each rep's rate applied to the days
+ * they were on the team inside the period (a rep who joined or left mid-period
+ * gets a pro-rated goal; one not on the team at all gets none), the team goal
+ * as their sum, and the plain-language basis. Owner request 2026-11-17.
+ */
+function repGoals(kpiKey: string, base: number, unit: "day" | "week", range: DateRange): { perRep: Record<string, RepGoal>; full: number; scaled: number; teamRate: number; count: number; basis: string } {
+  const perUnit = unit === "day" ? 1 : 7;
+  const day = rosterDay(range);
+  const perRep: Record<string, RepGoal> = {};
+  let full = 0;
+  let scaled = 0;
+  let teamRate = 0;
+  let count = 0;
+  const exceptions: string[] = [];
+  const tenure: string[] = [];
+  for (const r of salesReps) {
+    const daysOn = activeDays(r, range.start, range.fullEnd);
+    if (daysOn <= 0) continue;
+    const rate = repRate(r, kpiKey, base);
+    const elapsedOn = range.partial ? Math.min(daysOn, activeDays(r, range.start, range.end)) : daysOn;
+    const g: RepGoal = { full: (rate * daysOn) / perUnit, scaled: (rate * elapsedOn) / perUnit, rate };
+    perRep[r.userId] = g;
+    full += g.full;
+    scaled += g.scaled;
+    if (isActiveOn(r, day)) {
+      count += 1;
+      teamRate += rate;
+    }
+    if (Math.abs(rate - base) > 1e-9) exceptions.push(`${r.name} ${fmt(rate)}`);
+    const note = tenureNote(r, range.start, range.fullEnd);
+    if (note) tenure.push(`${r.name} ${note}`);
+  }
+  const basis = `${fmt(base)} per rep per ${unit}${exceptions.length ? ` (${exceptions.join(", ")})` : ""}, ${count} rep${count === 1 ? "" : "s"} on the team at the end of the period${tenure.length ? ` (${tenure.join("; ")}: counted for their days on the team)` : ""}, team ${fmt(teamRate)} per ${unit}`;
+  return { perRep, full, scaled, teamRate, count, basis };
 }
 
 export function goalFor(kpiKey: string, range: DateRange): Goal | null {
@@ -93,37 +123,38 @@ export function goalFor(kpiKey: string, range: DateRange): Goal | null {
 
   const perDay = num(goals.perRepPerDay?.[kpiKey]);
   if (perDay !== null) {
-    const r = rates(kpiKey, perDay, "day");
-    const perRep: Record<string, RepGoal> = {};
-    for (const x of r.rates) perRep[x.userId] = { full: x.rate * days, scaled: x.rate * days * elapsedFraction, rate: x.rate };
-    const full = r.team * days;
-    return { kpiKey, full, scaled: full * elapsedFraction, perRep, basis: `${r.basis} × ${days} ${dayWord}`, elapsedFraction, partial: range.partial, snapshot: false, unit: "day" };
+    const r = repGoals(kpiKey, perDay, "day", range);
+    return { kpiKey, full: r.full, scaled: r.scaled, perRep: r.perRep, basis: `${r.basis} × ${days} ${dayWord}`, elapsedFraction, partial: range.partial, snapshot: false, unit: "day" };
   }
 
   const perWeek = num(goals.perRepPerWeek?.[kpiKey]);
   if (perWeek !== null) {
-    const r = rates(kpiKey, perWeek, "week");
-    const perRep: Record<string, RepGoal> = {};
     if (goals.snapshotKpis?.includes(kpiKey)) {
-      for (const x of r.rates) perRep[x.userId] = { full: x.rate, scaled: x.rate, rate: x.rate };
+      // Snapshot KPIs compare the current count with the weekly rate of the reps on the team now.
+      const perRep: Record<string, RepGoal> = {};
+      const exceptions: string[] = [];
+      let team = 0;
+      const reps = activeReps(range);
+      for (const rep of reps) {
+        const rate = repRate(rep, kpiKey, perWeek);
+        perRep[rep.userId] = { full: rate, scaled: rate, rate };
+        team += rate;
+        if (Math.abs(rate - perWeek) > 1e-9) exceptions.push(`${rep.name} ${fmt(rate)}`);
+      }
       return {
         kpiKey,
-        full: r.team,
-        scaled: r.team,
+        full: team,
+        scaled: team,
         perRep,
-        basis: `at least ${r.basis}, compared with the current snapshot (not scaled to the period)`,
+        basis: `at least ${fmt(perWeek)} per rep per week${exceptions.length ? ` (${exceptions.join(", ")})` : ""}, ${reps.length} reps on the team, team ${fmt(team)} per week, compared with the current snapshot (not scaled to the period)`,
         elapsedFraction: 1,
         partial: false,
         snapshot: true,
         unit: "week",
       };
     }
-    for (const x of r.rates) {
-      const full = (x.rate / 7) * days;
-      perRep[x.userId] = { full, scaled: full * elapsedFraction, rate: x.rate };
-    }
-    const full = (r.team / 7) * days;
-    return { kpiKey, full, scaled: full * elapsedFraction, perRep, basis: `${r.basis}, pro-rated to ${days} ${dayWord}`, elapsedFraction, partial: range.partial, snapshot: false, unit: "week" };
+    const r = repGoals(kpiKey, perWeek, "week", range);
+    return { kpiKey, full: r.full, scaled: r.scaled, perRep: r.perRep, basis: `${r.basis}, pro-rated to ${days} ${dayWord}`, elapsedFraction, partial: range.partial, snapshot: false, unit: "week" };
   }
 
   const team = num(goals.teamPerWeek?.[kpiKey]);

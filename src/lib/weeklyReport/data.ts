@@ -22,7 +22,7 @@ import { coverage, fmtMinutes, kpiLeadsAssigned, kpiNewLeads, kpiTalkTime } from
 import { computeMilestoneByKey } from "@/lib/milestones";
 import { computeRepCalls } from "@/lib/repCalls";
 import { computeRepPerformance } from "@/lib/repPerformance";
-import { salesReps } from "@/lib/reps";
+import { activeReps, repWorkingDayKeys } from "@/lib/reps";
 import { computeSubmissions } from "@/lib/submissions";
 import { CORE_SYNC_KIND, HISTORY_START } from "@/lib/sync/core";
 import { failedPhases, runningTooLong } from "@/lib/syncStatus";
@@ -392,11 +392,15 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
   const remainingWd = allWd.length - elapsedWd.length;
   const project = (mtd: number) => (elapsedWd.length > 0 ? Math.round((mtd / elapsedWd.length) * allWd.length) : null);
   const needed = (mtd: number, quota: number) => (remainingWd > 0 ? Math.max(0, quota - mtd) / remainingWd : null);
-  const paceReps: RepPace[] = salesReps.map((rep) => {
+  // The reps on the team today (startDate / endDate), each paced over their own working days this month.
+  const paceReps: RepPace[] = activeReps(now).map((rep) => {
     const r = commission.reps[rep.userId];
     const mtd = r?.submissionsMtd ?? 0;
     const quota = r?.monthlyQuota ?? 0;
     const row = reps.find((x) => x.userId === rep.userId);
+    const repAll = repWorkingDayKeys(rep, month.start, month.fullEnd, cfg.workingDays);
+    const repElapsed = repWorkingDayKeys(rep, month.start, addDays(startOfDay(now), 1), cfg.workingDays).filter((k) => repAll.includes(k));
+    const repRemaining = repAll.length - repElapsed.length;
     return {
       userId: rep.userId,
       name: rep.name,
@@ -406,8 +410,8 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
       mtd,
       quota,
       quotaPct: quota > 0 ? mtd / quota : null,
-      projected: project(mtd),
-      neededPerDay: quota > 0 ? needed(mtd, quota) : null,
+      projected: repElapsed.length > 0 ? Math.round((mtd / repElapsed.length) * repAll.length) : null,
+      neededPerDay: quota > 0 && repRemaining > 0 ? Math.max(0, quota - mtd) / repRemaining : null,
       commissionMtd: r?.commissionMtd.amount ?? null,
       commissionLabel: r?.commissionMtd.label ?? "plan not found",
       planLabel: r?.planLabel ?? null,

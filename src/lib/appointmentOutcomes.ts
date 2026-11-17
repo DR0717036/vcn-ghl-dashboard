@@ -402,7 +402,7 @@ export interface CompareResult {
 
 export function computeComparison(range: DateRange, rates: RatesResult, outcome: OutcomeResult): CompareResult {
   const cfg = appointmentsConfig();
-  const roster = repRoster();
+  const roster = repRoster(range);
   const isRep = (u: string | null) => u !== null && roster.byUserId.has(u);
   // calls per booking by program: host dials in the window before each booking created in the range
   const booked = bookedIn(iso(range.start), iso(range.end));

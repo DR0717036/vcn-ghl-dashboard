@@ -57,7 +57,7 @@ function WeekModal({ w, onClose }: { w: StreakWeek; onClose: () => void }) {
         <div className="modal-title">Week of {w.label}</div>
         <div className="note modal-sub">
           {w.combined === null ? "unavailable" : `${n(w.combined)} combined submission${w.combined === 1 ? "" : "s"}`}
-          {w.goal !== null ? ` · goal ${n(Math.round(w.goal))}` : ""} · commission earned {usd(w.commission)} (estimated)
+          {w.offTeam ? " · not on the team this week" : w.goal !== null ? ` · goal ${n(Math.round(w.goal))}` : ""} · commission earned {usd(w.commission)} (estimated)
           {w.current ? " · in progress" : ""}
         </div>
       </div>
@@ -143,7 +143,7 @@ export default function WeekChart({ weeks, goal }: { weeks: StreakWeek[]; goal: 
           return (
             <g
               key={w.start}
-              className={`me-weekbar ${w.met === true ? "is-met" : "is-not"}${w.current ? " is-current" : ""}${hot === i ? " is-hot" : ""}`}
+              className={`me-weekbar ${w.met === true ? "is-met" : "is-not"}${w.offTeam ? " is-off" : ""}${w.current ? " is-current" : ""}${hot === i ? " is-hot" : ""}`}
               role="button"
               tabIndex={0}
               aria-label={`${w.label}: ${w.combined === null ? "unavailable" : n(w.combined)} submissions, ${usd(w.commission)} commission. Open the list.`}
@@ -183,7 +183,7 @@ export default function WeekChart({ weeks, goal }: { weeks: StreakWeek[]; goal: 
           <b>Week of {hotWeek.label}</b>
           <span>
             {hotWeek.combined === null ? "unavailable" : `${n(hotWeek.combined)} submission${hotWeek.combined === 1 ? "" : "s"}`}
-            {hotWeek.goal !== null ? ` · goal ${n(Math.round(hotWeek.goal))}` : ""}
+            {hotWeek.offTeam ? " · not on the team this week" : hotWeek.goal !== null ? ` · goal ${n(Math.round(hotWeek.goal))}` : ""}
           </span>
           <span>{usd(hotWeek.commission)} commission earned · click for the list</span>
         </div>

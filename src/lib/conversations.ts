@@ -145,7 +145,7 @@ function staleCandidates(now: Date, cfg: ConversationsConfig): ConvRow[] {
 
 export function computeStale(now: Date): StaleResult {
   const cfg = conversationsConfig();
-  const roster = repRoster();
+  const roster = repRoster(now);
   const names = userNames();
   const snapshotAt = getState("conversations_snapshot_at") ?? null;
   const all = staleCandidates(now, cfg);
@@ -206,7 +206,7 @@ export function computeStale(now: Date): StaleResult {
 /** Stale conversations for one row: a rep's user id, "unassigned", or "others". */
 export function staleDrilldown(user: string, now: Date): DrillResult {
   const cfg = conversationsConfig();
-  const roster = repRoster();
+  const roster = repRoster(now);
   const names = userNames();
   const owned = (u: string | null) => (user === "unassigned" ? !u : user === "others" ? Boolean(u) && !roster.byUserId.has(u!) : u === user);
   const list = staleCandidates(now, cfg).filter((c) => owned(c.assigned_to));
@@ -346,7 +346,7 @@ function median(xs: number[]): number | null {
 
 export function computeResponseTimes(range: DateRange): ResponseResult {
   const cfg = conversationsConfig();
-  const roster = repRoster();
+  const roster = repRoster(range);
   const names = userNames();
   const episodes = responseEpisodes(range);
   const bucketOf = (u: string | null) => (u ? (roster.byUserId.has(u) ? u : `other:${u}`) : "__unassigned");
@@ -399,7 +399,7 @@ export function computeResponseTimes(range: DateRange): ResponseResult {
 /** Episodes for one rep ("unassigned" / "others" allowed), with a short inbound preview. */
 export function responseDrilldown(user: string, range: DateRange): DrillResult {
   const cfg = conversationsConfig();
-  const roster = repRoster();
+  const roster = repRoster(range);
   const names = userNames();
   const owned = (u: string | null) => (user === "unassigned" ? !u : user === "others" ? Boolean(u) && !roster.byUserId.has(u!) : u === user);
   const eps = responseEpisodes(range).filter((e) => owned(e.userId));

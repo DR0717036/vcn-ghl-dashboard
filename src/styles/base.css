@@ -5398,3 +5398,8 @@ tr:hover .lb-viewas,
 .modal-week {
   max-width: 760px;
 }
+
+/* rep tenure: weeks before a rep's start date (or after their end date) are not judged */
+.me-weekbar.is-off .me-weekbar-bar {
+  opacity: 0.35;
+}

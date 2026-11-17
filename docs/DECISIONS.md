@@ -1355,3 +1355,33 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     any still missing) — verified against the cache: no opportunity in the
     CA 101 stage lacks an event. Nothing is written to GHL; the dashboard
     cannot add the tag for a contact that lacks it.
+
+89. **Rep start and end dates (owner request 2026-11-17).** A rep entry in
+    config/sales-reps.json may carry startDate and/or endDate (New York
+    calendar days, inclusive). Isabela Estrada left on 2026-11-08 and keeps
+    her entry with that endDate; nothing is deleted. The rule everywhere: a
+    rep is on the roster for a range when they are on the team on the range's
+    last day (today for a period still in progress), so Rep Performance, the
+    leaderboard, Program Submissions rows, the per-rep rows of calls,
+    appointments, response times, leads, the drilldowns, and the Sunday report
+    and midweek check-in (both go through the same roster functions) list the
+    same people for the same dates. A former rep's activity inside a range
+    that ends after their last day sits under "Other users, not sales reps",
+    named as a former rep, and their own card returns for any range ending on
+    or before their last day; their commission, invoices (months through
+    their last one), and drilldowns stay correct. Goals: every per-rep goal is
+    the rep's rate applied to the days they were on the team inside the
+    period (src/lib/goals.ts repGoals), and the team goal is the sum, so the
+    weekly combined-submissions goal and the other per-rep sums follow the
+    roster on each date instead of a head count; the basis text names reps
+    counted for part of the period. The monthly quota is pro-rated the same
+    way (configured quota × days on the team ÷ days in the month, whole
+    submissions) and the pacing colors judge against the rep's own elapsed
+    tenure; pace projections and needed-per-day use the rep's own working
+    days; the /me streak and weekly chart mark weeks before a start date as
+    not judged. Sign-in works only while on the team (checked on each request
+    against today's New York date). The team-wide weekly goals in
+    config/goals.json teamPerWeek (leads assigned 200, new leads 200) are fixed
+    totals, not sums per rep, and are unchanged; converting them to a per-rep
+    rate is an owner decision. (Jorge A., start 2026-11-16, is added in the
+    following commit once the owner confirms the GHL user match.)

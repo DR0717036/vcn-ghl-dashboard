@@ -8,6 +8,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { nyDayKey } from "@/lib/dates";
 
 const FILE = path.join(process.cwd(), "config", "users.json");
 const REPS_FILE = path.join(process.cwd(), "config", "sales-reps.json");
@@ -18,6 +19,8 @@ interface RepEntry {
   name: string;
   userId: string;
   signInEmail?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 let cache: { mtimeMs: number; admins: Set<string>; historyAdmins: Set<string> } | null = null;
@@ -34,20 +37,39 @@ function load(): { admins: Set<string>; historyAdmins: Set<string> } {
   return cache;
 }
 
-let repCache: { mtimeMs: number; accounts: Map<string, { userId: string; name: string }> } | null = null;
+interface RepAccount {
+  userId: string;
+  name: string;
+  startDate?: string;
+  endDate?: string;
+}
 
-/** Sign-in address → rep (GHL user id and name), for every rep with a signInEmail. */
-function repAccounts(): Map<string, { userId: string; name: string }> {
+let repCache: { mtimeMs: number; accounts: Map<string, RepAccount> } | null = null;
+
+/** Sign-in address → rep (GHL user id, name, tenure), for every rep with a signInEmail, present or former. */
+function allRepAccounts(): Map<string, RepAccount> {
   const mtimeMs = fs.statSync(REPS_FILE).mtimeMs;
   if (repCache && repCache.mtimeMs === mtimeMs) return repCache.accounts;
   const raw = JSON.parse(fs.readFileSync(REPS_FILE, "utf8")) as { reps?: RepEntry[] };
-  const accounts = new Map<string, { userId: string; name: string }>();
+  const accounts = new Map<string, RepAccount>();
   for (const r of Array.isArray(raw.reps) ? raw.reps : []) {
     const e = typeof r.signInEmail === "string" ? norm(r.signInEmail) : "";
-    if (e && typeof r.userId === "string") accounts.set(e, { userId: r.userId, name: r.name });
+    if (e && typeof r.userId === "string") accounts.set(e, { userId: r.userId, name: r.name, startDate: typeof r.startDate === "string" ? r.startDate : undefined, endDate: typeof r.endDate === "string" ? r.endDate : undefined });
   }
   repCache = { mtimeMs, accounts };
   return accounts;
+}
+
+/** Sign-in address → rep, for the reps on the team today (startDate / endDate in config/sales-reps.json). A rep who has left keeps their history but can no longer sign in; a rep who has not started yet cannot sign in yet. Checked on every call, so access ends at midnight New York after the end date without a restart. */
+function repAccounts(): Map<string, { userId: string; name: string }> {
+  const today = nyDayKey(new Date());
+  const out = new Map<string, { userId: string; name: string }>();
+  for (const [e, a] of allRepAccounts()) {
+    if (a.startDate && today < a.startDate) continue;
+    if (a.endDate && today > a.endDate) continue;
+    out.set(e, { userId: a.userId, name: a.name });
+  }
+  return out;
 }
 
 export function adminEmails(): Set<string> {

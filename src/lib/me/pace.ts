@@ -11,8 +11,8 @@ import { getDb } from "@/lib/db";
 import { computeInvoiceLines, repSubmissions } from "@/lib/invoices/lines";
 import type { MilestoneResult } from "@/lib/milestones";
 import { dailyMotto } from "./mottos";
-import { addDays, addMonths, dayKeysBetween, fmtDay, fmtRangeShort, nyDayKey, nyParts, parseNyDay, resolveRange, startOfDay, startOfMonth } from "@/lib/dates";
-import type { Rep } from "@/lib/reps";
+import { addDays, addMonths, fmtDay, fmtRangeShort, nyDayKey, parseNyDay, resolveRange, startOfDay, startOfMonth } from "@/lib/dates";
+import { repWorkingDayKeys, tenureNote, tenureOverlaps, type Rep } from "@/lib/reps";
 import { computeSubmissions } from "@/lib/submissions";
 import { lastCompletedWeekStart, weekRange, weeklyReportConfig } from "@/lib/weeklyReport/config";
 
@@ -38,6 +38,8 @@ export interface StreakWeek {
   met: boolean | null;
   /** The week in progress (not part of the streak yet). */
   current: boolean;
+  /** True when the rep was not on the team at any point in the week (before their start date or after their end date): no goal, not judged. */
+  offTeam: boolean;
   /** The submissions behind the count (plus the week's wons on won-based plans), oldest first. */
   items: WeekItem[];
   /** Commission earned by the week's items under their month's pricing. */
@@ -75,13 +77,6 @@ export interface RepPaceData {
   notes: string[];
 }
 
-function workingDayKeys(start: Date, end: Date, days: number[]): string[] {
-  return dayKeysBetween(start, end).filter((k) => {
-    const d = parseNyDay(k);
-    return d ? days.includes(nyParts(d).wd) : false;
-  });
-}
-
 const STREAK_WEEKS = 8;
 
 export function computeRepPace(rep: Rep, now: Date): RepPaceData {
@@ -91,8 +86,9 @@ export function computeRepPace(rep: Rep, now: Date): RepPaceData {
   const r = commission.reps[rep.userId];
   const mtd = r?.submissionsMtd ?? 0;
   const quota = r?.monthlyQuota ?? 0;
-  const allWd = workingDayKeys(month.start, month.fullEnd, cfg.workingDays);
-  const elapsedWd = workingDayKeys(month.start, addDays(startOfDay(now), 1), cfg.workingDays).filter((k) => allWd.includes(k));
+  // Working days count only the rep's own days on the team (a rep who joined mid-month is paced from their start date).
+  const allWd = repWorkingDayKeys(rep, month.start, month.fullEnd, cfg.workingDays);
+  const elapsedWd = repWorkingDayKeys(rep, month.start, addDays(startOfDay(now), 1), cfg.workingDays).filter((k) => allWd.includes(k));
   const remainingWd = allWd.length - elapsedWd.length;
   const projected = elapsedWd.length > 0 ? Math.round((mtd / elapsedWd.length) * allWd.length) : null;
   const neededPerDay = quota > 0 && remainingWd > 0 ? Math.max(0, quota - mtd) / remainingWd : null;
@@ -111,16 +107,19 @@ export function computeRepPace(rep: Rep, now: Date): RepPaceData {
     const range = weekRange(ws, now);
     const subs = computeSubmissions(range, "all");
     const row = subs.rows.find((x) => x.userId === rep.userId);
-    const goal = subs.goal?.perRep[rep.userId]?.full ?? null;
-    if (back === 1 && goal !== null) weeklyGoal = goal;
+    const offTeam = !tenureOverlaps(rep, range.start, range.fullEnd);
+    const goal = offTeam ? null : (subs.goal?.perRep[rep.userId]?.full ?? null);
+    // The goal line is the rep's own full weekly rate (a week they joined mid-way shows a pro-rated bar goal instead).
+    if (weeklyGoal === null && subs.goal?.perRep[rep.userId]) weeklyGoal = subs.goal.perRep[rep.userId].rate;
     const combined = subs.value === null ? null : (row?.total ?? 0);
     weeks.push({
       label: fmtRangeShort(range.start, range.fullEnd),
       start: nyDayKey(ws),
       combined,
       goal,
-      met: combined === null || goal === null ? null : combined >= goal - 1e-9,
+      met: offTeam || combined === null || goal === null ? null : combined >= goal - 1e-9,
       current: back === 0,
+      offTeam,
       items: [],
       commission: 0,
     });
@@ -175,6 +174,8 @@ export function computeRepPace(rep: Rep, now: Date): RepPaceData {
   }
   // The week in progress extends the streak once it is already met.
   if (weeks[0]?.met === true) count += 1;
+  const tenure = tenureNote(rep, month.start, month.fullEnd);
+  const tenureLine = tenure ? `Partial month — you are counted ${tenure}: the quota (${quota.toLocaleString("en-US")} of the configured ${(r?.quotaFull ?? quota).toLocaleString("en-US")}), the working days, and the weekly goals cover only your days on the team; weeks before your start date carry no goal and are not judged.` : null;
 
   return {
     monthLabel: commission.monthLabel,
@@ -198,6 +199,7 @@ export function computeRepPace(rep: Rep, now: Date): RepPaceData {
     workingDaysRemaining: remainingWd,
     streak: { count, weeks: weeks.slice().reverse(), weeklyGoal },
     notes: [
+      ...(tenureLine ? [tenureLine] : []),
       "Month to date — your combined submissions this calendar month (CA 101 + IAU App, every semester), the same figure as the month-to-date column of Program Submissions, against the monthly quota in your rep settings.",
       `Working days — ${cfg.workingDays.map((d) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]).join(", ")} (config/weekly-report.json). Expected by today spreads the quota evenly over the month's working days.`,
       "Projected month-end — your current rate per working day carried to the end of the month. Needed per day — the gap to quota spread over the working days left.",

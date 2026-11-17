@@ -21,7 +21,7 @@ import type { CommissionReport } from "@/lib/commission";
 import type { ResponseResult } from "@/lib/conversations";
 import { buckets, fill } from "@/lib/charts";
 import { getDb } from "@/lib/db";
-import type { DateRange } from "@/lib/dates";
+import { fmtDay, parseNyDay, type DateRange } from "@/lib/dates";
 import { goalFor, repGoalStatus, type GoalStatus } from "@/lib/goals";
 import type { AssignedResult } from "@/lib/leads";
 import { trackedMilestones } from "@/lib/mapping-config";
@@ -30,7 +30,7 @@ import { firstEvents } from "@/lib/milestones";
 import type { RepApptsResult } from "@/lib/appointments";
 import type { RepCallsResult } from "@/lib/repCalls";
 import { fmtDuration } from "@/lib/repCalls";
-import { salesReps } from "@/lib/reps";
+import { activeReps, salesReps, tenureOverlaps, type Rep } from "@/lib/reps";
 import { iauKeys, submissionEvents, type SubmissionsResult } from "@/lib/submissions";
 import { wonOpps } from "@/lib/wonRow";
 
@@ -171,8 +171,13 @@ export function computeRepPerformance(input: {
   const b = buckets(range.start, range.end);
   const subEvents = submissionEvents(range.start, range.end);
   const cov = coverage();
+  // The roster for this range: reps on the team on its last day (today for a period in progress).
+  const roster = activeReps(range);
+  const rosterIds = new Set(roster.map((r) => r.userId));
+  // Configured reps who worked part of the range but had left by its end: their activity sits under Other users, named.
+  const formerInRange = salesReps.filter((r) => !rosterIds.has(r.userId) && r.endDate && tenureOverlaps(r, range.start, range.end));
 
-  const build = (userId: string | null, name: string, isRep: boolean, rep?: (typeof salesReps)[number]): RepScore => {
+  const build = (userId: string | null, name: string, isRep: boolean, rep?: Rep): RepScore => {
     const key = userId ?? "others";
     const calls = userId ? repCalls.rows.find((r) => r.userId === userId) : repCalls.others;
     const appt = userId ? repAppts.rows.find((r) => r.userId === userId) : repAppts.others;
@@ -181,15 +186,15 @@ export function computeRepPerformance(input: {
     const resp = userId ? responseTimes.rows.find((r) => r.userId === userId) : responseTimes.others;
     const leads = userId ? leadsByUser.rows.find((r) => r.userId === userId) : leadsByUser.rows.filter((r) => r.kind !== "rep").reduce((s, r) => s + r.count, 0);
     const newLeads = typeof leads === "number" ? leads : (leads?.count ?? 0);
-    const won = wonInRange.filter((o) => (userId ? o.assignedTo === userId : !o.assignedTo || !salesReps.some((r) => r.userId === o.assignedTo)));
+    const won = wonInRange.filter((o) => (userId ? o.assignedTo === userId : !o.assignedTo || !rosterIds.has(o.assignedTo)));
     const wonValue = won.reduce((s, o) => s + (o.value ?? 0), 0);
-    const cr = userId ? close.get(userId) : [...close.entries()].filter(([u]) => u === "__none" || !salesReps.some((r) => r.userId === u)).reduce((acc, [, v]) => ({ submitted: acc.submitted + v.submitted, won: acc.won + v.won }), { submitted: 0, won: 0 });
+    const cr = userId ? close.get(userId) : [...close.entries()].filter(([u]) => u === "__none" || !rosterIds.has(u)).reduce((acc, [, v]) => ({ submitted: acc.submitted + v.submitted, won: acc.won + v.won }), { submitted: 0, won: 0 });
     const connected = calls ? calls.outcomes.conversation + calls.outcomes.short : 0;
     const marked = appt ? appt.showed + appt.noshow : 0;
     const combinedGoal = userId && submissions.goal ? submissions.goal.perRep[userId] : undefined;
     const combinedStatus = userId && submissions.goal && sub ? repGoalStatus(sub.total, submissions.goal, userId) : null;
     const completedStatus = userId && completedGoal && appt ? repGoalStatus(appt.showed, completedGoal, userId) : null;
-    const assignedCount = assigned ? (userId ? (assigned.get(userId) ?? 0) : [...assigned.entries()].filter(([u]) => !salesReps.some((r) => r.userId === u)).reduce((s, [, c]) => s + c, 0)) : null;
+    const assignedCount = assigned ? (userId ? (assigned.get(userId) ?? 0) : [...assigned.entries()].filter(([u]) => !rosterIds.has(u)).reduce((s, [, c]) => s + c, 0)) : null;
 
     const metrics: Record<string, Metric> = {
       leadsAssigned: assigned ? { value: assignedCount, text: n(assignedCount ?? 0), title: "Unique contacts assigned to this user during the range (assignment events seen by the sync)." } : { value: null, text: "unavailable", title: `Assignment tracking began ${cov.firstCoreSyncAt ? cov.firstCoreSyncAt.slice(0, 10) : "later"}; this range starts earlier.` },
@@ -220,7 +225,7 @@ export function computeRepPerformance(input: {
     if (metrics.quota.status) goalItems.push({ label: "Quota pacing", status: metrics.quota.status });
     const met = goalItems.filter((g) => g.status !== "missed").length;
 
-    const mine = subEvents.filter((e) => (userId ? e.userId === userId : e.userId === null || !salesReps.some((r) => r.userId === e.userId)));
+    const mine = subEvents.filter((e) => (userId ? e.userId === userId : e.userId === null || !rosterIds.has(e.userId)));
     const points = fill(b, mine.map((e) => ({ t: e.time, c: 1 })));
 
     const notesCommon = [`Source — every figure equals this rep's row in the band it comes from (${rangeLabel}).`];
@@ -246,8 +251,9 @@ export function computeRepPerformance(input: {
     };
   };
 
-  const reps = salesReps.map((r) => build(r.userId, r.name, true, r));
-  const others = build(null, "Other users, not sales reps", false);
+  const reps = roster.map((r) => build(r.userId, r.name, true, r));
+  const formerNote = formerInRange.map((r) => `${r.name} through ${fmtDay(parseNyDay(r.endDate) as Date)}`).join(", ");
+  const others = build(null, formerInRange.length > 0 ? `Other users, not sales reps (includes former rep${formerInRange.length === 1 ? "" : "s"} ${formerNote})` : "Other users, not sales reps", false);
   return {
     reps,
     others,
@@ -255,7 +261,8 @@ export function computeRepPerformance(input: {
     defaultSort: "combined",
     rangeLabel,
     notes: [
-      "Cards — one per sales rep in config/sales-reps.json, including reps with no activity; every figure equals the rep's row in the band it comes from for the selected range.",
+      "Cards — one per sales rep on the team on the last day of the selected range (today for a period in progress; startDate / endDate in config/sales-reps.json), including reps with no activity; every figure equals the rep's row in the band it comes from for the selected range.",
+      "Joiners and leavers — a rep who left before the end of the range is not listed; their activity inside the range sits under Other users, named. Pick a range ending on or before their last day to see their own card. A rep's weekly goal and monthly quota cover only their days on the team.",
       "Leads assigned — unique contacts assigned to the rep during the range (assignment events the sync observed; unavailable for ranges before tracking began). New leads assigned — contacts created in the range whose current owner is the rep.",
       "Dials, conversations, talk time, first call — Rep Call Activity. Bookings, show rate, calls per booking — Rep Appointments (as host).",
       `CA 101, IAU App (${submissions.semester.label}), combined — Program Submissions (first entry per contact, credited to the owner at the event); the combined goal is the rep's own weekly rate pro-rated to the range. Quota pacing and est. commission — the month-to-date and selected-range columns of the same table, counting every semester.`,

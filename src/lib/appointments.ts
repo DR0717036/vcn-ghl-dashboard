@@ -585,7 +585,7 @@ export function computeRepAppointments(range: DateRange): RepApptsResult {
   const cfg = appointmentsConfig();
   const start = iso(range.start);
   const end = iso(range.end);
-  const roster = repRoster();
+  const roster = repRoster(range);
   const names = userNames();
   const isRep = (u: string | null) => u !== null && roster.byUserId.has(u);
   const bucket = (u: string | null) => (isRep(u) ? (u as string) : "__others");
@@ -781,7 +781,7 @@ export function statusCardDrilldown(which: string, range: DateRange): DrillResul
   const start = iso(range.start);
   const end = iso(range.end);
   const cfg = appointmentsConfig();
-  const roster = repRoster();
+  const roster = repRoster(range);
   const isRep = (u: string | null) => u !== null && roster.byUserId.has(u);
   if (which === "confirmed") {
     const snap = confirmedSnapshot();
@@ -844,7 +844,7 @@ export function repAppointmentsDrilldown(user: string, range: DateRange): DrillR
   const cfg = appointmentsConfig();
   const start = iso(range.start);
   const end = iso(range.end);
-  const roster = repRoster();
+  const roster = repRoster(range);
   const names = userNames();
   const isRep = (u: string | null) => u !== null && roster.byUserId.has(u);
   const owned = (u: string | null) => (user === "others" ? !isRep(u) : u === user);

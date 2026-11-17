@@ -26,7 +26,7 @@ import raw from "../../config/commission.json";
 import { getDb } from "@/lib/db";
 import { addMonths, fmtDay, resolveRange, startOfMonth, type DateRange } from "@/lib/dates";
 import { mappingConfig } from "@/lib/mapping-config";
-import { salesReps, type Rep } from "@/lib/reps";
+import { activeDays, activeMs, salesReps, tenureNote, tenureShare, type Rep } from "@/lib/reps";
 import { computeSubmissions, submissionEvents } from "@/lib/submissions";
 
 export interface PlanSubmissionRetro {
@@ -245,7 +245,12 @@ export interface RepMtd {
   planLabel: string | null;
   /** Combined submissions so far this calendar month. */
   submissionsMtd: number;
+  /** The quota for this month: the configured quota, or a pro-rated share when the rep joined or left during the month. */
   monthlyQuota: number;
+  /** The configured monthly quota before any pro-rating. */
+  quotaFull: number;
+  /** Why the quota differs from the configured one ("pro-rated: on the team from Nov 16 (15 of 30 days)"), or null. */
+  quotaNote: string | null;
   quotaPct: number;
   /** good: 100%+, warn: 50–99%, bad: below 50% once more than half the month has elapsed, else neutral. */
   quotaStatus: QuotaStatus;
@@ -301,7 +306,15 @@ export function computeCommission(range: DateRange, now: Date): CommissionReport
     const plan = planFor(rep);
     const submissionsMtd = subsByUser.get(rep.userId) ?? 0;
     const lines = wonByUser.get(rep.userId) ?? [];
-    const quota = rep.monthlyQuota > 0 ? rep.monthlyQuota : 0;
+    const quotaFull = rep.monthlyQuota > 0 ? rep.monthlyQuota : 0;
+    // A rep who joined or left during the month owes the quota for their days on the team, in whole submissions.
+    const share = tenureShare(rep, month.start, month.fullEnd);
+    const wholeMonth = share >= 1 - 1e-9;
+    const quota = wholeMonth ? quotaFull : Math.round(quotaFull * share);
+    const onMs = activeMs(rep, month.start, month.fullEnd);
+    const repElapsed = onMs > 0 ? Math.min(1, activeMs(rep, month.start, month.end) / onMs) : monthElapsedFraction;
+    const monthDays = Math.round((month.fullEnd.getTime() - month.start.getTime()) / 86_400_000);
+    const quotaNote = wholeMonth ? null : share <= 0 ? "not on the team this month" : `pro-rated: on the team ${tenureNote(rep, month.start, month.fullEnd) ?? ""} (${Math.round(activeDays(rep, month.start, month.fullEnd))} of ${monthDays} days)`;
     const quotaPct = quota > 0 ? submissionsMtd / quota : 0;
     const commission = forRange.get(rep.userId)!;
     const commissionMtd = forMonth.get(rep.userId)!;
@@ -312,8 +325,10 @@ export function computeCommission(range: DateRange, now: Date): CommissionReport
       planLabel: plan?.label ?? null,
       submissionsMtd,
       monthlyQuota: quota,
+      quotaFull,
+      quotaNote,
       quotaPct,
-      quotaStatus: quota > 0 ? quotaStatus(quotaPct, monthElapsedFraction) : "neutral",
+      quotaStatus: quota > 0 ? quotaStatus(quotaPct, repElapsed) : "neutral",
       wonMtd: lines.length,
       wonValueMtd: lines.reduce((s, l) => s + (l.value ?? 0), 0),
       commission,
@@ -344,6 +359,7 @@ export function computeCommission(range: DateRange, now: Date): CommissionReport
       "Monthly thresholds — each event is priced by its place in its own calendar month: a submission pays the retro rate when the rep's submissions in that month, through the end of the range, reach the threshold; a won pays the first-tier rate when it is among the rep's first wons of that month by won date.",
       "Ranges spanning months — priced month by month.",
       `Monthly quota and Won (MTD) — always month-to-date for the current calendar month (${monthLabel}), regardless of the selected date range.`,
+      "Joiners and leavers — a rep on the team for part of the month owes a pro-rated quota (configured quota × their days on the team ÷ days in the month, rounded to whole submissions), and the pacing colors judge against the part of their own time that has elapsed.",
       "Won — opportunity status = won: the first won transition, once per opportunity id, in the Army CA or Veteran G.I. Bill pipeline, credited to the opportunity owner at the won event.",
       "Plans and rates — config/commission.json.",
       "Limitation: commission is estimated from dashboard counts; the official commission calculation is done outside this dashboard.",

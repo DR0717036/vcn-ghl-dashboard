@@ -177,7 +177,7 @@ export function outcomeRows(o: Record<CallOutcome, number>): { label: string; va
 export function computeRepCalls(range: DateRange): RepCallsResult {
   const start = range.start.toISOString();
   const end = range.end.toISOString();
-  const roster = repRoster();
+  const roster = repRoster(range);
   const names = userNames();
   const callsGoal = goalFor("callsMade", range);
   const talkGoal = goalFor("talkTimeMinutes", range);
@@ -277,7 +277,7 @@ export function computeRepCalls(range: DateRange): RepCallsResult {
 export function callsDrilldown(user: string, range: DateRange): DrillResult {
   const start = range.start.toISOString();
   const end = range.end.toISOString();
-  const roster = repRoster();
+  const roster = repRoster(range);
   const names = userNames();
   const owned = (u: string | null) => (user === "others" ? u === null || !roster.byUserId.has(u) : u === user);
   const calls = (

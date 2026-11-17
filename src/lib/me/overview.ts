@@ -7,9 +7,9 @@
 // scorecard; reads the cache only.
 
 import { computeCommission, planFor, type Plan } from "@/lib/commission";
-import { resolveRange } from "@/lib/dates";
+import { resolveRange, type DateRange } from "@/lib/dates";
 import type { Rep } from "@/lib/reps";
-import { salesReps } from "@/lib/reps";
+import { activeReps } from "@/lib/reps";
 import { computeSubmissions } from "@/lib/submissions";
 
 export interface Milestone {
@@ -49,11 +49,13 @@ function milestoneFor(plan: Plan | null, submissionsMtd: number, wonMtd: number)
   return { title: "Current rate", text: `${usd(plan.rate)} per won opportunity`, progress: null, done: true, detail: `${n(wonMtd)} won this month. Submissions do not pay under this plan.` };
 }
 
-function rankOf(userId: string, rows: { userId: string | null; total: number }[]): { rank: number | null; of: number; mtd: number } {
-  const reps = rows.filter((r) => r.userId && salesReps.some((s) => s.userId === r.userId));
+function rankOf(userId: string, rows: { userId: string | null; total: number }[], range: DateRange): { rank: number | null; of: number; mtd: number } {
+  // The reps on the team at the end of that month (today for the month in progress).
+  const roster = new Set(activeReps(range).map((r) => r.userId));
+  const reps = rows.filter((r) => r.userId && roster.has(r.userId));
   const mine = reps.find((r) => r.userId === userId);
-  if (!mine) return { rank: null, of: salesReps.length, mtd: 0 };
-  return { rank: 1 + reps.filter((r) => r.total > mine.total).length, of: salesReps.length, mtd: mine.total };
+  if (!mine) return { rank: null, of: roster.size, mtd: 0 };
+  return { rank: 1 + reps.filter((r) => r.total > mine.total).length, of: roster.size, mtd: mine.total };
 }
 
 export function computeRepOverview(rep: Rep, now: Date): RepOverview {
@@ -64,8 +66,8 @@ export function computeRepOverview(rep: Rep, now: Date): RepOverview {
   const plan = planFor(rep);
   const subs = computeSubmissions(month, "all");
   const subsLast = computeSubmissions(lastMonth, "all");
-  const cur = rankOf(rep.userId, subs.value === null ? [] : subs.rows);
-  const last = rankOf(rep.userId, subsLast.value === null ? [] : subsLast.rows);
+  const cur = rankOf(rep.userId, subs.value === null ? [] : subs.rows, month);
+  const last = rankOf(rep.userId, subsLast.value === null ? [] : subsLast.rows, lastMonth);
   return {
     monthLabel: commission.monthLabel,
     commission: { amount: mine?.commissionMtd.amount ?? null, calc: mine?.commissionMtd.label ?? "plan not found", planLabel: mine?.planLabel ?? null },
@@ -74,7 +76,7 @@ export function computeRepOverview(rep: Rep, now: Date): RepOverview {
     notes: [
       "Commission earned this month — the month-to-date estimate under your plan, as on the Program Submissions table; the official calculation is done outside this dashboard.",
       "Next milestone — your plan's threshold: the retro rate unlocks when the month's submissions reach the threshold (and then applies to every submission that month); tiered won plans pay the first-tier rate for the first wons of the month.",
-      "My rank — your place among the configured reps by combined submissions this calendar month (ties share a rank), compared with your place last month.",
+      "My rank — your place among the reps on the team by combined submissions this calendar month (ties share a rank), compared with your place last month.",
     ],
   };
 }

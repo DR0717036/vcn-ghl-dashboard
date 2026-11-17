@@ -13,7 +13,7 @@ import type { DateRange } from "@/lib/dates";
 import { goalFor, type Goal } from "@/lib/goals";
 import { defaultSemester, semesters, trackedMilestones, type Semester } from "@/lib/mapping-config";
 import { computeMilestoneByKey, firstEvents, type MilestoneResult } from "@/lib/milestones";
-import { repRoster, type Rep } from "@/lib/reps";
+import { inactiveLabel, repRoster, type Rep } from "@/lib/reps";
 
 export interface SubmissionRow {
   userId: string | null;
@@ -122,12 +122,13 @@ export function computeSubmissions(range: DateRange, sel: SemesterSelection = de
   const broken = parts.find((p) => p.achieved === null);
   if (broken) return { ...base, unavailableReason: broken.unavailableReason ?? "Milestone tracking has not started." };
 
-  const roster = repRoster();
+  const roster = repRoster(range);
   const byUser = new Map<string | null, SubmissionRow>();
   const ensure = (userId: string | null, name: string) => {
     let row = byUser.get(userId);
     if (!row) {
-      row = { userId, name, isRep: userId !== null && roster.byUserId.has(userId), ca101: 0, iau: 0, total: 0 };
+      const inactive = userId !== null ? roster.inactive.get(userId) : undefined;
+      row = { userId, name: inactive ? `${name} (${inactiveLabel(inactive, roster.day)})` : name, isRep: userId !== null && roster.byUserId.has(userId), ca101: 0, iau: 0, total: 0 };
       byUser.set(userId, row);
     }
     return row;

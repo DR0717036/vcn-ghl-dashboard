@@ -1,5 +1,5 @@
 {
-  "_comment": "The sales reps used for every per-rep goal, the Program Submissions table, quotas, and commission estimates. Matched to GHL users by userId (the id in GHL's user list); name and email are for readability only. kpiMultiplier scales every per-rep goal rate (1.0 = full-time, 0.5 = part-time); goalOverrides sets a fixed rate for one KPI instead (in the KPI's own unit: per week for weekly goals, per day for daily goals). monthlyQuota is combined submissions for the calendar month. commissionPlan names a plan in config/commission.json. Team-wide goals are the sum of each rep's goal. Everyone not listed here is grouped as 'Other users, not sales reps' and still counts in team totals. Owner decision 2026-10-13 (edits round 6). photo: a path under public/ to the rep's picture; shown as a circle on the Rep Performance cards, with initials when missing (added 2026-10-18). signInEmail (added 2026-10-26): the Google account the rep signs in with to see their own dashboard at /me; empty = the rep cannot sign in yet. The older email field is the address on the GHL user record and is informational only.",
+  "_comment": "The sales reps used for every per-rep goal, the Program Submissions table, quotas, and commission estimates. Matched to GHL users by userId (the id in GHL's user list); name and email are for readability only. kpiMultiplier scales every per-rep goal rate (1.0 = full-time, 0.5 = part-time); goalOverrides sets a fixed rate for one KPI instead (in the KPI's own unit: per week for weekly goals, per day for daily goals). monthlyQuota is combined submissions for the calendar month. commissionPlan names a plan in config/commission.json. Team-wide goals are the sum of each rep's goal. Everyone not listed here is grouped as 'Other users, not sales reps' and still counts in team totals. Owner decision 2026-10-13 (edits round 6). photo: a path under public/ to the rep's picture; shown as a circle on the Rep Performance cards, with initials when missing (added 2026-10-18). signInEmail (added 2026-10-26): the Google account the rep signs in with to see their own dashboard at /me; empty = the rep cannot sign in yet. The older email field is the address on the GHL user record and is informational only. startDate / endDate (added 2026-11-17): the rep's first and last day on the team (YYYY-MM-DD, New York, inclusive). Rep lists, leaderboards, goals, quotas, pace, and the reports use the reps on the team on the last day of the selected range (today for a period in progress); per-rep goals and the monthly quota are pro-rated to the days on the team; sign-in works only while on the team. Nothing is deleted: a former rep's activity, commission, and invoices through their last day stay visible for ranges that include those days.",
   "reps": [
     {
       "name": "Miguel Torres",
@@ -28,7 +28,8 @@
       "signInEmail": "",
       "kpiMultiplier": 1,
       "monthlyQuota": 20,
-      "commissionPlan": "submission-retro"
+      "commissionPlan": "submission-retro",
+      "endDate": "2026-11-08"
     },
     {
       "name": "Anthony N.",

@@ -278,7 +278,7 @@ export async function repDrilldown(user: string, range: DateRange, month: DateRa
   const ca = trackedMilestones().find((x) => x.key === CA101_KEY);
   const fs = trackedMilestones().find((x) => x.key === semester.submittedKey);
   if (!ca || !fs) return null;
-  const roster = repRoster();
+  const roster = repRoster(range);
   const names = userNames();
   const owned = (id: string | null): boolean => (user === "others" ? id === null || !roster.byUserId.has(id) : id === user);
 

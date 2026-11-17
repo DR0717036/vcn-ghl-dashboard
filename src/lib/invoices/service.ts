@@ -12,7 +12,7 @@
 import { addMonths, fmtDateTime, fmtDay, nyDate, nyParts, startOfMonth } from "@/lib/dates";
 import { gmailConfigured, sendGmail, type MailMessage } from "@/lib/mailer";
 import { planText } from "@/lib/me/commission";
-import { salesReps, type Rep } from "@/lib/reps";
+import { salesReps, tenureOverlaps, type Rep } from "@/lib/reps";
 import { HISTORY_START } from "@/lib/sync/core";
 import { dashboardBaseUrl } from "@/lib/weeklyReport/config";
 import { invoicesConfig, isApprover } from "./config";
@@ -104,6 +104,8 @@ export function invoiceMonths(rep: Rep, now: Date): InvoiceMonth[] {
   for (let back = 0; back <= cfg.historyMonths; back++) {
     const mStart = addMonths(thisStart, -back);
     if (addMonths(mStart, 1).toISOString() <= HISTORY_START) break;
+    // Only months the rep was on the team for at least one day (startDate / endDate): a former rep keeps every month through their last one.
+    if (!tenureOverlaps(rep, mStart, addMonths(mStart, 1))) continue;
     out.push(monthOf(rep, mStart, now, stored.get(monthKeyOf(mStart)) ?? null));
   }
   return out;
