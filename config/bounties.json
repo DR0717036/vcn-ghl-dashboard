@@ -1,0 +1,17 @@
+{
+  "_comment": "Bounties shown on the rep dashboard (My overview, Bounties card), the admin Rep Performance section, and the Sunday report (owner request 2026-11-18, docs/DECISIONS.md #91). Edit this file, not the code. Amounts are USD. Counts come from the same milestone events as the scorecard (first entry per contact into CA 101 submitted or an IAU App Submitted stage, credited to the opportunity owner at the event); nothing here writes to GHL. weekly: the first rep in a Monday-to-Sunday week (New York) to reach `target` combined submissions (CA 101 + IAU App for every semester, mixed) claims it; it resets every Monday; winners are kept in the cache (bounty_claims) from the week containing `since` onward. semester: the rep with the most IAU App Submitted entries for the semester named by `semester` (a key from config/ghl-mapping.json semesters.list) between `from` (optional; default: since milestone tracking began) and `to` (optional; default: today). Set enabled to false to hide a bounty.",
+  "weekly": {
+    "enabled": true,
+    "amount": 200,
+    "target": 6,
+    "title": "first rep this week to reach 6 submissions",
+    "counts": "IAU App Submitted + Army CA 101 submitted, mixed",
+    "since": "2026-11-16"
+  },
+  "semester": {
+    "enabled": true,
+    "amount": 1500,
+    "semester": "SS1-2027",
+    "title": "most IAU App Submissions for Spring Session 1"
+  }
+}

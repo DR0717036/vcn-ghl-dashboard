@@ -5404,3 +5404,259 @@ tr:hover .lb-viewas,
 .me-weekbar.is-off .me-weekbar-bar {
   opacity: 0.35;
 }
+
+/* My overview redesign (2026-11-18): three taller cards; donut milestone; bounties */
+.me-overview-rich .stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 320px;
+}
+
+.me-overview-rich .stat-value.me-ov-big {
+  font-size: 38px;
+  line-height: 1.05;
+}
+
+.me-ov-line {
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.me-ov-line b {
+  font-size: 17px;
+}
+
+.me-bar-thin {
+  height: 6px;
+}
+
+.me-ladder {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.me-rung b {
+  color: var(--text-primary);
+}
+
+.me-rung.is-done,
+.me-rung.is-done b {
+  color: var(--status-good);
+}
+
+.me-rung-sep {
+  margin-right: 8px;
+  color: var(--text-muted);
+}
+
+.me-ov-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.me-ov-k {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.me-ov-v {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+.me-split {
+  display: flex;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  gap: 2px;
+}
+
+.me-split > span {
+  display: block;
+  height: 100%;
+}
+
+.me-donut-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+
+.me-donut {
+  flex: none;
+}
+
+.me-donut .donut-wrap {
+  height: auto;
+  gap: 0;
+}
+
+.me-donut .donut-legend {
+  display: none;
+}
+
+.me-donut .donut-total {
+  font-size: 26px;
+}
+
+.me-donut.is-done .donut-total {
+  color: var(--status-good);
+}
+
+.me-donut-side {
+  min-width: 0;
+}
+
+.me-donut-side .me-milestone {
+  margin-top: 0;
+  font-size: 18px;
+}
+
+.me-ov-rank .stat-value {
+  font-size: 34px;
+  margin-top: 0;
+}
+
+.me-bounty {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-soft);
+  display: grid;
+  gap: 4px;
+}
+
+.me-bounty.is-claimed {
+  border-color: rgba(34, 160, 107, 0.45);
+}
+
+.me-bounty-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.me-bounty-amt {
+  font-size: 20px;
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-tight);
+}
+
+.me-bounty-claimed,
+.me-bounty-standing {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.me-bounty-history {
+  font-size: 11px;
+}
+
+.bounty-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-5);
+  margin-top: var(--s-4);
+}
+
+.bounty-col {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.bounty-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.bounty-standings {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.bounty-standings li {
+  display: grid;
+  grid-template-columns: 30px 24px minmax(0, 1fr) minmax(60px, 160px) 32px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-body);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.bounty-standings li.is-winner {
+  background: rgba(34, 160, 107, 0.12);
+}
+
+.bounty-place {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.bounty-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bounty-bar {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.bounty-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent-blue);
+}
+
+.bounty-standings li.is-winner .bounty-bar > span {
+  background: var(--status-good);
+}
+
+.bounty-count {
+  text-align: right;
+  color: var(--text-primary);
+}
+
+@media (max-width: 760px) {
+  .bounty-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .me-overview-rich .stat-tile {
+    min-height: 0;
+  }
+}

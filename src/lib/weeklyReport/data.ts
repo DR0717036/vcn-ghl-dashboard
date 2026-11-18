@@ -11,6 +11,7 @@
 // config/weekly-report.json). Reads the local cache only; never GHL.
 
 import { computeRates, computeRepAppointments, computeStatusCards } from "@/lib/appointments";
+import { computeBountyBoard } from "@/lib/bounties";
 import { computeCommission } from "@/lib/commission";
 import { computeResponseTimes, computeStale } from "@/lib/conversations";
 import { getDb, getState, latestSyncRuns } from "@/lib/db";
@@ -165,6 +166,11 @@ export interface WeeklyReportData {
   dashboardUrl: string | null;
   headlines: Headline[];
   reps: RepRow[];
+  /** The bounties (config/bounties.json) for the report week, as of the build; null when none is configured. */
+  bounties: {
+    weekly: { amount: number; target: number; title: string; counts: string; open: boolean; claimedBy: string | null; claimedDay: string | null; leader: { name: string; count: number } | null; standings: { name: string; count: number }[] } | null;
+    semester: { amount: number; title: string; semesterLabel: string; leader: { name: string; count: number } | null; runnerUp: { name: string; count: number } | null; standings: { name: string; count: number }[] } | null;
+  };
   topPerformer: RepRow | null;
   biggestImprover: { rep: RepRow; delta: number } | null;
   pace: {
@@ -232,6 +238,16 @@ function repBundle(range: DateRange, now: Date) {
   const leadsByUser = computeAssignedByUser(leads);
   const perf = computeRepPerformance({ range, now, repCalls, repAppts, submissions, commission, responseTimes, leadsByUser, rangeQuery: "", rangeLabel: range.label });
   return { repCalls, repAppts, submissions, commission, leads, leadsByUser, perf };
+}
+
+/** The bounty board for the report week, trimmed to what the email shows. */
+function bountiesFor(weekStart: Date, now: Date): WeeklyReportData["bounties"] {
+  const b = computeBountyBoard(now, weekStart);
+  const slim = (s: { name: string; count: number }[]) => s.filter((x) => x.count > 0).slice(0, 5).map((x) => ({ name: x.name, count: x.count }));
+  return {
+    weekly: b.weekly ? { amount: b.weekly.amount, target: b.weekly.target, title: b.weekly.title, counts: b.weekly.counts, open: b.weekly.open, claimedBy: b.weekly.claimed?.name ?? null, claimedDay: b.weekly.claimed?.dayText ?? null, leader: b.weekly.leader ? { name: b.weekly.leader.name, count: b.weekly.leader.count } : null, standings: slim(b.weekly.standings) } : null,
+    semester: b.semester ? { amount: b.semester.amount, title: b.semester.title, semesterLabel: b.semester.semester.label, leader: b.semester.leader ? { name: b.semester.leader.name, count: b.semester.leader.count } : null, runnerUp: b.semester.standings[1] && b.semester.standings[1].count > 0 ? { name: b.semester.standings[1].name, count: b.semester.standings[1].count } : null, standings: slim(b.semester.standings) } : null,
+  };
 }
 
 function ratio(num: number, den: number): number | null {
@@ -632,6 +648,7 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
     trend,
     finish,
     flags,
+    bounties: bountiesFor(weekStart, now),
     notes,
   };
 }

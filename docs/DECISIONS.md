@@ -1406,3 +1406,34 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     goal, the monthly quota, commission, and the weekly reports keep counting
     every semester. The Rep Performance tile label carries the semester's
     short name instead of "(semester shown)".
+
+91. **My overview redesign and bounties (owner request 2026-11-18).** The
+    rep dashboard's first section has three taller cards. Card 1, Momentum:
+    this week's combined submissions against the rep's weekly goal with a
+    thin bar, what the next submission is worth under the plan (the retro
+    rate once unlocked), the pay ladder (what the month pays at the quota and
+    at the retro threshold; won plans show their tier), the Army / Veteran
+    split this month, and the last submission; once the month's commission
+    estimate reaches $1,000 the card becomes "Commission earned this month"
+    with the count-up and keeps the smaller lines. Card 2, Next milestone: the
+    plan's threshold as a donut (the admin cards' DonutChart) with the count
+    in the centre and the "N more to unlock" line beside it, green once
+    reached, plus the projected month-end and the needed per working day
+    (the My pace arithmetic, shared through monthPaceFor). Card 3, Bounties:
+    the rank line first ("#3 of 7 this month"), then the bounties from the
+    new config/bounties.json: the weekly bounty ($200, first rep in the
+    Monday-to-Sunday New York week to reach 6 combined submissions, CA 101 +
+    IAU App for every semester) with the rep's own mini bar, the leader,
+    "ends Sunday 11:59 PM", and "Claimed by <name> on <day>" once someone
+    reaches the target; and the semester bounty ($1,500, most IAU App
+    Submissions for Spring Session 1 since tracking began) with the rep's
+    count, place, the leader's count, and the gap. Counts are the same
+    first-entry-per-contact milestone events as Program Submissions,
+    credited to the opportunity owner at the event; standings cover the reps
+    on the team on the day. Weekly winners are stored in the cache table
+    bounty_claims the first time a claim is seen (from the week containing
+    the config's "since"), so the record survives later re-filing; earlier
+    weeks are backfilled from events. The admin Rep Performance section shows
+    the same board as a compact card above the leaderboard, and the Sunday
+    report's leaderboard section carries a bounties line. Nothing here
+    writes to GHL; the payout decision stays with the owner.

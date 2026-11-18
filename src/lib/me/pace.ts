@@ -79,6 +79,34 @@ export interface RepPaceData {
 
 const STREAK_WEEKS = 8;
 
+export interface MonthPace {
+  workingDaysTotal: number;
+  workingDaysElapsed: number;
+  workingDaysRemaining: number;
+  /** Month-to-date carried to month end at the current rate per working day; null before the first working day. */
+  projected: number | null;
+  /** The gap to quota over the working days left; null without a quota or with no days left. */
+  neededPerDay: number | null;
+  /** Where the rep would be if the quota were spread evenly over the month's working days. */
+  expectedToday: number | null;
+}
+
+/** The month's working-day arithmetic for one rep (shared by My pace and the Next milestone tile). Working days count only the rep's own days on the team (a rep who joined mid-month is paced from their start date). */
+export function monthPaceFor(rep: Rep, now: Date, mtd: number, quota: number, workingDays: number[] = weeklyReportConfig().workingDays): MonthPace {
+  const month = resolveRange("this_month", now);
+  const allWd = repWorkingDayKeys(rep, month.start, month.fullEnd, workingDays);
+  const elapsedWd = repWorkingDayKeys(rep, month.start, addDays(startOfDay(now), 1), workingDays).filter((k) => allWd.includes(k));
+  const remainingWd = allWd.length - elapsedWd.length;
+  return {
+    workingDaysTotal: allWd.length,
+    workingDaysElapsed: elapsedWd.length,
+    workingDaysRemaining: remainingWd,
+    projected: elapsedWd.length > 0 ? Math.round((mtd / elapsedWd.length) * allWd.length) : null,
+    neededPerDay: quota > 0 && remainingWd > 0 ? Math.max(0, quota - mtd) / remainingWd : null,
+    expectedToday: quota > 0 && allWd.length > 0 ? (quota * elapsedWd.length) / allWd.length : null,
+  };
+}
+
 export function computeRepPace(rep: Rep, now: Date): RepPaceData {
   const cfg = weeklyReportConfig();
   const month = resolveRange("this_month", now);
@@ -86,13 +114,8 @@ export function computeRepPace(rep: Rep, now: Date): RepPaceData {
   const r = commission.reps[rep.userId];
   const mtd = r?.submissionsMtd ?? 0;
   const quota = r?.monthlyQuota ?? 0;
-  // Working days count only the rep's own days on the team (a rep who joined mid-month is paced from their start date).
-  const allWd = repWorkingDayKeys(rep, month.start, month.fullEnd, cfg.workingDays);
-  const elapsedWd = repWorkingDayKeys(rep, month.start, addDays(startOfDay(now), 1), cfg.workingDays).filter((k) => allWd.includes(k));
-  const remainingWd = allWd.length - elapsedWd.length;
-  const projected = elapsedWd.length > 0 ? Math.round((mtd / elapsedWd.length) * allWd.length) : null;
-  const neededPerDay = quota > 0 && remainingWd > 0 ? Math.max(0, quota - mtd) / remainingWd : null;
-  const expectedToday = quota > 0 && allWd.length > 0 ? (quota * elapsedWd.length) / allWd.length : null;
+  const mp = monthPaceFor(rep, now, mtd, quota, cfg.workingDays);
+  const { projected, neededPerDay, expectedToday } = mp;
   // Opportunity Value behind this rep's submissions this month: the rep's line in each part of Program Submissions.
   const monthSubs = computeSubmissions(month, "all");
   const partValue = (p: MilestoneResult | undefined) => p?.reps.find((x) => x.userId === rep.userId)?.value ?? 0;
@@ -194,9 +217,9 @@ export function computeRepPace(rep: Rep, now: Date): RepPaceData {
     expectedToday,
     projected,
     neededPerDay,
-    workingDaysTotal: allWd.length,
-    workingDaysElapsed: elapsedWd.length,
-    workingDaysRemaining: remainingWd,
+    workingDaysTotal: mp.workingDaysTotal,
+    workingDaysElapsed: mp.workingDaysElapsed,
+    workingDaysRemaining: mp.workingDaysRemaining,
     streak: { count, weeks: weeks.slice().reverse(), weeklyGoal },
     notes: [
       ...(tenureLine ? [tenureLine] : []),

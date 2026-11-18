@@ -333,6 +333,27 @@ function bar(pct: number, color: string, height = 6): string {
 }
 
 /** A numbers-only sentence on the spread across reps for when the narrative is unavailable; every figure is copied from the data. */
+/** The bounties line for the leaderboard section: the weekly bounty's outcome and the semester bounty's leader. Empty when none is configured. */
+export function bountiesLine(d: WeeklyReportData): string {
+  const b = d.bounties;
+  if (!b || (!b.weekly && !b.semester)) return "";
+  const parts: string[] = [];
+  if (b.weekly) {
+    const w = b.weekly;
+    const head = `Weekly bounty (${fmtValue("usd", w.amount)}, ${w.title}; ${w.counts}): `;
+    if (w.claimedBy) parts.push(`${head}claimed by ${w.claimedBy} on ${w.claimedDay}.`);
+    else if (w.leader) parts.push(`${head}${w.open ? "not claimed yet" : "not claimed"}; ${w.leader.name} ${w.open ? "leads" : "came closest"} with ${n(w.leader.count)} of ${n(w.target)}.`);
+    else parts.push(`${head}no submissions ${w.open ? "yet " : ""}this week.`);
+  }
+  if (b.semester) {
+    const s = b.semester;
+    const head = `Semester bounty (${fmtValue("usd", s.amount)}, ${s.title}): `;
+    if (s.leader) parts.push(`${head}${s.leader.name} leads with ${n(s.leader.count)}${s.runnerUp ? `, ${n(s.leader.count - s.runnerUp.count)} ahead of ${s.runnerUp.name} (${n(s.runnerUp.count)})` : ""}.`);
+    else parts.push(`${head}no submissions yet.`);
+  }
+  return parts.join(" ");
+}
+
 export function leaderboardFallback(d: WeeklyReportData): string {
   if (d.reps.length === 0) return "No sales reps are configured.";
   const top = d.reps[0];
@@ -527,7 +548,8 @@ function renderHtmlBody(d: WeeklyReportData, narrative: Narrative | null, charts
   const tp = d.topPerformer;
   const bi = d.biggestImprover;
   const calloutsHtml = tileTable([[highlight("Top performer", tp, tp ? `${n(tp.combined)} submissions · ${n(tp.dials)} dials · ${n(tp.booked)} booked` : "", "No rep submitted or dialed this week."), highlight("Biggest improver", bi?.rep ?? null, bi ? `+${n(bi.delta)} submissions vs last week (${n(bi.rep.combinedPrev ?? 0)} → ${n(bi.rep.combined)})` : "", "No rep submitted more than last week.")]]);
-  const spreadHtml = paragraph(narrative?.leaderboard ?? leaderboardFallback(d));
+  const bountyText = bountiesLine(d);
+  const spreadHtml = paragraph(narrative?.leaderboard ?? leaderboardFallback(d)) + (bountyText ? `<p style="font-size:13px;font-weight:600;line-height:1.5;color:${C.ink};margin:0 0 10px">🏆 ${esc(bountyText)}</p>` : "");
   parts.push(
     section(
       "2 · Rep leaderboard",
@@ -820,6 +842,7 @@ export function renderText(d: WeeklyReportData, narrative: Narrative | null): st
   if (d.topPerformer) out.push(`Top performer: ${d.topPerformer.name} (${n(d.topPerformer.combined)} submissions, ${n(d.topPerformer.dials)} dials, ${n(d.topPerformer.booked)} booked)`);
   out.push(d.biggestImprover ? `Biggest improver: ${d.biggestImprover.rep.name} (+${n(d.biggestImprover.delta)} submissions vs last week)` : "Biggest improver: no rep submitted more than last week.");
   out.push(narrative?.leaderboard ?? leaderboardFallback(d), "");
+  if (bountiesLine(d)) out.push(bountiesLine(d), "");
   out.push(
     textTable(
       ["Rep", "Subs", "Goal", "Attain", "vs last", "Dials", "Talk", "Booked", "Show", "Won"],

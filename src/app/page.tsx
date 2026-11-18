@@ -45,9 +45,11 @@ import Motion from "./Motion";
 import Dock from "./Dock";
 import { SECTIONS } from "./sections";
 import SubmissionsCard from "./SubmissionsCard";
+import BountiesCard from "./BountiesCard";
 import RepCards from "./RepCards";
 import Leaderboard from "./Leaderboard";
 import { computeRepPerformance } from "@/lib/repPerformance";
+import { computeBountyBoard } from "@/lib/bounties";
 import { CloseRateCard, CurrentProgramsCard, PastSemestersCard, WonByCampaignCard, WonHeadlineCard, WonMonthlyCard } from "./WonCards";
 import WonModeSwitch from "./WonModeSwitch";
 import { requireAdminPage } from "@/lib/guard";
@@ -157,6 +159,8 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   // Names the selected range for drilldown requests (same keys the page itself reads).
   const rangeQuery = new URLSearchParams({ range: key, ...(key === "custom" && from ? { from } : {}), ...(key === "custom" && to ? { to } : {}) }).toString() + semesterQuery(semester);
   const repPerf = computeRepPerformance({ range, now, repCalls, repAppts, submissions, commission, responseTimes, leadsByUser, rangeQuery, rangeLabel: range.label });
+  // Bounties (config/bounties.json): the week in progress and the semester standings, as of now (not the selected range).
+  const bounties = computeBountyBoard(now);
 
   const milestoneTitle: Record<string, string> = {
     army_ca101: "Army CA 101 Submissions",
@@ -388,6 +392,9 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
         <div className="band-inner">
           <BandHeading s={SECTIONS[6]} />
           <RepCards data={repPerf} rangeLabel={range.label} />
+          <div className="kpi-row cols-1">
+            <BountiesCard b={bounties} />
+          </div>
           <Leaderboard data={repPerf} rangeLabel={range.label} />
         </div>
       </section>
