@@ -4,8 +4,9 @@
 // days still unmarked, oldest first). Row 2: Appointments Booked (own goal,
 // calls per booking), Booking rate, Show rate (own completed goal), each
 // with the prior-period change. Row 3: Appointment outcomes as a donut with
-// counts; NGT entries and post-appointment losses. Row 4: Army vs Veteran
-// and Booked vs Showed. Clicks open the rep's own rows from
+// counts; NGT entries and post-appointment losses (the Army vs Veteran and
+// Booked vs Showed comparison cards were removed on the owner's request,
+// 2026-11-25). Clicks open the rep's own rows from
 // /api/me/drilldown. Server component; charts and modals are the existing
 // client pieces the admin page uses. No Opportunity Value anywhere.
 
@@ -14,8 +15,6 @@ import { fmtDateTime } from "@/lib/dates";
 import type { Split } from "@/lib/appointments";
 import type { ApptRow, RepApptSection } from "@/lib/me/appointments";
 import { ProgramSplit } from "../AppointmentCards";
-import LineChart from "../charts/LineChart";
-import PairedHBarChart from "../charts/PairedHBarChart";
 import { APPT_COLUMNS, DrilldownButton, LOST_COLUMNS, MilestoneDrilldown, NGT_COLUMNS, OUTCOME_COLUMNS, type DrilldownSpec } from "../Drilldown";
 import { GoalPill, GoalText } from "../GoalLine";
 import KpiShell, { Delta } from "../KpiShell";
@@ -227,7 +226,6 @@ export default function AppointmentsSection({ d, rangeQuery, rangeLabel }: { d: 
     { key: "upcoming", label: "Upcoming" },
     { key: "rescheduled", label: "Rescheduled at least once" },
   ];
-  const per = d.series.grouping === "hourly" ? "per hour" : d.series.grouping === "daily" ? "per day" : "per week";
   const detailsBtn = (
     <button type="button" className="kpi-details-btn">
       Details
@@ -458,67 +456,6 @@ export default function AppointmentsSection({ d, rangeQuery, rangeLabel }: { d: 
                 <DrilldownButton spec={ngtSpec} label="View NGT entries" />
               </div>
             </div>
-          }
-        />
-      </div>
-
-      <div className="kpi-row cols-2">
-        <KpiShell
-          id="me-appts-compare"
-          className="kpi-title-xl me-card"
-          title="Army vs Veteran"
-          subtitle={`Your appointments by the contact's program · ${rangeLabel}`}
-          value={
-            <div className="stat-pair">
-              <div>
-                <div className="stat-value" style={{ color: programColors.army }}>
-                  {n(d.booked.split.army)}
-                </div>
-                <div className="note">Army booked</div>
-              </div>
-              <div>
-                <div className="stat-value" style={{ color: programColors.veteran }}>
-                  {n(d.booked.split.veteran)}
-                </div>
-                <div className="note">Veteran booked</div>
-              </div>
-            </div>
-          }
-          pill={<span className="pill pill-neutral">Goal not set</span>}
-          goalLine={<span className="kpi-muted">Converted: {pctOrDash(d.cohort.conversionRate)} of {n(d.cohort.withHistory.total)} cohort contacts with history · Won: {n(d.cohort.won.total)} of {n(d.cohort.total.total)}</span>}
-          deltaLine={<span className="kpi-muted">Both / No tag contacts count in the totals only; hover a bar for the detail.</span>}
-          chart={<PairedHBarChart height={250} seriesA={{ label: "Army", color: programColors.army }} seriesB={{ label: "Veteran", color: programColors.veteran }} rows={d.compare.map((r) => ({ label: r.label, a: r.army, b: r.veteran, aDetail: r.aDetail, bDetail: r.bDetail, muted: r.muted }))} />}
-          footer={<DrilldownButton spec={cohortSpec} label="View the cohort" />}
-        />
-        <KpiShell
-          id="me-appts-booked-showed"
-          className="kpi-title-xl me-card"
-          title="Booked vs Showed"
-          subtitle={`Bookings created and appointments showed ${per}, you as host · ${rangeLabel}`}
-          value={
-            <div className="stat-pair">
-              <div>
-                <div className="stat-value">{n(d.series.bookedTotal)}</div>
-                <div className="note">Booked</div>
-              </div>
-              <div>
-                <div className="stat-value">{n(d.series.showedTotal)}</div>
-                <div className="note">Showed</div>
-              </div>
-            </div>
-          }
-          pill={<span className="pill pill-neutral">Goal not set</span>}
-          goalLine={<span className="kpi-muted">Booked by booking time · Showed by scheduled time</span>}
-          deltaLine={<span className="kpi-muted">Totals equal the Appointments Booked card and the Showed count above.</span>}
-          chart={
-            <LineChart
-              height={250}
-              leftLabel="Appointments"
-              series={[
-                { label: `Booked ${per}`, color: OUTCOME_COLORS.upcoming, points: d.series.booked.map((p) => ({ label: p.label, value: p.count })), format: "count" },
-                { label: `Showed ${per}`, color: OUTCOME_COLORS.showed, points: d.series.showed.map((p) => ({ label: p.label, value: p.count })), format: "count" },
-              ]}
-            />
           }
         />
       </div>

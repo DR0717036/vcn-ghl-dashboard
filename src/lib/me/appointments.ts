@@ -17,14 +17,12 @@
 //     range; lost after showing = of those who showed with the rep, an
 //     opportunity lost at or after that appointment; NGT = entries into the
 //     NGT stage in the range on opportunities assigned to the rep.
-//   Army vs Veteran and Booked vs Showed for the same appointments.
 // Host = the appointment's assigned user. Every list links to the contact in
 // GHL; marking Showed / No-show happens in GHL, never here. A rep never sees
 // Opportunity Value. Reads the local cache only.
 
-import { appointmentsConfig, apptDrillRows, bookedIn, calendarNames, callsBeforeBooking, cancelledIn, dialsByContact, emptySplit, scheduledIn, splitOf, STATUS_LABEL, TAG_CLASS_LABEL, type Appt, type Split } from "@/lib/appointments";
+import { appointmentsConfig, apptDrillRows, bookedIn, calendarNames, callsBeforeBooking, dialsByContact, emptySplit, scheduledIn, splitOf, STATUS_LABEL, TAG_CLASS_LABEL, type Appt, type Split } from "@/lib/appointments";
 import { buildNgt, computeOutcome, memberRows, ngtRows, stageNames, type CohortMember, type NgtMember } from "@/lib/appointmentOutcomes";
-import { buckets, fill, type Grouping, type TimePoint } from "@/lib/charts";
 import { addDays, fmtDay, startOfWeek, type DateRange } from "@/lib/dates";
 import { getDb } from "@/lib/db";
 import { contactUrl } from "@/lib/drilldown";
@@ -69,9 +67,6 @@ export interface RepApptSection {
   cohort: { total: Split; withHistory: Split; showed: Split; converted: Split; won: Split; lost: Split; conversionRate: number | null; asOf: string; historyStart: string | undefined };
   losses: { showedContacts: Split; lostAfterShowed: Split; byStage: { stage: string; pipeline: string; count: number }[] };
   ngt: { entered: Split; fs2: Split; won: Split; lost: Split; open: Split; stageName: string };
-  /** Army vs Veteran counts for the paired chart. */
-  compare: { label: string; army: number; veteran: number; aDetail: string; bDetail: string; muted?: boolean }[];
-  series: { grouping: Grouping; booked: TimePoint[]; showed: TimePoint[]; bookedTotal: number; showedTotal: number };
   notes: string[];
 }
 
@@ -177,7 +172,6 @@ export function computeRepAppointmentSection(rep: Rep, range: DateRange, now: Da
   const invalid = count(scheduled, (a) => a.status === "invalid");
   const rate = (s: number, ns: number) => (s + ns > 0 ? s / (s + ns) : null);
   const prevShow = prevScheduled ? rate(count(prevScheduled, (a) => a.status === "showed"), count(prevScheduled, (a) => a.status === "noshow")) : null;
-  const cancelled = mine(cancelledIn(start, end));
 
   // ---- cohort, losses, NGT ----
   const { outcome, members, showedMembers, lostMembers, ngtMembers } = repCohort(rep, range);
@@ -198,15 +192,11 @@ export function computeRepAppointmentSection(rep: Rep, range: DateRange, now: Da
   }
   const ngtSplit = (f: (m: NgtMember) => boolean) => splitWhere(ngtMembers, f);
 
-  // ---- charts ----
-  const b = buckets(range.start, range.end);
+  // ---- program splits for the outcomes table ----
   const showedAppts = scheduled.filter((a) => a.status === "showed" && a.startTime);
   const bookedSplit = splitOf(booked);
   const showedSplit = splitOf(showedAppts);
   const noshowSplit = splitOf(scheduled.filter((a) => a.status === "noshow"));
-  const cancelledSplit = splitOf(cancelled);
-  const detail = (s: Split, k: "army" | "veteran") => `${n(s[k])} ${k === "army" ? "Army" : "Veteran"}`;
-  const pctOf = (num: number, den: number) => (den > 0 ? `${Math.round((num / den) * 100)}%` : "—");
 
   return {
     rangeLabel: range.label,
@@ -247,21 +237,6 @@ export function computeRepAppointmentSection(rep: Rep, range: DateRange, now: Da
     cohort: { total: cohortTotal, withHistory, showed: splitWhere(showedMembers, () => true), converted, won, lost, conversionRate: withHistory.total > 0 ? converted.total / withHistory.total : null, asOf: outcome.asOf, historyStart: outcome.historyStart },
     losses: { showedContacts: splitWhere(showedMembers, () => true), lostAfterShowed: splitWhere(lostMembers, () => true), byStage: [...byStage.values()].sort((a, z) => z.count - a.count) },
     ngt: { entered: ngtSplit(() => true), fs2: ngtSplit((m) => m.fs2 !== null), won: ngtSplit((m) => m.won !== null), lost: ngtSplit((m) => m.lost !== null), open: ngtSplit((m) => m.fs2 === null && m.won === null && m.lost === null), stageName: cfg.ngtStage.stageName },
-    compare: [
-      { label: "Booked (as host)", army: bookedSplit.army, veteran: bookedSplit.veteran, aDetail: detail(bookedSplit, "army"), bDetail: detail(bookedSplit, "veteran") },
-      { label: "Showed", army: showedSplit.army, veteran: showedSplit.veteran, aDetail: `${pctOf(showedSplit.army, showedSplit.army + noshowSplit.army)} show rate`, bDetail: `${pctOf(showedSplit.veteran, showedSplit.veteran + noshowSplit.veteran)} show rate` },
-      { label: "No-show", army: noshowSplit.army, veteran: noshowSplit.veteran, aDetail: detail(noshowSplit, "army"), bDetail: detail(noshowSplit, "veteran") },
-      { label: "Cancelled", army: cancelledSplit.army, veteran: cancelledSplit.veteran, aDetail: detail(cancelledSplit, "army"), bDetail: detail(cancelledSplit, "veteran"), muted: true },
-      { label: "Converted after appt", army: converted.army, veteran: converted.veteran, aDetail: `${pctOf(converted.army, withHistory.army)} of ${n(withHistory.army)} with history`, bDetail: `${pctOf(converted.veteran, withHistory.veteran)} of ${n(withHistory.veteran)} with history` },
-      { label: "Won after appt", army: won.army, veteran: won.veteran, aDetail: `${pctOf(won.army, cohortTotal.army)} of cohort`, bDetail: `${pctOf(won.veteran, cohortTotal.veteran)} of cohort` },
-    ],
-    series: {
-      grouping: b.grouping,
-      booked: fill(b, booked.filter((a) => a.bookedAt).map((a) => ({ t: a.bookedAt as string, c: 1 }))),
-      showed: fill(b, showedAppts.map((a) => ({ t: a.startTime as string, c: 1 }))),
-      bookedTotal: booked.length,
-      showedTotal: showedAppts.length,
-    },
     notes: [
       "Every figure here is your row of the admin Appointments section: the same appointment rows, the same rules, the same previous period, for the date range in the bar at the top; the two lists have fixed windows instead.",
       "Host — the appointment's assigned user; an appointment counts as yours when you host it.",
@@ -276,7 +251,6 @@ export function computeRepAppointmentSection(rep: Rep, range: DateRange, now: Da
       "Lost after showing — of the contacts who showed with you in the range, those with an opportunity lost at or after that appointment; the stage shown is the stage the opportunity sits in now, which is where it was lost from.",
       `${cfg.ngtStage.stageName} — opportunities assigned to you that entered the stage during the range (stage changes the sync observed, or GHL's stage-entry time for opportunities already there at the first sync), with what each became since: IAU App Submitted, won, lost, or still open.`,
       "Army / Veteran — the contact's current tags; Both and No tag count in the totals only.",
-      "Booked vs Showed — bookings created per bucket (booking time) and appointments showed per bucket (scheduled time): hourly for a single day, daily up to 92 days, weekly beyond.",
       "Limitation: Showed and No-show are set by hand in GHL, so the show rate is only as current as your marking; GHL does not record when an appointment was cancelled, so the cancelled count uses the last-updated time.",
     ],
   };
