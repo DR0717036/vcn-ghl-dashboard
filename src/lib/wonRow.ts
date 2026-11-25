@@ -571,7 +571,7 @@ export function computeMonthly(now: Date): MonthlyResult {
 
 // ---- drilldowns ---------------------------------------------------------------------------------
 
-function wonRow(o: WonOpp, names: Map<string, string>, segments?: string[]): DrillRow {
+export function wonRow(o: WonOpp, names: Map<string, string>, segments?: string[]): DrillRow {
   return {
     contactId: o.contactId,
     opportunityId: o.id,

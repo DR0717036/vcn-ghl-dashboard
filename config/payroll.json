@@ -1,0 +1,39 @@
+{
+  "_comment": "Payroll-style invoicing (owner request 2026-11-24). basePay: monthly base pay per rep, keyed by the rep's GHL user id (the name is a label only); a rep not listed is commission-only and gets no base invoice. periods: bi-weekly pay periods of lengthDays days starting on firstStart (a Monday, America/New_York) and repeating every lengthDays; workingDays are the weekday numbers that count (1 = Monday ... 5 = Friday). workedDayMinDials: a working day counts as worked when the rep made at least this many outbound human dials that day (one per call ID, automated calls excluded); fewer is a Non-paid day off unless an admin overrides the day. holidays: unpaid days (YYYY-MM-DD, with a name) excluded from the month's working-day count, so they neither lower the daily rate nor count as a deduction; optional: true marks an optional work day, paid at the daily rate when the rep makes workedDayMinDials+ dials, otherwise a holiday with no deduction. dailyRate = monthly base ÷ working days in that calendar month (holidays excluded); a period that spans two months uses each month's rate for its own days. recipients: every invoice email goes To 'to' with 'cc' in the Cc header; from is the sender shown (the Gmail account that sends is GMAIL_USER in .env, which must be this address or one of its aliases). monthlySummary: who gets the summary of invoices due on the 1st of each month, and at what hour (America/New_York). numberPrefix: invoice numbers are <prefix>-<rep initials>-<YYYYMMDD>-<type>. paymentTerms and payer are printed on the PDF. Approvers are the 'approvers' list in config/invoices.json. Editable without code; the server re-reads the file when it changes.",
+  "basePay": {
+    "qpXxqyAmfmhYPvS1DvsE": { "name": "William Bobier", "monthly": 2400 },
+    "zAScZsaQOAHdH4asBzY7": { "name": "Miguel Torres", "monthly": 2400 },
+    "R8AguELhlH1L0Pfw8nEk": { "name": "Jorge A.", "monthly": 2400 },
+    "Ll4hIijoZ5PscaEsqMpp": { "name": "Michael Nieves", "monthly": 1400 }
+  },
+  "periods": {
+    "firstStart": "2026-11-30",
+    "lengthDays": 14,
+    "workingDays": [1, 2, 3, 4, 5]
+  },
+  "workedDayMinDials": 20,
+  "holidays": [
+    { "day": "2026-11-26", "name": "Thanksgiving" },
+    { "day": "2026-11-27", "name": "Day after Thanksgiving", "optional": true },
+    { "day": "2026-12-24", "name": "Christmas Eve" },
+    { "day": "2026-12-25", "name": "Christmas Day" },
+    { "day": "2026-12-31", "name": "New Year's Eve" },
+    { "day": "2027-01-01", "name": "New Year's Day" }
+  ],
+  "recipients": {
+    "to": ["info@intelagentmedia.com"],
+    "cc": ["diego@intelagentmedia.com", "dante@intelagentmedia.com", "tonyn@intelagentmedia.com"]
+  },
+  "from": {
+    "name": "VCN Sales Dashboard",
+    "address": "info@intelagentmedia.com"
+  },
+  "monthlySummary": {
+    "to": ["diego@intelagentmedia.com"],
+    "dayOfMonth": 1,
+    "hour": 9
+  },
+  "numberPrefix": "VCN",
+  "payer": "Intelagent Media · Veteran Careers Network",
+  "paymentTerms": "Payable by Intelagent Media within 7 days of approval. Base pay and commission are estimated from dashboard counts; the approved invoice is the record."
+}

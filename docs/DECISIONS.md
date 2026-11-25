@@ -1437,3 +1437,44 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     the same board as a compact card above the leaderboard, and the Sunday
     report's leaderboard section carries a bounties line. Nothing here
     writes to GHL; the payout decision stays with the owner.
+
+92. **Rep dashboard rounds 1-7 and the payroll invoicing system (owner
+    requests 2026-11-19 to 2026-11-25).** Rep views never show Opportunity
+    Value: every rep API response passes through src/lib/me/repSafe.ts,
+    which strips the value keys (and recording ids) and warns if one slips
+    through, and tests/rep-views.test.mjs (npm test, against a running dev
+    server) signs in as the admin and every active rep, fetches /me, the
+    invoice pages and every /api/me/drilldown kind, and fails on any value
+    key or "Opportunity Value" phrase while confirming the admin still sees
+    it. The /me page is now overview, submissions, pace, activity (Calls
+    Made, Talk Time, the rep's own call activity row and heat map; no
+    recordings), appointments (upcoming, outcomes to mark, rate cards, a
+    clickable outcomes donut, NGT and losses, Army vs Veteran, Booked vs
+    Showed), pipeline (a fixed stage set per program with "View all stages",
+    plus the Needs a call card: open leads in the configured stages with no
+    outbound human call for 14 days, measured from the last call or the
+    stage entry; config/leads.json needsCall; also a Rep Performance metric
+    and a midweek check-in flag), and My invoices. My scorecard, My
+    commission, My leads and the Team leaderboard were removed from /me.
+    Payroll: config/payroll.json holds base pay per rep, bi-weekly periods
+    from Mon Nov 30 2026, the 20-dial worked-day rule, the unpaid holiday
+    list (Nov 27 optional: paid at the daily rate as an extra line when
+    worked), recipients (To info@, Cc the admins as a real Cc header),
+    numbering (VCN-<initials>-YYYYMMDD-BASE|COMM) and payment terms. The
+    daily rate is the monthly base over the weekdays in the month minus
+    holidays; a base invoice is half the monthly base minus a deduction per
+    non-paid day plus weekly bounties won in the period; a commission
+    invoice is the month's plan commission (commission-only reps carry
+    bounties there). Attendance overrides (PTO, sick, company holiday,
+    excused) pay the day and are logged; a day on a sent base invoice is
+    refused. The rep sees an attendance calendar and their invoices with a
+    Send button once the period ends; sending freezes lines and total,
+    stores the branded PDF and emails it. The admin Invoices page has due
+    tiles, every rep's invoices with filters, Approve (Diego and Dante),
+    Mark paid, PDF, Preview PDF (rendered live, never stored) on every row,
+    CSVs, the attendance strips with clickable red days that pre-fill the
+    override form, and the log; the rep is emailed at each status change,
+    and a monthly summary goes to the owner on the 1st at 9 AM New York
+    (once per month, guarded in sync_state). The two invoices from the old
+    flow were migrated into payroll_invoices and marked as such. Nothing
+    here writes to GHL.

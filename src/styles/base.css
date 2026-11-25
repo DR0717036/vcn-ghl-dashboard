@@ -5660,3 +5660,596 @@ tr:hover .lb-viewas,
     min-height: 0;
   }
 }
+
+/* My scorecard redesign (2026-11-18): four larger cards */
+.me-sc-intro {
+  margin: 0 0 var(--s-4);
+}
+
+.me-sc-grid {
+  margin-top: 0;
+}
+
+.me-big {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.me-big-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.me-big-hero .stat-value {
+  margin-top: 0;
+}
+
+.me-breakdown {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.me-split-tall {
+  height: 10px;
+}
+
+.me-parts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.me-parts-list li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-body);
+}
+
+.me-parts-list b {
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.me-parts-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.me-ov-stats-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.me-mini {
+  min-width: 0;
+}
+
+.me-mini .me-ov-v.unavailable {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.me-mini-delta {
+  font-size: 12px;
+}
+
+.me-sc-notes {
+  margin-top: var(--s-4);
+}
+
+@media (max-width: 760px) {
+  .me-ov-stats-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* My scorecard cards B–D */
+.me-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-5);
+}
+
+.me-two .me-big-hero {
+  margin-top: 2px;
+}
+
+.me-two .stat-value.me-ov-big {
+  font-size: 32px;
+}
+
+.me-mini-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.me-heat {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.me-won-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: var(--text-body);
+}
+
+.me-won-table th {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  text-align: left;
+  font-weight: 600;
+  padding: 2px 0 6px;
+}
+
+.me-won-table td {
+  padding: 3px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.me-won-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.me-won-table td b {
+  color: var(--text-primary);
+}
+
+.me-won-total td {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.me-won-line {
+  margin-top: auto;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-soft);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+@media (max-width: 640px) {
+  .me-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.me-sc-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-5);
+  align-items: start;
+}
+
+.me-sc-col {
+  display: grid;
+  gap: var(--s-5);
+  min-width: 0;
+}
+
+.me-big .me-ov-stats {
+  margin-top: 0;
+}
+
+@media (max-width: 980px) {
+  .me-sc-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* =====================================================================
+   Rep dashboard, 2026-11-19: Momentum program tiles, My submissions
+   ===================================================================== */
+.me-ov-bottom {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+  display: grid;
+  gap: 8px;
+}
+
+.me-split-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.me-tile-btn {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.me-tile-btn:hover,
+.me-tile-btn:focus-visible {
+  border-color: var(--accent-yellow);
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.me-tile-btn .me-ov-k {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.me-tile-n {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 4px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.me-tile-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.me-ov-last b {
+  color: var(--text-primary);
+}
+
+.me-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin: var(--s-4) 0 var(--s-2);
+}
+
+.me-row-head + .kpi-row {
+  margin-top: 0;
+}
+
+.me-row-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.me-warn-text {
+  color: var(--accent-yellow-text);
+  font-weight: 700;
+}
+
+/* 5-day deadline list inside the Supervisor Approval card */
+.me-deadlines {
+  margin-top: var(--s-3);
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+  cursor: default;
+}
+
+.me-deadlines-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.me-dl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.me-dl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.me-dl:last-child {
+  border-bottom: 0;
+}
+
+.me-dl-main {
+  min-width: 0;
+}
+
+.me-dl-name {
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.me-dl-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.me-dl-pill {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  .me-row-head {
+    flex-wrap: wrap;
+  }
+}
+
+/* ---- Rep dashboard, round 3 (2026-11-20): hero cards above the submission rows, name inside a pill ---- */
+
+/* A proper name inside an uppercase pill keeps its own case ("CLAIMED · Michael Nieves"). */
+.pill .pill-name {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.me-hero-row {
+  margin-bottom: var(--s-2);
+}
+
+/* The two hero cards share the KPI card anatomy and a common height. (Round 4: renamed from .me-hero,
+   which is the pace, commission, and invoice cards' own header block and was being stretched to 300px.) */
+.me-hero-card {
+  min-height: 300px;
+}
+
+.me-hero-card .kpi-chart {
+  min-height: 0;
+  margin-top: auto;
+}
+
+.me-hero-num .me-hero-of {
+  font-size: 20px;
+}
+
+/* six-month sparkline on Best month */
+.me-spark {
+  margin-top: var(--s-2);
+}
+
+.me-spark svg {
+  display: block;
+}
+
+.me-spark-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding: 0 2px;
+}
+
+.me-spark-labels span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.me-spark-labels b {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.me-spark-labels i {
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.me-spark-labels .is-best b {
+  color: var(--accent-yellow-text);
+}
+
+.me-spark-labels .is-current i {
+  color: var(--text-primary);
+}
+
+/* hero cards: lines may wrap, the goal bar block sits at the bottom like the sparkline */
+.me-hero-card .kpi-line {
+  height: auto;
+  min-height: 24px;
+  white-space: normal;
+}
+
+.me-goal-block {
+  margin-top: var(--s-2);
+  padding-bottom: 6px;
+}
+
+.me-goal-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* the hero card aligns its rows to the start (me-card); the bar block and sparkline must still span the card */
+.me-hero-card .kpi-chart {
+  align-self: stretch;
+  width: 100%;
+}
+
+/* ---- Rep dashboard, round 5 (2026-11-24): My appointments ---- */
+/* two drilldown buttons side by side under a cohort table */
+.me-card .cohort-sub-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+}
+
+/* ---- Rep dashboard, round 6 (2026-11-24): clickable donut, needs-a-call, pipeline cards ---- */
+.donut-clickable path,
+.donut-clickable .donut-legend li {
+  cursor: pointer;
+}
+
+.donut-clickable .donut-legend li:hover .donut-legend-name {
+  text-decoration: underline;
+}
+
+.donut-legend li.legend-only {
+  opacity: 0.85;
+}
+
+.me-donut-wrap {
+  margin: var(--s-2) 0;
+}
+
+/* ---- Payroll (2026-11-24): My attendance calendar ---- */
+.me-att-weeks {
+  display: grid;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+.me-att-weeklabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.me-att-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.me-att-day {
+  border: 1px solid var(--border-soft);
+  border-left: 4px solid var(--text-secondary);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 92px;
+  background: rgba(127, 140, 160, 0.06);
+}
+
+.me-att-day.is-worked { border-left-color: #15803d; background: rgba(21, 128, 61, 0.1); }
+.me-att-day.is-unpaid { border-left-color: #c62828; background: rgba(198, 40, 40, 0.1); }
+.me-att-day.is-excused { border-left-color: #0f5fd1; background: rgba(15, 95, 209, 0.1); }
+.me-att-day.is-today { border-left-color: var(--accent-yellow-text); background: rgba(234, 179, 8, 0.1); }
+.me-att-day.is-upcoming { opacity: 0.6; border-left-style: dashed; }
+
+.me-att-date { font-size: 12px; color: var(--text-secondary); }
+.me-att-date b { color: var(--text-primary); }
+.me-att-dials { font-size: 22px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.me-att-dials span { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+.me-att-tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; color: var(--text-secondary); }
+.me-att-day.is-unpaid .me-att-tag { color: #c62828; font-weight: 700; }
+.me-att-day.is-worked .me-att-tag { color: #15803d; font-weight: 700; }
+.me-att-day.is-excused .me-att-tag { color: #0f5fd1; font-weight: 700; }
+.me-att-ded { font-size: 12px; font-weight: 700; color: #c62828; margin-top: 2px; }
+.me-att-note { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+.me-att-legend { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-3); }
+.me-att-key { padding-left: 14px; position: relative; }
+.me-att-key::before { content: ""; position: absolute; left: 0; top: 4px; width: 9px; height: 9px; border-radius: 2px; background: var(--text-secondary); }
+.me-att-key.is-worked::before { background: #15803d; }
+.me-att-key.is-unpaid::before { background: #c62828; }
+.me-att-key.is-excused::before { background: #0f5fd1; }
+.me-att-key.is-today::before { background: var(--accent-yellow-text); }
+.me-att-key.is-upcoming::before { background: transparent; border: 1px dashed var(--text-secondary); }
+
+@media (max-width: 720px) {
+  .me-att-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.me-att-day.is-holiday { border-left-color: #7c3aed; background: rgba(124, 58, 237, 0.1); }
+.me-att-day.is-holiday .me-att-tag { color: #7c3aed; font-weight: 700; }
+.me-att-key.is-holiday::before { background: #7c3aed; }
+
+/* ---- Payroll invoices (2026-11-24) ---- */
+.inv-totals { display: flex; flex-wrap: wrap; gap: var(--s-4); margin: var(--s-3) 0; }
+.inv-row-muted td { opacity: 0.6; }
+.inv-row-deduction td { background: rgba(198, 40, 40, 0.06); }
+.inv-attendance { margin-top: var(--s-4); }
+.inv-attendance .stat.kpi { box-shadow: none; border: 1px solid var(--border-soft); }
+
+/* ---- Payroll step 3 (2026-11-24): admin Invoices page ---- */
+.me-att-day.is-optional { border-left-color: #0f9f6e; }
+.me-att-extra { font-size: 12px; font-weight: 700; color: #15803d; margin-top: 2px; }
+
+.inv-filters { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: end; margin: var(--s-3) 0; }
+.inv-filters label, .inv-override-form label { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+.inv-filters select, .inv-filters input, .inv-override-form select, .inv-override-form input {
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-soft); background: var(--surface, transparent); color: inherit; font: inherit;
+}
+.inv-override-form { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: end; margin: var(--s-3) 0; padding: var(--s-3); border: 1px solid var(--border-soft); border-radius: 10px; }
+.inv-override-note { flex: 1 1 260px; }
+.inv-override-actions { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
+
+.inv-att-list { display: grid; gap: var(--s-2); margin-top: var(--s-3); }
+.inv-att-row { display: grid; grid-template-columns: minmax(220px, 1fr) 2fr; gap: var(--s-3); align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-soft); }
+.inv-att-name { display: flex; flex-direction: column; gap: 2px; }
+.inv-att-days { display: flex; flex-wrap: wrap; gap: 4px; }
+.inv-att-day { display: inline-flex; flex-direction: column; align-items: center; min-width: 44px; padding: 4px 6px; border-radius: 6px; border-left: 3px solid var(--text-secondary); background: rgba(127, 140, 160, 0.1); font-size: 11px; }
+.inv-att-day i { font-style: normal; color: var(--text-secondary); }
+.inv-att-day b { font-variant-numeric: tabular-nums; }
+.inv-att-day.is-worked { border-left-color: #15803d; background: rgba(21, 128, 61, 0.14); }
+.inv-att-day.is-unpaid { border-left-color: #c62828; background: rgba(198, 40, 40, 0.14); }
+.inv-att-day.is-excused { border-left-color: #0f5fd1; background: rgba(15, 95, 209, 0.14); }
+.inv-att-day.is-holiday { border-left-color: #7c3aed; background: rgba(124, 58, 237, 0.14); }
+.inv-att-day.is-today { border-left-color: var(--accent-yellow-text); background: rgba(234, 179, 8, 0.14); }
+.inv-att-day.is-upcoming { opacity: 0.55; border-left-style: dashed; }
+@media (max-width: 900px) { .inv-att-row { grid-template-columns: 1fr; } }
+
+/* Admin Invoices usability (owner request 2026-11-25): clickable red days,
+   the hint above the override form, the picked state, the mini Preview PDF
+   button beside each invoice number. */
+.inv-att-pick { cursor: pointer; font: inherit; color: inherit; border-top: 0; border-right: 0; border-bottom: 0; transition: transform 120ms ease, box-shadow 120ms ease; }
+.inv-att-pick:hover, .inv-att-pick:focus-visible { transform: translateY(-1px); box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.45); outline: none; }
+.inv-override-hint { margin: var(--s-3) 0 0; }
+.inv-override-form.is-picked { border-color: #c62828; box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.25); }
+.inv-btn-mini { font-size: 11px; padding: 2px 8px; vertical-align: middle; }

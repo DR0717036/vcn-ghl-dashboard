@@ -58,10 +58,20 @@ export default function BountiesCard({ b }: { b: BountyBoard }) {
           <div className="bounty-col">
             <div className="bounty-title">
               <b className="me-bounty-amt">{usd(w.amount)}</b> weekly · {w.title}
-              <span className={`pill ${w.claimed ? "pill-ok" : "pill-info"}`}>{w.claimed ? "claimed" : w.open ? "open" : "not claimed"}</span>
+              <span className={`pill ${w.claimed ? "pill-gold" : "pill-info"}`}>
+                {w.claimed ? (
+                  <>
+                    Claimed · <span className="pill-name">{w.claimed.name}</span>
+                  </>
+                ) : w.open ? (
+                  "open"
+                ) : (
+                  "not claimed"
+                )}
+              </span>
             </div>
             <div className="note">
-              {w.weekLabel} · {w.counts} · {w.claimed ? `claimed by ${w.claimed.name} on ${w.claimed.dayText}` : w.open ? `first to ${n(w.target)} wins · ends ${w.endsText}` : "nobody reached the target"}
+              {w.weekLabel} · {w.counts} · {w.claimed ? `claimed on ${w.claimed.dayText}` : w.open ? `first to ${n(w.target)} wins · ends ${w.endsText}` : "nobody reached the target"}
             </div>
             <Standings rows={w.standings.slice(0, 7)} max={w.target} highlight={w.claimed?.userId ?? null} />
             <div className="note bounty-history">{w.recentWinners.length > 0 ? `Recent winners: ${w.recentWinners.map((x) => `${x.name} (${x.weekLabel})`).join(" · ")}` : "No earlier winners on record yet."}</div>

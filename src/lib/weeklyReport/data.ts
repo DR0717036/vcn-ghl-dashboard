@@ -21,6 +21,7 @@ import { semesters, trackedMilestones } from "@/lib/mapping-config";
 import { analyzeMessaging, keywordCard, replyRateCard } from "@/lib/messaging";
 import { coverage, fmtMinutes, kpiLeadsAssigned, kpiNewLeads, kpiTalkTime } from "@/lib/metrics";
 import { computeMilestoneByKey } from "@/lib/milestones";
+import { needsCallCounts } from "@/lib/needsCall";
 import { computeRepCalls } from "@/lib/repCalls";
 import { computeRepPerformance } from "@/lib/repPerformance";
 import { activeReps, repWorkingDayKeys } from "@/lib/reps";
@@ -536,6 +537,12 @@ export function buildWeeklyReport(weekStart: Date, now: Date): WeeklyReportData 
 
   // ---- 7. flags ----------------------------------------------------------------------------
   const flags: Flag[] = [];
+  // Needs a call (the rep dashboard's My pipeline rule), per rep, as of now.
+  const nc = needsCallCounts(now);
+  const silentReps = reps.filter((r) => (nc.counts.get(r.userId) ?? 0) > 0).sort((a, b) => (nc.counts.get(b.userId) ?? 0) - (nc.counts.get(a.userId) ?? 0));
+  if (silentReps.length > 0) {
+    flags.push({ level: "warn", label: "Needs a call", text: `Open leads in an active tier with no outbound call from the rep in ${n(nc.silentDays)}+ days: ${silentReps.map((r) => `${r.name} (${n(nc.counts.get(r.userId) ?? 0)})`).join(", ")}. Each rep sees the list on their own dashboard under My pipeline.` });
+  }
   const under = reps.filter((r) => r.combinedGoal && r.combinedGoal > 0 && r.combined < r.combinedGoal * cfg.flags.underGoalShare);
   if (under.length > 0) {
     flags.push({ level: "bad", label: "Below goal", text: `Under ${Math.round(cfg.flags.underGoalShare * 100)}% of the weekly submissions goal: ${under.map((r) => `${r.name} (${n(r.combined)} of ${Math.round(r.combinedGoal as number)})`).join(", ")}.` });

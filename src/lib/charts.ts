@@ -108,22 +108,22 @@ function compared(range: DateRange, query: (start: string, end: string) => { t: 
   return { grouping: b.grouping, points, total, prior, priorTotal: prior.reduce((s, p) => s + p.count, 0) };
 }
 
-/** Human call attempts per bucket, with the comparison period. */
-export function callsSeries(range: DateRange): ComparedSeries {
+/** Human call attempts per bucket, with the comparison period; for one user (the user on the call's legs, as Rep Call Activity attributes them) when userId is given. */
+export function callsSeries(range: DateRange, userId?: string): ComparedSeries {
   return compared(
     range,
     (start, end) =>
       getDb()
         .prepare(
-          `SELECT MIN(date_added) AS t, 1 AS c FROM calls WHERE automated = 0 AND date_added >= ? AND date_added < ? GROUP BY COALESCE(alt_id, id)`,
+          `SELECT MIN(date_added) AS t, 1 AS c FROM calls WHERE automated = 0 AND date_added >= ? AND date_added < ? GROUP BY COALESCE(alt_id, id)${userId ? " HAVING MIN(NULLIF(user_id, '')) = ?" : ""}`,
         )
-        .all(start, end) as { t: string; c: number }[],
+        .all(...(userId ? [start, end, userId] : [start, end])) as { t: string; c: number }[],
     "Call",
   );
 }
 
-/** Recorded call minutes per bucket (completed/answered human calls), with the comparison period. */
-export function talkTimeSeries(range: DateRange): ComparedSeries {
+/** Recorded call minutes per bucket (completed/answered human calls), with the comparison period; for one user when userId is given. */
+export function talkTimeSeries(range: DateRange, userId?: string): ComparedSeries {
   const s = compared(
     range,
     (start, end) =>
@@ -131,9 +131,9 @@ export function talkTimeSeries(range: DateRange): ComparedSeries {
         .prepare(
           `SELECT MIN(date_added) AS t, MAX(duration) AS c FROM calls
             WHERE automated = 0 AND call_status IN ('completed', 'answered') AND duration > 0 AND date_added >= ? AND date_added < ?
-            GROUP BY COALESCE(alt_id, id)`,
+            GROUP BY COALESCE(alt_id, id)${userId ? " HAVING MIN(NULLIF(user_id, '')) = ?" : ""}`,
         )
-        .all(start, end) as { t: string; c: number }[],
+        .all(...(userId ? [start, end, userId] : [start, end])) as { t: string; c: number }[],
     "Call",
   );
   const toMin = (p: TimePoint) => ({ ...p, count: Math.round(p.count / 60) });

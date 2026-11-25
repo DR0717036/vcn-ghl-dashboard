@@ -26,6 +26,8 @@ export interface Attachment {
 export interface MailMessage {
   from: { name: string; address: string };
   to: string[];
+  /** Carbon-copy recipients: listed in a Cc header and delivered like To. */
+  cc?: string[];
   subject: string;
   text: string;
   html: string;
@@ -134,6 +136,7 @@ export function buildMime(msg: MailMessage, messageId: string, opts: { eightBit?
   const headers = [
     `From: ${addr(msg.from.name, msg.from.address)}`,
     `To: ${msg.to.join(", ")}`,
+    ...(msg.cc && msg.cc.length > 0 ? [`Cc: ${msg.cc.join(", ")}`] : []),
     `Subject: ${encodeHeaderText(msg.subject)}`,
     `Date: ${new Date().toUTCString()}`,
     `Message-ID: <${messageId}@${domain}>`,
@@ -310,7 +313,7 @@ export async function sendGmail(msg: MailMessage, opts: { host?: string; port?: 
     const raw = buildMime(msg, messageId, { eightBit });
     await s.expect("AUTH", (c) => c === 235, `AUTH PLAIN ${plain}`);
     await s.expect("MAIL FROM", is2xx, `MAIL FROM:<${msg.from.address}>${eightBit ? " BODY=8BITMIME" : ""}`);
-    for (const to of msg.to) await s.expect(`RCPT TO ${to}`, is2xx, `RCPT TO:<${to}>`);
+    for (const to of [...new Set([...msg.to, ...(msg.cc ?? [])])]) await s.expect(`RCPT TO ${to}`, is2xx, `RCPT TO:<${to}>`);
     await s.expect("DATA", (c) => c === 354, "DATA");
     // Dot-stuffing: a line starting with "." must be sent as "..".
     const body = raw.replace(/\r\n\./g, "\r\n..");

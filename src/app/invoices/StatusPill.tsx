@@ -1,8 +1,7 @@
 // Invoice status pill (Draft / Submitted / Approved / Paid, or Live preview
 // for the month in progress). Shared by the invoice list and detail pages.
 
-import { STATUS_LABEL } from "@/lib/invoices/service";
-import type { InvoiceStatus } from "@/lib/invoices/store";
+import { STATUS_LABEL, type PayrollStatus as InvoiceStatus } from "@/lib/payroll/store";
 
 const PILL: Record<InvoiceStatus, string> = { draft: "pill-neutral", submitted: "pill-info", approved: "pill-ok", paid: "pill-gold" };
 

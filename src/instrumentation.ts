@@ -32,4 +32,10 @@ export async function register(): Promise<void> {
   const reportTick = () => maybeSendScheduledReport(new Date()).catch((e: Error) => console.error("[weekly-report] tick failed:", e.message));
   setTimeout(reportTick, FIRST_RUN_DELAY_MS + 10_000);
   setInterval(reportTick, REPORT_CHECK_MS);
+
+  // The payroll "invoices due" summary, once a month on the configured day (config/payroll.json monthlySummary).
+  const { maybeSendMonthlySummary } = await import("@/lib/payroll/admin");
+  const summaryTick = () => maybeSendMonthlySummary(new Date()).catch((e: Error) => console.error("[payroll] summary tick failed:", e.message));
+  setTimeout(summaryTick, FIRST_RUN_DELAY_MS + 20_000);
+  setInterval(summaryTick, REPORT_CHECK_MS);
 }

@@ -45,6 +45,8 @@ export interface LeadsConfig {
   touchWindowDays: number;
   staleAfterDays: number;
   topSources: number;
+  /** "Needs a call" (src/lib/needsCall.ts): active stage names and the silence threshold in days. */
+  needsCall: { silentDays: number; stageNames: string[] };
 }
 
 export function leadsConfig(): LeadsConfig {
@@ -59,6 +61,10 @@ export function leadsConfig(): LeadsConfig {
     touchWindowDays: int(c.touchWindowDays, 7),
     staleAfterDays: int(c.staleAfterDays, 2),
     topSources: Math.max(1, int(c.topSources, 6)),
+    needsCall: {
+      silentDays: Math.max(1, int((c.needsCall as { silentDays?: unknown } | undefined)?.silentDays, 14)),
+      stageNames: list((c.needsCall as { stageNames?: unknown } | undefined)?.stageNames, ["Tier 1", "Tier 2", "Tier 3", "Tier 4", "Tier 5", "Tier 6", "Tier 7", "Sale in Progress", "Active Reply", "Appointment No Show", "Appointment No Show (NGT)", "Appointment missed", "IAU Appointment Missed"]),
+    },
   };
 }
 

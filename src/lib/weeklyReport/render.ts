@@ -735,7 +735,7 @@ export function midweekBriefFallback(d: WeeklyReportData): string {
 
 /** What needs action before Friday: unmarked appointments, stale conversations, reps below pace, plus any sync or data flag. */
 export function midweekFlags(d: WeeklyReportData): Flag[] {
-  const keep = new Set(["Unmarked appointments", "Sync", "Unavailable", "Rep mapping"]);
+  const keep = new Set(["Unmarked appointments", "Needs a call", "Sync", "Unavailable", "Rep mapping"]);
   const out: Flag[] = d.flags.filter((f) => keep.has(f.label));
   const sc = d.pipeline.staleConversations;
   if (sc.conversations > 0) {

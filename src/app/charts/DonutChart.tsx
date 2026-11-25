@@ -13,6 +13,10 @@ export interface DonutSegment {
   color: string;
   /** Extra legend text, e.g. "7.8%". */
   extra?: string;
+  /** Replaces the tooltip body (count and share) with this text, e.g. "$525 · 7 × $75". */
+  tip?: string;
+  /** Listed in the legend (and clickable) but not drawn as a slice: for a count that overlaps the others. */
+  legendOnly?: boolean;
 }
 
 const n = (v: number) => v.toLocaleString("en-US");
@@ -28,10 +32,11 @@ function arc(cx: number, cy: number, r1: number, r2: number, a0: number, a1: num
   return `M${x0},${y0} A${r2},${r2} 0 ${large} 1 ${x1},${y1} L${x2},${y2} A${r1},${r1} 0 ${large} 0 ${x3},${y3} Z`;
 }
 
-export default function DonutChart({ segments, total, centerLabel, size = 160, emptyText = "No data in range." }: { segments: DonutSegment[]; total: number; centerLabel: string; size?: number; emptyText?: string }) {
+export default function DonutChart({ segments, total, centerLabel, size = 160, emptyText = "No data in range.", onSegmentClick }: { segments: DonutSegment[]; total: number; centerLabel: string; size?: number; emptyText?: string; /** Called with the segment index when a slice or its legend row is clicked. */ onSegmentClick?: (i: number) => void }) {
   const [hover, setHover] = useState<number | null>(null);
   const [tip, setTip] = useState<({ i: number } & TipPos) | null>(null);
-  const sum = segments.reduce((s, x) => s + x.value, 0);
+  const sum = segments.reduce((s, x) => s + (x.legendOnly ? 0 : x.value), 0);
+  const click = onSegmentClick ? (i: number) => () => onSegmentClick(i) : () => undefined;
   const cx = size / 2;
   const cy = size / 2;
   const r2 = size / 2 - 2;
@@ -41,7 +46,7 @@ export default function DonutChart({ segments, total, centerLabel, size = 160, e
   const check = JSON.stringify({ total, segments: segments.map((s) => ({ label: s.label, value: s.value })) });
 
   return (
-    <div className="donut-wrap anim-root" data-check={check} onMouseLeave={() => { setHover(null); setTip(null); }}>
+    <div className={`donut-wrap anim-root${onSegmentClick ? " donut-clickable" : ""}`} data-check={check} onMouseLeave={() => { setHover(null); setTip(null); }}>
       <div className="donut donut-sweep" style={{ width: size, height: size }}>
         {sum === 0 ? (
           <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="chart" role="img" aria-label={centerLabel}>
@@ -50,12 +55,13 @@ export default function DonutChart({ segments, total, centerLabel, size = 160, e
         ) : (
           <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="chart" role="img" aria-label={`${centerLabel}: ${segments.map((s) => `${s.label} ${n(s.value)}`).join(", ")}`} onMouseLeave={() => setHover(null)}>
             {segments.map((s, i) => {
+              if (s.legendOnly) return null;
               const span = (s.value / sum) * Math.PI * 2;
               const a0 = a + gap / 2;
               const a1 = a + span - gap / 2;
               a += span;
               if (a1 <= a0) return null;
-              return <path key={s.label} d={arc(cx, cy, r1, r2, a0, a1)} fill={s.color} opacity={hover !== null && hover !== i ? 0.45 : 1} onMouseMove={(e) => { setHover(i); setTip({ i, clientX: e.clientX, clientY: e.clientY }); }} />;
+              return <path key={s.label} d={arc(cx, cy, r1, r2, a0, a1)} fill={s.color} opacity={hover !== null && hover !== i ? 0.45 : 1} onMouseMove={(e) => { setHover(i); setTip({ i, clientX: e.clientX, clientY: e.clientY }); }} onClick={click(i)} />;
             })}
           </svg>
         )}
@@ -67,8 +73,8 @@ export default function DonutChart({ segments, total, centerLabel, size = 160, e
       <ul className="donut-legend">
         {segments.length === 0 ? <li className="note">{emptyText}</li> : null}
         {segments.map((s, i) => (
-          <li key={s.label} className={hover === i ? "is-hover" : ""} onMouseMove={(e) => { setHover(i); setTip({ i, clientX: e.clientX, clientY: e.clientY }); }} onMouseLeave={() => { setHover(null); setTip(null); }}>
-            <span className="legend-swatch" style={{ background: s.color }} />
+          <li key={s.label} className={`${hover === i ? "is-hover" : ""}${s.legendOnly ? " legend-only" : ""}`.trim()} onMouseMove={(e) => { setHover(i); setTip({ i, clientX: e.clientX, clientY: e.clientY }); }} onMouseLeave={() => { setHover(null); setTip(null); }} onClick={click(i)} title={onSegmentClick ? `Click for the ${s.label} appointments` : undefined}>
+            <span className="legend-swatch" style={s.legendOnly ? { background: "transparent", boxShadow: "inset 0 0 0 2px currentColor", opacity: 0.6 } : { background: s.color }} />
             <span className="donut-legend-name">{s.label}</span>
             <span className="donut-legend-count">{n(s.value)}</span>
             {s.extra ? <span className="donut-legend-extra">{s.extra}</span> : null}
@@ -79,11 +85,17 @@ export default function DonutChart({ segments, total, centerLabel, size = 160, e
         {tip ? (
           <>
             <div className="chart-tip-title">{segments[tip.i].label}</div>
-            <div>
-              <span className="legend-swatch" style={{ background: segments[tip.i].color }} /> <b>{n(segments[tip.i].value)}</b>
-              {sum > 0 ? ` · ${Math.round((segments[tip.i].value / sum) * 100)}% of ${n(sum)}` : ""}
-              {segments[tip.i].extra ? ` · ${segments[tip.i].extra}` : ""}
-            </div>
+            {segments[tip.i].tip ? (
+              <div>
+                <span className="legend-swatch" style={{ background: segments[tip.i].color }} /> {segments[tip.i].tip}
+              </div>
+            ) : (
+              <div>
+                <span className="legend-swatch" style={{ background: segments[tip.i].color }} /> <b>{n(segments[tip.i].value)}</b>
+                {sum > 0 ? ` · ${Math.round((segments[tip.i].value / sum) * 100)}% of ${n(sum)}` : ""}
+                {segments[tip.i].extra ? ` · ${segments[tip.i].extra}` : ""}
+              </div>
+            )}
           </>
         ) : null}
       </ChartTooltip>

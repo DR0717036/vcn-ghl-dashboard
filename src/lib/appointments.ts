@@ -546,13 +546,13 @@ export interface RepApptsResult {
   notes: string[];
 }
 
-interface DialRef {
+export interface DialRef {
   u: string | null;
   t: string;
 }
 
 /** Outbound human dials in [start, end), one per call id, grouped by contact. */
-function dialsByContact(start: string, end: string): Map<string, DialRef[]> {
+export function dialsByContact(start: string, end: string): Map<string, DialRef[]> {
   const rows = getDb()
     .prepare(
       `SELECT MIN(NULLIF(user_id, '')) AS u, MIN(date_added) AS t, MIN(contact_id) AS cid
@@ -774,6 +774,14 @@ function drillContext(appts: Appt[]) {
     for (const c of getDb().prepare(`SELECT id, name FROM contacts WHERE id IN (${marks})`).all(...chunk) as unknown as { id: string; name: string | null }[]) contactName.set(c.id, c.name);
   }
   return { names, contactName, calendars };
+}
+
+/** Drilldown rows for a list of appointments (contact, host, calendar, status, times), newest first; the rep dashboard reuses this for the rep's own appointments. */
+export function apptDrillRows(appts: Appt[]): DrillRow[] {
+  const ctx = drillContext(appts);
+  const rows = appts.map((a) => baseRow(a, ctx));
+  rows.sort((a, b) => (a.reachedOn < b.reachedOn ? 1 : a.reachedOn > b.reachedOn ? -1 : 0));
+  return rows;
 }
 
 /** The appointments (or, for the snapshot, the contacts) behind one status card. Row count equals the card's headline. */

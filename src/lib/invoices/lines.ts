@@ -16,6 +16,8 @@ import { iauKeys } from "@/lib/submissions";
 
 export interface InvoiceLine {
   kind: "submission" | "won";
+  /** The won opportunity (won lines only). */
+  opportunityId?: string;
   contactId: string | null;
   contactName: string;
   /** "Army CA 101", "Veteran IAU · FS2", "Army CA", "Veteran G.I. Bill". */
@@ -131,6 +133,7 @@ export function computeInvoiceLines(rep: Rep, start: Date, end: Date): InvoiceLi
       const rate = plan.type === "per_won_flat" ? plan.rate : first ? plan.firstRate : plan.thenRate;
       lines.push({
         kind: "won",
+        opportunityId: w.opportunityId,
         contactId: w.contactId,
         contactName: (w.contactId ? names.get(w.contactId) : null) ?? "(no name)",
         program: w.pipelineId === mappingConfig.programs.army.pipelineId ? "Army CA" : "Veteran G.I. Bill",

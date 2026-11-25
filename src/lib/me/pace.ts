@@ -9,7 +9,6 @@
 import { computeCommission, planFor, quotaStatus, type QuotaStatus } from "@/lib/commission";
 import { getDb } from "@/lib/db";
 import { computeInvoiceLines, repSubmissions } from "@/lib/invoices/lines";
-import type { MilestoneResult } from "@/lib/milestones";
 import { dailyMotto } from "./mottos";
 import { addDays, addMonths, fmtDay, fmtRangeShort, nyDayKey, parseNyDay, resolveRange, startOfDay, startOfMonth } from "@/lib/dates";
 import { repWorkingDayKeys, tenureNote, tenureOverlaps, type Rep } from "@/lib/reps";
@@ -55,8 +54,6 @@ export interface RepPaceData {
   quotaStatus: QuotaStatus;
   /** True when month-to-date is at or above the quota spread evenly over the working days done. */
   onPace: boolean;
-  /** Opportunity Value behind this month's submissions (value at each event, distinct opportunities). Never revenue. */
-  oppValue: number;
   /** This month's commission estimate and its calculation. */
   commissionMtd: { amount: number | null; calc: string };
   /** Combined submissions this week and last week (the "vs last week" pill). */
@@ -116,10 +113,6 @@ export function computeRepPace(rep: Rep, now: Date): RepPaceData {
   const quota = r?.monthlyQuota ?? 0;
   const mp = monthPaceFor(rep, now, mtd, quota, cfg.workingDays);
   const { projected, neededPerDay, expectedToday } = mp;
-  // Opportunity Value behind this rep's submissions this month: the rep's line in each part of Program Submissions.
-  const monthSubs = computeSubmissions(month, "all");
-  const partValue = (p: MilestoneResult | undefined) => p?.reps.find((x) => x.userId === rep.userId)?.value ?? 0;
-  const oppValue = monthSubs.parts ? partValue(monthSubs.parts.ca101) + monthSubs.parts.iau.reduce((t, p) => t + partValue(p), 0) : 0;
 
   // Weekly goal streak: the last completed weeks, newest first, plus the week in progress.
   const weeks: StreakWeek[] = [];
@@ -208,7 +201,6 @@ export function computeRepPace(rep: Rep, now: Date): RepPaceData {
     quotaPct: quota > 0 ? mtd / quota : null,
     quotaStatus: quota > 0 ? quotaStatus(mtd / quota, commission.monthElapsedFraction) : "neutral",
     onPace: expectedToday === null ? true : mtd >= expectedToday - 1e-9,
-    oppValue,
     commissionMtd: { amount: r?.commissionMtd.amount ?? null, calc: r?.commissionMtd.label ?? "plan not found" },
     thisWeek: weeks[0]?.combined ?? null,
     lastWeek: weeks[1]?.combined ?? null,
@@ -226,7 +218,7 @@ export function computeRepPace(rep: Rep, now: Date): RepPaceData {
       "Month to date — your combined submissions this calendar month (CA 101 + IAU App, every semester), the same figure as the month-to-date column of Program Submissions, against the monthly quota in your rep settings.",
       `Working days — ${cfg.workingDays.map((d) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]).join(", ")} (config/weekly-report.json). Expected by today spreads the quota evenly over the month's working days.`,
       "Projected month-end — your current rate per working day carried to the end of the month. Needed per day — the gap to quota spread over the working days left.",
-      "Opportunity Value — the value on each submitted opportunity at the time of its event, summed over your submissions this month; never revenue, cash, or commission. Commission — this month's estimate under your plan.",
+      "Commission — this month's estimate under your plan; never cash. The official calculation is done outside this dashboard.",
       "Weekly chart — your combined submissions per Monday-to-Sunday week for the last 8 weeks and the week in progress; the dashed line is your own weekly goal; a bar is green when the week met it; the curve follows the bar tops. Hover a bar for the week's commission; click it for the submissions behind it, each priced by its month's rules (the retro rate applies to a whole month once it reaches the threshold, so a week's commission can rise later in the month). The pill compares this week so far with last week's full week.",
       "Potential — what this calendar month would pay at your plan's next threshold, compared with today's estimate.",
       "Weekly goal streak — consecutive completed weeks (newest first) in which your combined submissions reached your weekly goal; the week in progress joins the streak once it is met. Weeks before milestone tracking began cannot be judged.",

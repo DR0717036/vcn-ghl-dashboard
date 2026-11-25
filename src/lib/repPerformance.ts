@@ -14,6 +14,7 @@
 // (of the contacts the rep submitted in the range, the share whose live
 // opportunity is won now).
 
+import { needsCallCounts } from "@/lib/needsCall";
 import fs from "node:fs";
 import path from "node:path";
 import type { ColumnKey, DrilldownSpec } from "@/app/Drilldown";
@@ -67,6 +68,7 @@ export const METRIC_DEFS: MetricDef[] = [
   { key: "quota", label: "Monthly quota pacing", kind: "pct", source: "Program Submissions (month to date)" },
   { key: "won", label: "Won", kind: "count", source: "Won Opportunities (became won in range, credited to the rep)" },
   { key: "closeRate", label: "Close rate", kind: "pct", source: "won ÷ submitted, cohort as of today" },
+  { key: "needsCall", label: "Needs a call", kind: "count", lowerIsBetter: true, source: "My pipeline rule: the rep's open leads in an active tier with no outbound call from them in 14+ days (snapshot as of the last sync)" },
   { key: "medianResponse", label: "Median response time", kind: "minutes", lowerIsBetter: true, source: "Response Time" },
   { key: "commission", label: "Est. commission", kind: "usd", source: "Program Submissions (selected range)" },
 ];
@@ -165,6 +167,7 @@ export function computeRepPerformance(input: {
   rangeLabel: string;
 }): RepPerformance {
   const { range, repCalls, repAppts, submissions, commission, responseTimes, leadsByUser, rangeQuery, rangeLabel } = input;
+  const needsCall = needsCallCounts(input.now);
   const assigned = leadsAssignedBy(range);
   const close = closeRates(range);
   const wonInRange = wonOpps("period", range);
@@ -212,6 +215,7 @@ export function computeRepPerformance(input: {
       combined: { value: sub?.total ?? 0, text: n(sub?.total ?? 0), status: combinedStatus, sub: combinedGoal ? `goal ${Math.round(combinedGoal.full)}${submissions.goal?.partial && Math.round(combinedGoal.scaled) !== Math.round(combinedGoal.full) ? ` · ${Math.round(combinedGoal.scaled)} by now` : ""}` : undefined },
       quota: mtd ? { value: mtd.monthlyQuota > 0 ? mtd.submissionsMtd / mtd.monthlyQuota : null, text: `${n(mtd.submissionsMtd)}/${n(mtd.monthlyQuota)}`, sub: `${Math.round(mtd.quotaPct * 100)}% · ${commission.monthLabel}`, status: mtd.quotaStatus === "good" ? "met" : mtd.quotaStatus === "warn" ? "on_track" : mtd.quotaStatus === "bad" ? "missed" : null, title: "Combined submissions this calendar month over the monthly quota." } : { value: null, text: DASH },
       won: { value: won.length, text: `${n(won.length)} · ${usd(wonValue)}`, title: "Opportunities that first became won during the range, credited to the owner at the won event; Opportunity Value, not cash." },
+      needsCall: userId ? { value: needsCall.counts.get(userId) ?? 0, text: n(needsCall.counts.get(userId) ?? 0), sub: `no call in ${n(needsCall.silentDays)}+ days · snapshot`, title: `Open leads in Tier 1–7, Sale in Progress, Active Reply, or a No Show stage with no outbound call from this rep for more than ${n(needsCall.silentDays)} days, as of the last sync (the date range does not apply).` } : { value: null, text: DASH, title: "Only configured reps have a needs-a-call count." },
       closeRate: { value: cr && cr.submitted > 0 ? cr.won / cr.submitted : null, text: cr && cr.submitted > 0 ? pct(cr.won, cr.submitted) : DASH, sub: cr ? `${n(cr.won)} won of ${n(cr.submitted)} submitted` : undefined, title: "Of the contacts this rep submitted in the range (CA 101 or IAU App, any semester), the share whose opportunity is won now." },
       medianResponse: { value: resp?.medianMinutes ?? null, text: resp && resp.medianMinutes !== null ? fmtMinutes(Math.round(resp.medianMinutes)) : DASH, sub: resp ? `${n(resp.replied)} of ${n(resp.episodes)} replied` : undefined, title: `Median business-time response to inbound messages (${responseTimes.windowLabel}).` },
       commission: mtd ? { value: mtd.commission.amount, text: mtd.commission.amount === null ? DASH : usd(mtd.commission.amount), sub: mtd.commission.label, title: `Plan ${mtd.planKey}; estimated from dashboard counts for the selected range.` } : { value: null, text: DASH },

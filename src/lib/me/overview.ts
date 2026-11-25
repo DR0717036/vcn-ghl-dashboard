@@ -16,6 +16,7 @@ import { computeBountyBoard, standingOf, type Standing, type WeeklyBounty, type 
 import { computeCommission, planFor, type Plan } from "@/lib/commission";
 import { addDays, fmtDay, nyDayKey, resolveRange, type DateRange } from "@/lib/dates";
 import { repSubmissions } from "@/lib/invoices/lines";
+import { semesters } from "@/lib/mapping-config";
 import type { Rep } from "@/lib/reps";
 import { activeReps } from "@/lib/reps";
 import { computeSubmissions } from "@/lib/submissions";
@@ -35,6 +36,9 @@ export interface Milestone {
   detail: string;
   /** What the donut counts: "submissions" or "won". */
   unit: "submissions" | "won";
+  /** Hover text for the filled segment ("$525 · 7 × $75") and the remaining one ("14 more → $2,100 total (+$1,575)"). */
+  tipDone: string | null;
+  tipLeft: string | null;
   /** The month's projection and need, from the same arithmetic as My pace. */
   projected: number | null;
   neededPerDay: number | null;
@@ -59,6 +63,8 @@ export interface Momentum {
   ladder: LadderRung[];
   /** Combined submissions this month split by program. */
   split: { army: number; veteran: number };
+  /** The Veteran part by semester (every configured semester, default first). */
+  splitSemesters: { key: string; short: string; label: string; count: number }[];
   lastSubmission: { text: string; day: string | null; event: string | null };
 }
 
@@ -83,7 +89,7 @@ export interface RepOverview {
 const usd = (v: number) => v.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const n = (v: number) => v.toLocaleString("en-US");
 
-function milestoneFor(plan: Plan | null, submissionsMtd: number, wonMtd: number): Omit<Milestone, "projected" | "neededPerDay" | "quota" | "mtd" | "workingDaysRemaining"> {
+function milestoneFor(plan: Plan | null, submissionsMtd: number, wonMtd: number): Omit<Milestone, "projected" | "neededPerDay" | "quota" | "mtd" | "workingDaysRemaining" | "tipDone" | "tipLeft"> {
   if (!plan) return { title: "Next milestone", text: "No commission plan configured", progress: null, done: false, detail: "Ask Diego to set your plan in the rep settings.", unit: "submissions" };
   if (plan.type === "per_submission_retro") {
     const left = Math.max(0, plan.retroThreshold - submissionsMtd);
@@ -173,13 +179,27 @@ export function computeRepOverview(rep: Rep, now: Date): RepOverview {
     nextWorth,
     ladder,
     split: { army: monthRow?.ca101 ?? 0, veteran: monthRow?.iau ?? 0 },
+    splitSemesters: semesters().map((s) => ({ key: s.key, short: s.short, label: s.label, count: subs.parts?.iau.find((p) => p.key === s.submittedKey)?.reps.find((r) => r.userId === rep.userId)?.contacts ?? 0 })),
     lastSubmission: lastSub ? { text: agoText(lastSub.at, now), day: fmtDay(new Date(lastSub.at)), event: lastSub.event } : { text: "none in the last 180 days", day: null, event: null },
   };
 
   // Next milestone, with the month's pace figures.
   const base = milestoneFor(plan, mtd, wonMtd);
   const pace = monthPaceFor(rep, now, mtd, quota);
-  const milestone: Milestone = { ...base, projected: pace.projected, neededPerDay: pace.neededPerDay, quota, mtd, workingDaysRemaining: pace.workingDaysRemaining };
+  const earned = amount ?? 0;
+  let tipDone: string | null = null;
+  let tipLeft: string | null = null;
+  if (plan?.type === "per_submission_retro") {
+    const unlocked = mtd >= plan.retroThreshold;
+    const potential = plan.retroThreshold * plan.retroRate;
+    tipDone = `${usd(earned)} earned so far · ${n(mtd)} × ${usd(unlocked ? plan.retroRate : plan.rate)}`;
+    tipLeft = unlocked ? null : `${n(plan.retroThreshold - mtd)} more → ${usd(potential)} total (+${usd(potential - earned)})`;
+  } else if (plan?.type === "per_won_tiered") {
+    const potential = plan.firstCount * plan.firstRate;
+    tipDone = `${usd(earned)} earned so far · ${n(Math.min(wonMtd, plan.firstCount))} × ${usd(plan.firstRate)}${wonMtd > plan.firstCount ? ` + ${n(wonMtd - plan.firstCount)} × ${usd(plan.thenRate)}` : ""}`;
+    tipLeft = wonMtd >= plan.firstCount ? null : `${n(plan.firstCount - wonMtd)} more won → ${usd(potential)} total (+${usd(potential - earned)})`;
+  }
+  const milestone: Milestone = { ...base, tipDone, tipLeft, projected: pace.projected, neededPerDay: pace.neededPerDay, quota, mtd, workingDaysRemaining: pace.workingDaysRemaining };
 
   // Bounties, with this rep's standing.
   const board = computeBountyBoard(now);
@@ -201,7 +221,7 @@ export function computeRepOverview(rep: Rep, now: Date): RepOverview {
     bounties,
     notes: [
       `Momentum — this week's combined submissions (CA 101 + IAU App, every semester; Monday to now) against your own weekly goal; what the next counted submission (or won, on won-based plans) pays under your plan; the ladder is what this calendar month would pay at your quota and at the plan's threshold. The card switches to "Commission earned this month" once the month's estimate reaches ${usd(COMMISSION_CARD_THRESHOLD)}.`,
-      "Army / Veteran — your submissions this month split by program (CA 101 submitted vs IAU App Submitted, every semester). Last submission — your most recent counted submission, by New York calendar day.",
+      "Army / Veteran tiles — your submissions this month by program (CA 101 submitted vs IAU App Submitted, every semester, with the semester split under the Veteran tile); click a tile for the list: contact, program and semester, submission time, the opportunity's stage now, the estimated commission the submission earns under your plan, and a link to the contact in GHL. Last submission — your most recent counted submission, by New York calendar day.",
       "Next milestone — your plan's threshold as a donut: the retro rate unlocks when the month's submissions reach the threshold (and then applies to every submission that month); tiered won plans pay the first-tier rate for the first wons of the month. Projected month-end and needed per working day are the My pace figures (your rate per working day carried to month end; the gap to quota over the working days left).",
       "Bounties — your place among the reps on the team by combined submissions this calendar month (ties share a rank), compared with your place last month; then the weekly and semester bounties from config/bounties.json.",
       ...board.notes,

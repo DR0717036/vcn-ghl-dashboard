@@ -279,7 +279,7 @@ export interface LossesResult {
   notes: string[];
 }
 
-function stageNames() {
+export function stageNames() {
   const stages = new Map<string, string>();
   const pipelines = new Map<string, string>();
   for (const p of mappingConfig.pipelines) {
@@ -458,7 +458,7 @@ export function computeComparison(range: DateRange, rates: RatesResult, outcome:
 
 // ---- drilldowns ---------------------------------------------------------------------------------
 
-function memberRows(members: CohortMember[], segmentsOf: (m: CohortMember) => string[]): DrillRow[] {
+export function memberRows(members: CohortMember[], segmentsOf: (m: CohortMember) => string[]): DrillRow[] {
   const names = userNames();
   const { stages, pipelines } = stageNames();
   const ids = members.map((m) => m.contactId);
@@ -527,9 +527,8 @@ export function lostDrilldown(range: DateRange): DrillResult {
   return { ok: true, title: "Lost after showing", rows, count: rows.length, detailsNote: null, fetchedAt: new Date().toISOString() };
 }
 
-/** Contacts who entered the NGT stage in the range, tagged with what they became since. */
-export function ngtDrilldown(range: DateRange): DrillResult {
-  const members = buildNgt(range);
+/** Drilldown rows for NGT entries, tagged with what each contact became since; newest first. */
+export function ngtRows(members: NgtMember[]): DrillRow[] {
   const names = userNames();
   const { stages, pipelines } = stageNames();
   const opps = oppsByContact();
@@ -569,5 +568,11 @@ export function ngtDrilldown(range: DateRange): DrillResult {
     };
   });
   rows.sort((a, b) => (a.reachedOn < b.reachedOn ? 1 : -1));
+  return rows;
+}
+
+/** Contacts who entered the NGT stage in the range, tagged with what they became since. */
+export function ngtDrilldown(range: DateRange): DrillResult {
+  const rows = ngtRows(buildNgt(range));
   return { ok: true, title: "Appointment Booked (NGT) entries", rows, count: rows.length, detailsNote: null, fetchedAt: new Date().toISOString() };
 }

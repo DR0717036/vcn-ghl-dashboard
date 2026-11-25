@@ -62,16 +62,18 @@ export function isWonBased(plan: Plan | null): boolean {
 
 const usd = (v: number) => v.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
-/** One sentence per plan, built from the configured numbers, for the column-header tooltip. */
+/** One plan in a sentence, built from the configured numbers ("$75 per combined submission, or $100 for every submission in a calendar month that reaches 21"). */
+export function planText(p: Plan): string {
+  if (p.type === "per_submission_retro") return `${usd(p.rate)} per combined submission, or ${usd(p.retroRate)} for every submission in a calendar month that reaches ${p.retroThreshold}`;
+  if (p.type === "per_won_flat") return `${usd(p.rate)} per won opportunity; submissions do not pay`;
+  return `${usd(p.firstRate)} for each of the first ${p.firstCount} won in a calendar month, then ${usd(p.thenRate)} each; submissions do not pay`;
+}
+
+/** One sentence per plan, for the column-header tooltip. */
 export function planSummary(): string {
-  const parts: string[] = [];
-  for (const [key, p] of Object.entries(commissionPlans)) {
-    if (p.type === "per_submission_retro")
-      parts.push(`${key}: ${usd(p.rate)} per combined submission, or ${usd(p.retroRate)} for every submission in a calendar month that reaches ${p.retroThreshold}.`);
-    else if (p.type === "per_won_flat") parts.push(`${key}: ${usd(p.rate)} per won opportunity; submissions do not pay.`);
-    else parts.push(`${key}: ${usd(p.firstRate)} for each of the first ${p.firstCount} won in a calendar month, then ${usd(p.thenRate)} each; submissions do not pay.`);
-  }
-  return parts.join(" ");
+  return Object.entries(commissionPlans)
+    .map(([key, p]) => `${key}: ${planText(p)}.`)
+    .join(" ");
 }
 
 export interface WonLine {

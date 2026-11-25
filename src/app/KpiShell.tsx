@@ -9,7 +9,14 @@
 // card, and the toggle is pinned to the bottom, so cards in a row line up.
 
 import type { ReactNode } from "react";
-import { fmtMinutes, type Breakdown, type BreakdownSection } from "@/lib/metrics";
+import type { Breakdown, BreakdownSection } from "@/lib/metrics";
+
+/** "2h 05m" style minutes (a copy of src/lib/metrics fmtMinutes, kept here so this file stays free of server-only imports). */
+function fmtMinutes(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+}
 import Notes from "./Notes";
 
 export function Delta({ value, prev, format = "count", reason, what }: { value: number | null; prev: number | null; format?: "count" | "minutes" | "usd"; reason?: string; what?: string }) {

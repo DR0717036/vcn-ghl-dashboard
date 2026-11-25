@@ -89,6 +89,12 @@ export interface DrillRow {
   lastTouchAt?: string | null;
   daysWaiting?: number | null;
   daysEstimated?: boolean;
+  /** Rep submission rows: the estimated commission the event earns under the rep's plan (null = the plan does not pay for it). */
+  commission?: number | null;
+  /** Needs-a-call rows: days with no outbound call from the rep (measured from the stage entry when never called, flagged by daysEstimated), the last call, and how it ended. */
+  daysSilent?: number | null;
+  lastCallAt?: string | null;
+  lastCallOutcome?: string | null;
 }
 
 export interface DrillResult {
@@ -111,7 +117,7 @@ const DETAILS_TTL_MS = 15 * 60 * 1000;
 const CA101_KEY = "army_ca101";
 
 /** One event to list, whatever table it came from. */
-interface EventLike {
+export interface EventLike {
   contact_id: string | null;
   opportunity_id: string;
   event_time: string;
@@ -196,7 +202,7 @@ function countedEvents(m: MilestoneMapping, range: DateRange): EventLike[] {
   return out;
 }
 
-async function enrich(events: EventLike[]): Promise<{ rows: DrillRow[]; detailsNote: string | null }> {
+export async function enrich(events: EventLike[]): Promise<{ rows: DrillRow[]; detailsNote: string | null }> {
   if (events.length === 0) return { rows: [], detailsNote: null };
   const db = getDb();
   const names = userNames();

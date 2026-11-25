@@ -377,6 +377,66 @@ export function getDb(): DatabaseSync {
       detail      TEXT
     );
     CREATE INDEX IF NOT EXISTS invoice_events_invoice ON invoice_events(invoice_id);
+
+    -- Payroll attendance overrides (owner request 2026-11-24): an admin marks a
+    -- working day as approved PTO, sick, holiday, or excused so it is paid
+    -- despite too few dials; every change is logged. Lives only in this cache.
+    CREATE TABLE IF NOT EXISTS attendance_overrides (
+      user_id     TEXT NOT NULL,
+      day         TEXT NOT NULL,        -- YYYY-MM-DD, America/New_York
+      kind        TEXT NOT NULL,        -- pto | sick | holiday | other
+      note        TEXT,
+      created_by  TEXT NOT NULL,
+      created_at  TEXT NOT NULL,
+      PRIMARY KEY (user_id, day)
+    );
+    -- Payroll invoices (owner request 2026-11-24): one row per rep, type
+    -- (base | commission), and period once the rep sends it; lines, totals,
+    -- number, and PDF are frozen on sending. legacy = copied from the old
+    -- monthly invoice flow (table invoices). Lives only in this cache.
+    CREATE TABLE IF NOT EXISTS payroll_invoices (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id       TEXT NOT NULL,
+      rep_name      TEXT NOT NULL,
+      type          TEXT NOT NULL,      -- base | commission
+      period_key    TEXT NOT NULL,      -- YYYY-MM-DD (period start) | YYYY-MM
+      period_label  TEXT NOT NULL,
+      number        TEXT NOT NULL UNIQUE,
+      status        TEXT NOT NULL,      -- submitted | approved | paid
+      amount        REAL NOT NULL,
+      totals        TEXT NOT NULL,      -- JSON { base, deductions, bounties, commission, total }
+      lines         TEXT NOT NULL,      -- JSON array of line items
+      summary       TEXT NOT NULL,
+      pdf           BLOB,
+      pdf_name      TEXT,
+      submitted_at  TEXT NOT NULL,
+      submitted_by  TEXT NOT NULL,
+      approvals     TEXT NOT NULL DEFAULT '[]',
+      approved_at   TEXT,
+      paid_at       TEXT,
+      paid_by       TEXT,
+      legacy        INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(user_id, type, period_key)
+    );
+    CREATE TABLE IF NOT EXISTS payroll_invoice_events (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id  INTEGER NOT NULL,
+      at          TEXT NOT NULL,
+      kind        TEXT NOT NULL,
+      actor       TEXT,
+      detail      TEXT
+    );
+    CREATE INDEX IF NOT EXISTS payroll_invoice_events_invoice ON payroll_invoice_events(invoice_id);
+    CREATE TABLE IF NOT EXISTS attendance_override_log (
+      id       INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id  TEXT NOT NULL,
+      day      TEXT NOT NULL,
+      action   TEXT NOT NULL,           -- set | clear
+      kind     TEXT,
+      note     TEXT,
+      actor    TEXT NOT NULL,
+      at       TEXT NOT NULL
+    );
   `);
   return db;
 }

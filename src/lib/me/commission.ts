@@ -24,7 +24,6 @@ export interface CommissionMonth {
   parts: CommissionPart[];
   submissions: number;
   won: number;
-  wonValue: number;
   /** The month starts before milestone tracking began, so its counts can be incomplete. */
   partial: boolean;
 }
@@ -79,7 +78,6 @@ export function computeRepCommission(rep: Rep, now: Date): RepCommissionData {
       parts: c?.parts ?? [],
       submissions: subs.length,
       won: won.length,
-      wonValue: won.reduce((s, w) => s + (w.value ?? 0), 0),
       partial: mStart.toISOString() < historyStart,
     });
   }
@@ -94,7 +92,7 @@ export function computeRepCommission(rep: Rep, now: Date): RepCommissionData {
       "Estimated — every amount here is an estimate from dashboard counts; the official commission calculation is done outside this dashboard and may differ.",
       `Your plan (${rep.commissionPlan}) — ${planText(plan)}`,
       "Pricing — each submission or won is priced by its place in its own calendar month: the retro rate applies when the month's submissions reach the threshold; a won pays the first-tier rate when it is among the first wons of that month by won date.",
-      "Submissions — the first entry into CA 101 submitted or IAU App Submitted (every semester) per contact, credited to the opportunity owner at the event. Won — opportunity status = won, once per opportunity id, in the Army CA or Veteran G.I. Bill pipeline, credited to the owner at the won event. Dollar figures beside won counts are Opportunity Value, never cash.",
+      "Submissions — the first entry into CA 101 submitted or IAU App Submitted (every semester) per contact, credited to the opportunity owner at the event. Won — opportunity status = won, once per opportunity id, in the Army CA or Veteran G.I. Bill pipeline, credited to the owner at the won event.",
       `History — months before milestone tracking began (${fmtDay(new Date(historyStart))}) are marked partial: only contacts still sitting in a stage at the first sync are known for them.`,
     ],
   };

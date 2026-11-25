@@ -6,5 +6,10 @@
   "newLeadStageName": "New Lead",
   "touchWindowDays": 7,
   "staleAfterDays": 2,
-  "topSources": 6
+  "topSources": 6,
+  "needsCall": {
+    "_comment": "Needs a call (rep dashboard My pipeline, Rep Performance, midweek check-in): an open opportunity assigned to the rep in one of these stages (by name, case-insensitive, Army CA and Veteran G.I. Bill pipelines) with no outbound call from the rep for more than silentDays; a never-called lead is measured from its stage entry.",
+    "silentDays": 14,
+    "stageNames": ["Tier 1", "Tier 2", "Tier 3", "Tier 4", "Tier 5", "Tier 6", "Tier 7", "Sale in Progress", "Active Reply", "Appointment No Show", "Appointment No Show (NGT)", "Appointment missed", "IAU Appointment Missed"]
+  }
 }

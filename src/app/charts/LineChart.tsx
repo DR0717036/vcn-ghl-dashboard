@@ -102,11 +102,14 @@ export default function LineChart({
   height = 200,
   leftLabel,
   rightLabel,
+  onPointClick,
 }: {
   series: LineSeries[];
   height?: number;
   leftLabel?: string;
   rightLabel?: string;
+  /** Called with the point index when a bucket is clicked (the chart shows a pointer cursor). */
+  onPointClick?: (i: number) => void;
 }) {
   const [hoverPos, setHoverPos] = useState<({ i: number } & TipPos) | null>(null);
   const hover = hoverPos?.i ?? null;
@@ -208,7 +211,26 @@ export default function LineChart({
           {Array.from({ length: n }, (_, i) => {
             const left = i === 0 ? padL : (x(i - 1) + x(i)) / 2;
             const right = i === n - 1 ? W - padR : (x(i) + x(i + 1)) / 2;
-            return <rect key={i} x={left} y={padT} width={Math.max(1, right - left)} height={plotH} fill="transparent" onMouseMove={(e) => setHoverPos({ i, clientX: e.clientX, clientY: e.clientY })} />;
+            return (
+              <rect
+                key={i}
+                x={left}
+                y={padT}
+                width={Math.max(1, right - left)}
+                height={plotH}
+                fill="transparent"
+                style={onPointClick ? { cursor: "pointer" } : undefined}
+                onMouseMove={(e) => setHoverPos({ i, clientX: e.clientX, clientY: e.clientY })}
+                onClick={
+                  onPointClick
+                    ? (e) => {
+                        e.stopPropagation();
+                        onPointClick(i);
+                      }
+                    : undefined
+                }
+              />
+            );
           })}
           {hover !== null ? <line pointerEvents="none" x1={x(hover)} x2={x(hover)} y1={padT} y2={padT + plotH} stroke="var(--chart-axis)" strokeDasharray="3 3" /> : null}
         </svg>

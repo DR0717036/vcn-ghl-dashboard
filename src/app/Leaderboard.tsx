@@ -36,7 +36,7 @@ function fmtAvg(kind: MetricDef["kind"], v: number): string {
   }
 }
 
-export default function Leaderboard({ data, rangeLabel, highlight = null, viewAs = true }: { data: RepPerformance; rangeLabel: string; /** GHL user id of the row to tint (the signed-in rep on their own dashboard). */ highlight?: string | null; /** Show the admin-only "View as rep" links. */ viewAs?: boolean }) {
+export default function Leaderboard({ data, rangeLabel, highlight = null, viewAs = true, title = "Leaderboard" }: { data: RepPerformance; rangeLabel: string; /** The card label ("Leaderboard"). */ title?: string; /** GHL user id of the row to tint (the signed-in rep on their own dashboard). */ highlight?: string | null; /** Show the admin-only "View as rep" links. */ viewAs?: boolean }) {
   const [sortKey, setSortKey] = useState(data.defaultSort);
   const [dir, setDir] = useState<"best" | "worst">("best");
   const defs = data.defs;
@@ -103,7 +103,7 @@ export default function Leaderboard({ data, rangeLabel, highlight = null, viewAs
   return (
     <div className="stat kpi kpi-title-xl reveal lb-card" data-kpi="leaderboard">
       <div className="kpi-head">
-        <div className="label">Leaderboard</div>
+        <div className="label">{title}</div>
         <div className="kpi-sub note">Every sales rep by any metric · click a column to sort, again to reverse · best value per column tinted · {rangeLabel}</div>
       </div>
       <div className="scroll kpi-body">

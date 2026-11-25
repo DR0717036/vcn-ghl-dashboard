@@ -63,7 +63,12 @@ export type ColumnKey =
   | "lostOn"
   | "campaigns"
   | "lastTouch"
-  | "daysWaiting";
+  | "daysWaiting"
+  | "submission"
+  | "commission"
+  | "daysSilent"
+  | "lastCall"
+  | "lastCallAt";
 
 const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "date" }> = {
   name: { label: "Contact name", kind: "text" },
@@ -112,7 +117,17 @@ const COLUMNS: Record<ColumnKey, { label: string; kind: "text" | "number" | "dat
   campaigns: { label: "Campaign tags", kind: "text" },
   lastTouch: { label: "Last outbound touch", kind: "date" },
   daysWaiting: { label: "Days waiting", kind: "number" },
+  submission: { label: "Program / semester", kind: "text" },
+  commission: { label: "Commission (est.)", kind: "number" },
+  daysSilent: { label: "Days since your last call", kind: "number" },
+  lastCall: { label: "Last call outcome", kind: "text" },
+  lastCallAt: { label: "Your last call", kind: "date" },
 };
+
+/** A rep's own submissions (the Momentum tiles on /me): what, when, where the opportunity is now, and what it earns. Reps never see Opportunity Value. */
+export const MY_SUBMISSION_COLUMNS: ColumnKey[] = ["name", "submission", "reachedOn", "stage", "commission"];
+/** A rep's own milestone card on /me (same as the admin KPI card, minus the assigned user, which is always the rep). */
+export const MY_KPI_COLUMNS: ColumnKey[] = ["name", "source", "pipeline", "status", "phone", "email", "stage", "tags", "createdOn", "reachedOn", "commission"];
 
 /** New leads behind a matrix cell, a user row, a source row, or the outcomes card. */
 export const LEAD_COLUMNS: ColumnKey[] = ["name", "program", "campaigns", "source", "assignedUser", "pipeline", "stage", "status", "createdOn", "lastTouch", "outcomeStage"];
@@ -156,6 +171,10 @@ function fmtWait(minutes: number): string {
 
 /** A rep's calls (Rep Call Activity drilldown). */
 export const CALL_COLUMNS: ColumnKey[] = ["name", "direction", "callOutcome", "duration", "calledOn", "recording"];
+/** A rep's own calls (My activity on /me): as CALL_COLUMNS without the recording; recordings stay admin-only. */
+export const MY_CALL_COLUMNS: ColumnKey[] = ["name", "direction", "callOutcome", "duration", "calledOn"];
+/** Needs a call (My pipeline on /me): each lead with its stage, days silent, and the rep's last call. */
+export const NEEDS_CALL_COLUMNS: ColumnKey[] = ["name", "program", "pipeline", "stage", "daysSilent", "lastCallAt", "lastCall"];
 /** Columns that never go into a CSV (a recording is streamed on click, not a value). */
 const NO_CSV: ColumnKey[] = ["recording"];
 
@@ -264,6 +283,16 @@ function cell(row: DrillRow, key: ColumnKey): { text: string; sort: string | num
       return { text: row.daysWaiting === null || row.daysWaiting === undefined ? DASH : `${row.daysWaiting.toLocaleString("en-US", { maximumFractionDigits: 1 })}${row.daysEstimated ? " (estimated)" : ""}`, sort: row.daysWaiting ?? null };
     case "outcome":
       return { text: row.outcome ? row.outcome : DASH, sort: row.outcome ?? null };
+    case "submission":
+      return { text: row.stageReached, sort: row.stageReached };
+    case "commission":
+      return { text: row.commission === null || row.commission === undefined ? DASH : fmtUsd(row.commission), sort: row.commission ?? null };
+    case "daysSilent":
+      return { text: row.daysSilent === null || row.daysSilent === undefined ? DASH : `${row.daysSilent.toLocaleString("en-US")}${row.daysEstimated ? " (never called, since stage entry)" : ""}`, sort: row.daysSilent ?? null };
+    case "lastCall":
+      return { text: row.lastCallOutcome ? row.lastCallOutcome : "never called", sort: row.lastCallOutcome ?? null };
+    case "lastCallAt":
+      return { text: row.lastCallAt ? fmtDate(row.lastCallAt) : "never", sort: row.lastCallAt ?? null };
     default: {
       const v = row[key];
       return { text: v ? v : DASH, sort: v ? v.toLowerCase() : null };
@@ -501,6 +530,8 @@ function SortableTable({
 export interface DrilldownSpec {
   /** Query string for /api/drilldown, e.g. "kind=milestone&key=army_ca101&range=this_month". */
   query: string;
+  /** The route that answers the query; /api/drilldown (admins) unless set, e.g. /api/me/drilldown for a rep's own rows. */
+  endpoint?: string;
   title: string;
   subtitle?: string;
   /** The count / Opportunity Value / status line, rendered as on the card. */
@@ -523,6 +554,10 @@ export interface DrilldownSpec {
   expectedConversations?: number | null;
   /** Segment filter: each row carries the segments it was counted in; the selected segment's rows are checked against its expected count. The first segment is selected by default. */
   segments?: { key: string; label: string; expected?: number | null }[];
+  /** The segment selected when the modal opens (a clicked donut slice, for example); the first segment otherwise. */
+  defaultSegment?: string;
+  /** The column the table sorts by when it opens (descending for numbers and dates); "reachedOn" otherwise. */
+  defaultSort?: ColumnKey;
   notes?: string[];
   csvName: string;
 }
@@ -532,7 +567,7 @@ export function DrilldownBody({ spec }: { spec: DrilldownSpec }) {
   const [data, setData] = useState<DrillResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [outcomeFilter, setOutcomeFilter] = useState<"all" | CallOutcome>("all");
-  const [segment, setSegment] = useState<string>(spec.segments?.[0]?.key ?? "all");
+  const [segment, setSegment] = useState<string>(spec.defaultSegment ?? spec.segments?.[0]?.key ?? "all");
   const everyRow = data?.rows ?? [];
   const allRows = spec.segments && segment !== "all" ? everyRow.filter((r) => r.segments?.includes(segment)) : everyRow;
   const segmentExpected = spec.segments ? (segment === "all" ? spec.expected : spec.segments.find((s) => s.key === segment)?.expected) : spec.expected;
@@ -544,7 +579,7 @@ export function DrilldownBody({ spec }: { spec: DrilldownSpec }) {
     let cancelled = false;
     setData(null);
     setError(null);
-    fetch(`/api/drilldown?${spec.query}`, { cache: "no-store" })
+    fetch(`${spec.endpoint ?? "/api/drilldown"}?${spec.query}`, { cache: "no-store" })
       .then(async (r) => {
         const body = (await r.json()) as DrillResult | { ok: false; error: string };
         if (cancelled) return;
@@ -557,7 +592,7 @@ export function DrilldownBody({ spec }: { spec: DrilldownSpec }) {
     return () => {
       cancelled = true;
     };
-  }, [spec.query]);
+  }, [spec.query, spec.endpoint]);
 
   return (
     <>
@@ -622,7 +657,7 @@ export function DrilldownBody({ spec }: { spec: DrilldownSpec }) {
           note={data?.detailsNote}
           csvName={spec.csvName}
           emptyText="No contacts in this period."
-          defaultSort="reachedOn"
+          defaultSort={spec.defaultSort ?? "reachedOn"}
           extraToolbar={
             spec.expectedConversations !== undefined && spec.expectedConversations !== null ? (
               <>

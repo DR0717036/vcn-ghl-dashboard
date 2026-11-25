@@ -4,21 +4,26 @@
 // Performance section). Same design system as the scorecard: sticky control
 // bar, alternating bands, dock. Every number comes from the functions the
 // team scorecard uses, filtered to this rep. Reads the local cache only.
+// Section order (owner requests 2026-11-24, rounds 4 and 5): My overview, My
+// submissions, My pace, My activity, My appointments, My pipeline, Team
+// leaderboard. My commission and My leads were removed in round 5 (commission
+// is covered by My overview, My pace, and Invoices). A rep never sees
+// Opportunity Value anywhere.
 
 import { getState, latestSyncRuns } from "@/lib/db";
 import { fmtDateTime, fmtRange, isRangeKey, resolveRange, type RangeKey } from "@/lib/dates";
-import { semesterFor, semesters } from "@/lib/mapping-config";
-import { computeMyAppointments } from "@/lib/me/appointments";
-import { computeRepCommission } from "@/lib/me/commission";
+import { semesterFor, semesterQuery, semesters } from "@/lib/mapping-config";
+import { computeRepActivity } from "@/lib/me/activity";
+import { computeRepAppointmentSection } from "@/lib/me/appointments";
 import { requireRepView } from "@/lib/me/context";
-import { computeRepLeads } from "@/lib/me/leads";
 import { computeRepOverview } from "@/lib/me/overview";
 import { computeRepPace } from "@/lib/me/pace";
 import { computeRepPipeline } from "@/lib/me/pipeline";
-import { computeRepScorecard } from "@/lib/me/scorecard";
-import { computeTeamLeaderboard } from "@/lib/me/team";
+import { computeMySubmissions } from "@/lib/me/submissions";
+import { computeNeedsCall } from "@/lib/needsCall";
+import { attendanceForNow } from "@/lib/payroll/attendance";
+import { repInvoices } from "@/lib/payroll/invoices";
 import { coverage } from "@/lib/metrics";
-import { heatBundle } from "@/lib/repCalls";
 import { CORE_SYNC_KIND } from "@/lib/sync/core";
 import { explainSyncSummary, runningTooLong } from "@/lib/syncStatus";
 import BandHeading from "../BandHeading";
@@ -27,17 +32,17 @@ import Dock from "../Dock";
 import Motion from "../Motion";
 import RangePicker from "../RangePicker";
 import Reveal from "../Reveal";
-import HeatMap from "../charts/HeatMap";
-import Leaderboard from "../Leaderboard";
 import SemesterPicker from "../SemesterPicker";
-import AppointmentsCards from "./AppointmentsCards";
-import CommissionCard from "./CommissionCard";
-import LeadsCards from "./LeadsCards";
+import ActivitySection from "./ActivitySection";
+import AttendanceCard from "./AttendanceCard";
+import InvoicesSection from "./InvoicesSection";
+import AppointmentsSection from "./AppointmentsSection";
+import NeedsCallCard from "./NeedsCallCard";
 import OverviewCard from "./OverviewCard";
 import PaceCard from "./PaceCard";
 import PipelineCard from "./PipelineCard";
 import RepHeader from "./RepHeader";
-import ScorecardCard from "./ScorecardCard";
+import SubmissionsSection from "./SubmissionsSection";
 import { ME_SECTIONS } from "./sections";
 
 export const dynamic = "force-dynamic";
@@ -63,20 +68,24 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
   const lastRun = latestSyncRuns(CORE_SYNC_KIND, 1)[0];
   const diskWarning = getState("disk_warning");
   const hasData = Boolean(cov.lastCoreSyncOkAt);
-  // The IAU App tile of the scorecard and the IAU column of the leaderboard show the chosen semester, like the admin's (?semester=KEY; the default otherwise).
+  // The Veteran cards of My submissions and the IAU column of the leaderboard show the chosen semester, like the admin's (?semester=KEY; the default otherwise).
   const semester = semesterFor(first(sp.semester));
-  const scorecard = computeRepScorecard(view.rep, range, semester);
+  // Names the selected range (and rep, for an admin viewing as) for the rep's drilldown requests.
+  const asQuery = view.viewingAs ? `&as=${encodeURIComponent(view.userId)}` : "";
+  const rangeQuery = new URLSearchParams({ range: key, ...(key === "custom" && from ? { from } : {}), ...(key === "custom" && to ? { to } : {}) }).toString() + semesterQuery(semester) + asQuery;
+  const mySubmissions = computeMySubmissions(view.rep, range, semester);
+  const activity = computeRepActivity(view.rep, range);
   const overview = computeRepOverview(view.rep, now);
   const pace = computeRepPace(view.rep, now);
-  const commission = computeRepCommission(view.rep, now);
-  const leads = computeRepLeads(view.rep, now);
-  const appts = computeMyAppointments(view.rep, now);
+  const appts = computeRepAppointmentSection(view.rep, range, now);
   const pipeline = computeRepPipeline(view.rep);
-  const team = computeTeamLeaderboard(range, now, semester);
-  const heat = heatBundle(range, (u) => u === view.userId);
+  const needsCall = computeNeedsCall(view.rep, now);
+  const attendance = attendanceForNow(view.rep, now);
+  const invoices = repInvoices(view.rep, now);
   const sections = ME_SECTIONS;
+  const sec = (id: string) => sections.find((s) => s.id === id)!;
   const semesterOptions = semesters().map((s) => ({ key: s.key, label: s.label, isDefault: Boolean(s.default) }));
-  const semesterHint = "Switches the IAU App tile of your scorecard and the IAU App tiles of the leaderboard to the chosen semester; combined submissions always count every semester.";
+  const semesterHint = "Switches the three Veteran cards of My submissions and the IAU App tiles of the leaderboard to the chosen semester; combined submissions always count every semester.";
 
   return (
     <>
@@ -112,91 +121,66 @@ export default async function MePage({ searchParams }: { searchParams: Promise<S
         </div>
       ) : null}
 
-      <section className="band band-dark" id={sections[0].id}>
+      <section className="band band-dark" id={sec("me-overview").id}>
         <div className="band-inner">
           <RepHeader view={view} />
-          <BandHeading s={sections[0]} />
+          <BandHeading s={sec("me-overview")} />
           <div className="kpi-row cols-1">
-            <OverviewCard o={overview} />
+            <OverviewCard o={overview} asQuery={asQuery} />
           </div>
         </div>
       </section>
 
-      <section className="band band-dark" id={sections[1].id}>
+      <section className="band band-dark" id={sec("me-submissions").id}>
         <div className="band-inner">
-          <BandHeading s={sections[1]} />
+          <BandHeading s={sec("me-submissions")} />
+          <SubmissionsSection d={mySubmissions} rangeQuery={rangeQuery} rangeLabel={range.label} semesterOptions={semesterOptions} semesterHint={semesterHint} />
+        </div>
+      </section>
+
+      <section className="band band-light" id={sec("me-pace").id}>
+        <div className="band-inner">
+          <BandHeading s={sec("me-pace")} />
           <div className="kpi-row cols-1">
             <PaceCard p={pace} />
           </div>
         </div>
       </section>
 
-      <section className="band band-light" id={sections[2].id}>
+      <section className="band band-dark" id={sec("me-activity").id}>
         <div className="band-inner">
-          <BandHeading s={sections[2]} />
-          <div className="me-toolbar">
-            <SemesterPicker options={semesterOptions} active={semester.key} hint={semesterHint} basePath="/me" anchor={sections[2].id} />
-          </div>
+          <BandHeading s={sec("me-activity")} />
+          <ActivitySection d={activity} rangeQuery={rangeQuery} rangeLabel={range.label} name={view.name} />
+        </div>
+      </section>
+
+      <section className="band band-light" id={sec("me-appointments").id}>
+        <div className="band-inner">
+          <BandHeading s={sec("me-appointments")} />
+          <AppointmentsSection d={appts} rangeQuery={rangeQuery} rangeLabel={range.label} />
+        </div>
+      </section>
+
+      <section className="band band-dark" id={sec("me-pipeline").id}>
+        <div className="band-inner">
+          <BandHeading s={sec("me-pipeline")} />
           <div className="kpi-row cols-1">
-            <ScorecardCard s={scorecard} name={view.name} rangeText={fmtRange(range.start, range.end, range.partial)} prevText={fmtRange(range.prevStart, range.prevEnd, range.partial)} />
+            <NeedsCallCard r={needsCall} asQuery={asQuery} />
           </div>
-        </div>
-      </section>
-
-      <section className="band band-light" id={sections[3].id}>
-        <div className="band-inner">
-          <BandHeading s={sections[3]} />
-          <div className="kpi-row cols-1">
-            <CommissionCard c={commission} invoicesHref={view.viewingAs ? `/invoices?as=${encodeURIComponent(view.userId)}` : "/invoices"} />
-          </div>
-        </div>
-      </section>
-
-      <section className="band band-dark" id={sections[4].id}>
-        <div className="band-inner">
-          <BandHeading s={sections[4]} />
-          <LeadsCards d={leads} />
-        </div>
-      </section>
-
-      <section className="band band-dark" id={sections[5].id}>
-        <div className="band-inner">
-          <BandHeading s={sections[5]} />
-          <AppointmentsCards d={appts} />
-        </div>
-      </section>
-
-      <section className="band band-light" id={sections[6].id}>
-        <div className="band-inner">
-          <BandHeading s={sections[6]} />
           <PipelineCard d={pipeline} />
         </div>
       </section>
 
-      <section className="band band-light" id={sections[7].id}>
+      <section className="band band-light" id={sec("me-invoices").id}>
         <div className="band-inner">
-          <BandHeading s={sections[7]} />
-          <div className="me-toolbar">
-            <SemesterPicker options={semesterOptions} active={semester.key} hint={semesterHint} basePath="/me" anchor="me-leaderboard" />
+          <BandHeading s={sec("me-invoices")} />
+          <div className="kpi-row cols-1">
+            <AttendanceCard a={attendance} />
           </div>
-          <Leaderboard data={team} rangeLabel={range.label} highlight={view.userId} viewAs={view.viewer.role === "admin"} />
+          <InvoicesSection inv={invoices} asQuery={view.viewingAs ? `?as=${encodeURIComponent(view.userId)}` : ""} canSend={!view.viewingAs} name={view.name} />
         </div>
       </section>
 
-      <section className="band band-dark" id={sections[8].id}>
-        <div className="band-inner">
-          <BandHeading s={sections[8]} />
-          <div className="kpi-row cols-1">
-            <div className="stat kpi kpi-title-xl reveal me-card" data-kpi="me-calltimes">
-              <div className="kpi-head">
-                <div className="label">Best times to call</div>
-                <div className="kpi-sub note">Your own outbound dials by weekday and hour · colored by the share that connected · {range.label} or the last 90 days</div>
-              </div>
-              <HeatMap bundle={heat} title="When your calls get answered" defaultMetric="connected" />
-            </div>
-          </div>
-        </div>
-      </section>
     </>
   );
 }

@@ -12,17 +12,17 @@ import type { Milestone, Momentum, RepBounties, RepOverview } from "@/lib/me/ove
 import DonutChart from "../charts/DonutChart";
 import Notes from "../Notes";
 import { CountUp, FillBar } from "./Animate";
+import SplitTiles from "./SplitTiles";
 
 const n = (v: number) => v.toLocaleString("en-US");
 const usd = (v: number) => v.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const GOOD = "#22a06b";
 const REMAINDER = "rgba(255, 255, 255, 0.10)";
 
-function MomentumTile({ m }: { m: Momentum }) {
+function MomentumTile({ m, monthLabel, asQuery }: { m: Momentum; monthLabel: string; asQuery: string }) {
   const goal = m.weeklyGoal;
   const pct = goal && goal > 0 && m.thisWeek !== null ? (m.thisWeek / goal) * 100 : 0;
   const met = goal !== null && m.thisWeek !== null && m.thisWeek >= goal - 1e-9;
-  const total = m.split.army + m.split.veteran;
   return (
     <div className="stat-tile me-ov">
       <div className="label">Momentum · this week</div>
@@ -51,21 +51,11 @@ function MomentumTile({ m }: { m: Momentum }) {
           ))}
         </div>
       ) : null}
-      <div className="me-ov-stats">
-        <div className="me-ov-stat">
-          <div className="me-ov-k">Army · Veteran this month</div>
-          <div className="me-ov-v">
-            <span style={{ color: chartSeries[0] }}>{n(m.split.army)}</span> · <span style={{ color: chartSeries[1] }}>{n(m.split.veteran)}</span>
-          </div>
-          <div className="me-split" role="img" aria-label={`Army ${n(m.split.army)}, Veteran ${n(m.split.veteran)}`}>
-            <span style={{ width: `${total > 0 ? (m.split.army / total) * 100 : 0}%`, background: chartSeries[0] }} />
-            <span style={{ width: `${total > 0 ? (m.split.veteran / total) * 100 : 0}%`, background: chartSeries[1] }} />
-          </div>
-        </div>
-        <div className="me-ov-stat">
-          <div className="me-ov-k">Last submission</div>
-          <div className="me-ov-v">{m.lastSubmission.text}</div>
-          <div className="note">{m.lastSubmission.day ? `${m.lastSubmission.day} · ${m.lastSubmission.event}` : "keep going"}</div>
+      <div className="me-ov-bottom">
+        <SplitTiles m={m} monthLabel={monthLabel} asQuery={asQuery} />
+        <div className="note me-ov-last">
+          Last submission: <b>{m.lastSubmission.text}</b>
+          {m.lastSubmission.day ? ` · ${m.lastSubmission.day} · ${m.lastSubmission.event}` : " · keep going"}
         </div>
       </div>
     </div>
@@ -118,7 +108,7 @@ function CommissionTile({ o }: { o: RepOverview }) {
 function MilestoneTile({ m }: { m: Milestone }) {
   const p = m.progress;
   const value = p ? Math.min(p.value, p.max) : 0;
-  const segments = p ? (m.done ? [{ label: m.unit === "won" ? "Reached" : "Retro unlocked", value: p.max, color: GOOD }] : [{ label: m.unit === "won" ? "Won" : "Submitted", value, color: chartSeries[0] }, { label: "To go", value: Math.max(0, p.max - value), color: REMAINDER }]) : [];
+  const segments = p ? (m.done ? [{ label: m.unit === "won" ? "Reached" : "Retro unlocked", value: p.max, color: GOOD, tip: m.tipDone ?? undefined }] : [{ label: m.unit === "won" ? "Won" : "Submitted", value, color: chartSeries[0], tip: m.tipDone ?? undefined }, { label: "To go", value: Math.max(0, p.max - value), color: REMAINDER, tip: m.tipLeft ?? undefined }]) : [];
   const perDay = m.neededPerDay === null ? (m.quota > 0 && m.mtd >= m.quota ? "Quota met" : "—") : m.neededPerDay >= 20 ? n(Math.round(m.neededPerDay)) : m.neededPerDay.toFixed(1);
   return (
     <div className="stat-tile me-ov">
@@ -179,15 +169,23 @@ function BountiesTile({ o }: { o: RepOverview }) {
         <div className={`me-bounty${w.claimed ? " is-claimed" : ""}`}>
           <div className="me-bounty-head">
             <b className="me-bounty-amt">{usd(w.amount)}</b> <span>weekly bounty</span>
-            <span className={`pill ${w.claimed ? (w.claimed.userId === w.mine?.userId ? "pill-ok" : "pill-neutral") : "pill-info"}`}>{w.claimed ? (w.claimed.userId === w.mine?.userId ? "yours" : "claimed") : "open"}</span>
+            <span className={`pill ${w.claimed ? "pill-gold" : "pill-info"}`}>
+              {w.claimed ? (
+                <>
+                  Claimed · <span className="pill-name">{w.claimed.userId === w.mine?.userId ? "you" : w.claimed.name}</span>
+                </>
+              ) : (
+                "open"
+              )}
+            </span>
           </div>
           <div className="note">
             {w.title} ({w.counts})
           </div>
           {w.claimed ? (
             <div className="me-bounty-claimed">
-              Claimed by <b>{w.claimed.name}</b> on {w.claimed.dayText}
-              <span className="note"> · you: {n(wMine)} of {n(w.target)} this week</span>
+              {w.claimed.userId === w.mine?.userId ? "You claimed it" : "Claimed"} on <b>{w.claimed.dayText}</b>
+              {w.claimed.userId === w.mine?.userId ? null : <span className="note"> · you: {n(wMine)} of {n(w.target)} this week</span>}
             </div>
           ) : (
             <>
@@ -250,7 +248,7 @@ function BountiesTile({ o }: { o: RepOverview }) {
   );
 }
 
-export default function OverviewCard({ o }: { o: RepOverview }) {
+export default function OverviewCard({ o, asQuery = "" }: { o: RepOverview; asQuery?: string }) {
   return (
     <div className="stat kpi kpi-title-xl reveal me-card" data-kpi="me-overview">
       <div className="kpi-head">
@@ -258,7 +256,7 @@ export default function OverviewCard({ o }: { o: RepOverview }) {
         <div className="kpi-sub note">{o.monthLabel} · estimates from your plan and the bounty rules · the official commission and bounty decisions are made outside this dashboard</div>
       </div>
       <div className="stat-tiles me-overview me-overview-rich">
-        {o.mode === "commission" ? <CommissionTile o={o} /> : <MomentumTile m={o.momentum} />}
+        {o.mode === "commission" ? <CommissionTile o={o} /> : <MomentumTile m={o.momentum} monthLabel={o.monthLabel} asQuery={asQuery} />}
         <MilestoneTile m={o.milestone} />
         <BountiesTile o={o} />
       </div>
