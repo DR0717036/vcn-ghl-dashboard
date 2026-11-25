@@ -1478,3 +1478,36 @@ the build brief. Newest at the bottom. Each entry has the date it was decided.
     (once per month, guarded in sync_state). The two invoices from the old
     flow were migrated into payroll_invoices and marked as such. Nothing
     here writes to GHL.
+
+93. **One submission ledger; the rep pages reconcile with the admin table
+    (owner request 2026-11-25).** The owner compared William's admin
+    Program Submissions row (8 this month) with his rep page (6). The two
+    pages were read from different caches: the live host had seen two CA 101
+    submissions (Nov 13 and Nov 15) that the local development cache never
+    observed because its server was off while those opportunities passed
+    through the stage; each environment agreed with itself. Two things were
+    still wrong and are fixed. (1) The admin table's Combined column counted
+    only the selected semester's IAU App submissions while the rep page, the
+    goal, the quota, commission and the invoices count every semester; the
+    Combined column now counts every semester (William's October row went
+    from 8 to 18, matching his $1,350 commission), the IAU column keeps the
+    selected semester with "+N other sem." under it, and the per-rep
+    drilldown lists every semester. (2) Counting paths are unified:
+    firstEvents() returns one row per contact in time order for every
+    caller; submissionLedger() in src/lib/submissions.ts is the single list
+    of counted submissions and the table rows, submissionEvents (commission,
+    bounties, Rep Performance), repSubmissions and the invoice lines, and
+    the semester bounty are counts or filters of it; the rep's Combined card
+    carries the range's est. commission from the same computeCommission
+    call as the admin cell, with a note for paid wons that sit on no card
+    (Veteran-pipeline wons outside every semester's Enrolled Won stage,
+    which is how Johnny's October cards summed to $3,250 against a $4,000
+    total). src/lib/reconcile.ts + /api/admin/reconcile compare, for every
+    rep and for Today / This Week / This Month / Last Month, the admin row
+    (combined, CA 101, IAU App, commission; rank and month-to-date for this
+    month) with every figure the rep pages compute, and
+    tests/reconcile.test.mjs fails on any difference and also compares the
+    rendered HTML of both pages through data-* hooks. `npm run check`
+    (typecheck + the suite) is the deploy gate; `npm run build` runs the
+    reconciliation first when a dashboard is reachable and says so when it
+    is not (the Railway build machine has no data).

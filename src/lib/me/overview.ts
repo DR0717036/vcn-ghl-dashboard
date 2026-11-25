@@ -178,7 +178,7 @@ export function computeRepOverview(rep: Rep, now: Date): RepOverview {
     weekLabel: week.label,
     nextWorth,
     ladder,
-    split: { army: monthRow?.ca101 ?? 0, veteran: monthRow?.iau ?? 0 },
+    split: { army: monthRow?.ca101 ?? 0, veteran: monthRow?.iauAll ?? 0 },
     splitSemesters: semesters().map((s) => ({ key: s.key, short: s.short, label: s.label, count: subs.parts?.iau.find((p) => p.key === s.submittedKey)?.reps.find((r) => r.userId === rep.userId)?.contacts ?? 0 })),
     lastSubmission: lastSub ? { text: agoText(lastSub.at, now), day: fmtDay(new Date(lastSub.at)), event: lastSub.event } : { text: "none in the last 180 days", day: null, event: null },
   };

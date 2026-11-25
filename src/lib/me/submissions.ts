@@ -25,7 +25,7 @@ import { addDays, addMonths, fmtDay, resolveRange, startOfMonth, type DateRange 
 import { getDb } from "@/lib/db";
 import { contactUrl, enrich, type EventLike } from "@/lib/drilldown";
 import { computeInvoiceLines, type InvoiceLine } from "@/lib/invoices/lines";
-import { isWonBased, planFor, planText, type Plan } from "@/lib/commission";
+import { computeCommission, isWonBased, planFor, planText, type Plan } from "@/lib/commission";
 import { mappingConfig, semesters, trackedMilestones, type MilestoneMapping, type Semester } from "@/lib/mapping-config";
 import { coverage } from "@/lib/metrics";
 import { firstEvents, userNames, type EventRow } from "@/lib/milestones";
@@ -122,6 +122,14 @@ export interface MySubmissions {
   partial: boolean;
   /** Combined submissions (CA 101 + IAU App, every semester) against the rep's own goal: the only submissions goal. */
   combined: { total: number | null; prev: number | null; goal: GoalPart; unavailable?: string };
+  /**
+   * Est. commission on the events inside the range: the admin Program
+   * Submissions table's "Est. commission (selected range)" cell for this rep,
+   * from the same computeCommission call. `otherWon` are wons the plan pays
+   * that sit on no card here (Veteran-pipeline wons outside every semester's
+   * Enrolled Won stage), so the cards plus this line add up to the amount.
+   */
+  commission: { amount: number | null; label: string; otherWon: { count: number; amount: number; stages: string[] } };
   best: BestMonth | null;
   army: { ca101: MyMilestoneCard; approval: MyMilestoneCard; deadline: DeadlineList; won: MyWonCard };
   veteran: { submitted: MyMilestoneCard; accepted: MyMilestoneCard; won: MyWonCard; semester: { key: string; label: string; short: string } };
@@ -389,6 +397,17 @@ export function computeMySubmissions(rep: Rep, range: DateRange, semester: Semes
   const wonPrice = { cur: priceIndex(rep, range, "won"), prev: priceIndex(rep, prevRange, "won") };
   const plan = subPrice.cur.plan;
 
+  // The range's est. commission: the SAME call behind the admin table's "Est. commission (selected range)" column.
+  const rangeCommission = computeCommission(range, now).reps[rep.userId]?.commission ?? null;
+  // Paid wons that no card below shows: Veteran-pipeline wons outside every semester's Enrolled Won stage (stages added in GHL after the mapping, for example).
+  const semesterWonStages = new Set(semesters().map((s) => trackedMilestones().find((m) => m.key === s.wonKey)?.stageId).filter((x): x is string => Boolean(x)));
+  const otherWonList = wonOpps("period", range).filter((o) => o.assignedTo === rep.userId && o.programKind === "veteran" && !semesterWonStages.has(o.stageId));
+  const otherWon = {
+    count: otherWonList.length,
+    amount: otherWonList.reduce((s, o) => s + (wonPrice.cur.lines.get(o.id)?.amount ?? 0), 0),
+    stages: [...new Set(otherWonList.map((o) => o.stageName))],
+  };
+
   const ca101 = milestoneCard(CA101_KEY, rep, range, "Army CA 101 Submissions", (m) => `Army CA · ${m.reportingGroup} · "${m.stageName}" · reached in period`, subPrice);
   const approval = milestoneCard(APPROVAL_KEY, rep, range, "Awaiting Supervisor Approval", (m) => `Army CA · ${m.reportingGroup} · awaiting approval · entered in period`, subPrice);
   const submitted = milestoneCard(semester.submittedKey, rep, range, `${semester.short} Application Submissions`, (m) => `Veteran G.I. Bill · ${semester.label} (${m.reportingGroup}) · "${m.stageName}" · reached in period`, subPrice);
@@ -415,6 +434,7 @@ export function computeMySubmissions(rep: Rep, range: DateRange, semester: Semes
     rangeLabel: range.label,
     partial: range.partial,
     combined: { total, prev: prevTotal, goal: goalPartFor(rep, subs.goal, total, singleDay), unavailable: subs.unavailableReason },
+    commission: { amount: rangeCommission?.amount ?? null, label: rangeCommission?.label ?? "plan not found", otherWon },
     best: bestMonthFor(rep, now),
     army: {
       ca101: ca101 ?? missing(CA101_KEY, "army", "Army CA 101 Submissions"),
@@ -431,6 +451,7 @@ export function computeMySubmissions(rep: Rep, range: DateRange, semester: Semes
     notes: [
       "Every card is the admin Submissions card of the same name filtered to you: the same events, the same counting rules, compared with the same previous period, for the date range in the bar at the top.",
       "Combined goal — the only submissions goal (CA 101 + IAU App, every semester, 5 per rep per week scaled by your plan, pro-rated to the range). Met = at or above the whole range's goal; On Track = at or above the goal for the time elapsed so far ('by now'); Missed = below it. The six cards carry no goal of their own.",
+      "Est. commission (this range) — the line under Combined submissions is the admin Program Submissions table's commission cell for you, from the same calculation: every counted submission or won inside the range, priced by calendar month under your plan. The six cards below break it down by stage; a won in a Veteran stage that is not a semester's Enrolled Won stage is paid but sits on no card, so it is noted on that line.",
       "Best month — your highest calendar-month total of combined submissions since milestone tracking began; 'away from beating it' is what this month still needs to pass it.",
       `5-day deadline — every open opportunity of yours sitting in "Supervisor Approval (5 days)" right now, with ${n(APPROVAL_DEADLINE_DAYS)} calendar days from the time it entered the stage: GHL's own stage-entry time (lastStageChangeAt) when it has one, otherwise the time the dashboard recorded the entry, otherwise when the dashboard first saw it there (marked estimated). Yellow under 2 days, red under 24 hours, 'Expired' once the deadline has passed. The countdown ticks on your screen; the dashboard never writes to GHL.`,
       `Semester — the three Veteran cards show ${semester.label}; pick another with the dropdown. Combined submissions and the goal count every semester.`,

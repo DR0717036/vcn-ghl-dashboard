@@ -7,7 +7,6 @@ import { NextResponse } from "next/server";
 import { isDenied, requireAdminApi } from "@/lib/guard";
 import { isRangeKey, resolveRange } from "@/lib/dates";
 import { milestoneDrilldown, repDrilldown } from "@/lib/drilldown";
-import { semesterFor } from "@/lib/mapping-config";
 import { responseDrilldown, staleDrilldown } from "@/lib/conversations";
 import { keywordDrilldown } from "@/lib/messaging";
 import { callsDrilldown } from "@/lib/repCalls";
@@ -33,7 +32,7 @@ export async function GET(req: Request): Promise<NextResponse> {
       kind === "milestone"
         ? await milestoneDrilldown(sp.get("key") ?? "", range)
         : kind === "rep"
-          ? await repDrilldown(sp.get("user") ?? "", range, month, semesterFor(sp.get("semester")))
+          ? await repDrilldown(sp.get("user") ?? "", range, month)
           : kind === "calls"
             ? callsDrilldown(sp.get("user") ?? "", range)
             : kind === "stale"

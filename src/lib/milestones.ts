@@ -65,11 +65,27 @@ const FIRST_EVENTS = `
     JOIN (SELECT COALESCE(contact_id, 'opp:' || opportunity_id) AS who, MIN(event_time) AS t
             FROM milestone_events WHERE kind = 'milestone' AND milestone_key = ? AND reporting_group = ? GROUP BY who) f
       ON COALESCE(e.contact_id, 'opp:' || e.opportunity_id) = f.who AND e.event_time = f.t
-   WHERE e.kind = 'milestone' AND e.milestone_key = ? AND e.reporting_group = ? AND e.event_time >= ? AND e.event_time < ?`;
+   WHERE e.kind = 'milestone' AND e.milestone_key = ? AND e.reporting_group = ? AND e.event_time >= ? AND e.event_time < ?
+   ORDER BY e.event_time, e.id`;
 
-/** Every first-entry event (one per contact and time) for a milestone and reporting group inside [start, end). Shared with drilldowns so the rows reconcile with the cards. */
+/**
+ * Every first-entry event for a milestone and reporting group inside
+ * [start, end): ONE row per contact (two opportunities of one contact that
+ * reached the stage at the same first instant count once), oldest first.
+ * This is the single counting primitive: the milestone cards, Program
+ * Submissions, the rep pages, commission, invoices, bounties and every
+ * drilldown read their events from here, so they cannot disagree.
+ */
 export function firstEvents(key: string, group: string, start: string, end: string): EventRow[] {
-  return getDb().prepare(FIRST_EVENTS).all(key, group, key, group, start, end) as unknown as EventRow[];
+  const rows = getDb().prepare(FIRST_EVENTS).all(key, group, key, group, start, end) as unknown as EventRow[];
+  const seen = new Set<string>();
+  const out: EventRow[] = [];
+  for (const r of rows) {
+    if (seen.has(r.who)) continue;
+    seen.add(r.who);
+    out.push(r);
+  }
+  return out;
 }
 
 export function userNames(): Map<string, string> {

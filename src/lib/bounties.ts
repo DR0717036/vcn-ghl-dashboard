@@ -13,9 +13,8 @@ import path from "node:path";
 import { getDb } from "@/lib/db";
 import { addDays, fmtDay, nyDayKey, parseNyDay, startOfWeek } from "@/lib/dates";
 import { semesters, trackedMilestones } from "@/lib/mapping-config";
-import { firstEvents } from "@/lib/milestones";
 import { activeReps, type Rep } from "@/lib/reps";
-import { submissionEvents } from "@/lib/submissions";
+import { submissionEvents, submissionLedger } from "@/lib/submissions";
 import { HISTORY_START } from "@/lib/sync/core";
 
 const FILE = path.join(process.cwd(), "config", "bounties.json");
@@ -269,13 +268,10 @@ export function computeSemesterBounty(cfg: SemesterBountyConfig, now: Date): Sem
   const toDate = cfg.to ? addDays(parseNyDay(cfg.to) as Date, 1) : null;
   const start = fromDate ? fromDate.toISOString() : HISTORY_START;
   const end = toDate && toDate.getTime() < now.getTime() ? toDate.toISOString() : now.toISOString();
-  const seen = new Set<string>();
-  const events: { userId: string | null; time: string }[] = [];
-  for (const r of firstEvents(sem.submittedKey, m.reportingGroup, start, end)) {
-    if (seen.has(r.who)) continue;
-    seen.add(r.who);
-    events.push({ userId: r.assigned_to_at_event, time: r.event_time });
-  }
+  // The semester's IAU App submissions from the shared ledger (the same list Program Submissions counts).
+  const events = submissionLedger(new Date(start), new Date(end))
+    .filter((x) => x.key === m.key)
+    .map((x) => ({ userId: x.userId, time: x.time }));
   const standings = standingsFor(activeReps(now), events, null);
   return {
     amount: cfg.amount,

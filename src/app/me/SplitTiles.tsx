@@ -40,14 +40,14 @@ export default function SplitTiles({ m, monthLabel, asQuery }: { m: Momentum; mo
           <div className="me-ov-k">
             <span className="legend-swatch" style={{ background: chartSeries[0] }} /> Army CA 101
           </div>
-          <div className="me-tile-n">{n(m.split.army)}</div>
+          <div className="me-tile-n" data-me-split-army={m.split.army}>{n(m.split.army)}</div>
           <div className="me-tile-sub">this month · click for the list</div>
         </button>
         <button type="button" className="me-tile-btn" onClick={() => setOpen(spec("veteran"))} title="Click for the list of these submissions">
           <div className="me-ov-k">
             <span className="legend-swatch" style={{ background: chartSeries[1] }} /> Veteran IAU
           </div>
-          <div className="me-tile-n">{n(m.split.veteran)}</div>
+          <div className="me-tile-n" data-me-split-veteran={m.split.veteran}>{n(m.split.veteran)}</div>
           <div className="me-tile-sub">{semText}</div>
         </button>
       </div>

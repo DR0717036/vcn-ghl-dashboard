@@ -9,10 +9,9 @@
 import { commissionBetween, planFor, wonEventsBetween, type Plan } from "@/lib/commission";
 import { getDb } from "@/lib/db";
 import { fmtDay } from "@/lib/dates";
-import { mappingConfig, semesters, trackedMilestones } from "@/lib/mapping-config";
-import { firstEvents } from "@/lib/milestones";
+import { mappingConfig } from "@/lib/mapping-config";
 import type { Rep } from "@/lib/reps";
-import { iauKeys } from "@/lib/submissions";
+import { ledgerEventLabel, ledgerFor, ledgerProgramLabel } from "@/lib/submissions";
 
 export interface InvoiceLine {
   kind: "submission" | "won";
@@ -46,7 +45,6 @@ export interface InvoiceLines {
   reconciledAgainst: number | null;
 }
 
-const CA101_KEY = "army_ca101";
 
 function contactNames(ids: string[]): Map<string, string | null> {
   const out = new Map<string, string | null>();
@@ -67,21 +65,9 @@ export interface RepSubmission {
   event: string;
 }
 
-/** Every counted submission in [start, end) credited to the rep (first entry per contact per stage, as the card counts), oldest first. */
+/** Every counted submission in [start, end) credited to the rep: the submission ledger (src/lib/submissions.ts) filtered to the rep, oldest first. */
 export function repSubmissions(rep: Rep, start: Date, end: Date): RepSubmission[] {
-  const raw: RepSubmission[] = [];
-  for (const key of [CA101_KEY, ...iauKeys("all")]) {
-    const m = trackedMilestones().find((x) => x.key === key);
-    if (!m) continue;
-    const seen = new Set<string>();
-    const sem = semesters().find((x) => x.submittedKey === key);
-    for (const r of firstEvents(key, m.reportingGroup, start.toISOString(), end.toISOString())) {
-      if (seen.has(r.who)) continue;
-      seen.add(r.who);
-      if (r.assigned_to_at_event === rep.userId) raw.push({ contactId: r.contact_id, who: r.who, at: r.event_time, key, program: key === CA101_KEY ? "Army CA 101" : `Veteran IAU · ${sem?.short ?? key}`, event: key === CA101_KEY ? "CA 101 submitted" : `IAU App Submitted (${sem?.short ?? key})` });
-    }
-  }
-  return raw.sort((x, y) => (x.at < y.at ? -1 : 1));
+  return ledgerFor(rep, start, end).map((x) => ({ contactId: x.contactId, who: x.who, at: x.time, key: x.key, program: ledgerProgramLabel(x), event: ledgerEventLabel(x) }));
 }
 
 /** Line items for [start, end): the month's start and either its end or "now" for the month in progress. */
@@ -92,31 +78,20 @@ export function computeInvoiceLines(rep: Rep, start: Date, end: Date): InvoiceLi
   if (!plan) return { planKey: rep.commissionPlan, plan: null, lines, total: 0, calc: "plan not found", reconciled: against?.amount === null, reconciledAgainst: against?.amount ?? null };
 
   if (plan.type === "per_submission_retro") {
-    // Every counted submission this month credited to the rep (first entry per contact per stage, as the card counts).
-    const raw: { contactId: string | null; who: string; at: string; key: string }[] = [];
-    for (const key of [CA101_KEY, ...iauKeys("all")]) {
-      const m = trackedMilestones().find((x) => x.key === key);
-      if (!m) continue;
-      const seen = new Set<string>();
-      for (const r of firstEvents(key, m.reportingGroup, start.toISOString(), end.toISOString())) {
-        if (seen.has(r.who)) continue;
-        seen.add(r.who);
-        if (r.assigned_to_at_event === rep.userId) raw.push({ contactId: r.contact_id, who: r.who, at: r.event_time, key });
-      }
-    }
+    // Every counted submission this month credited to the rep: the submission ledger filtered to the rep (the same list Program Submissions and the rep pages count).
+    const raw = ledgerFor(rep, start, end);
     const retro = raw.length >= plan.retroThreshold;
     const rate = retro ? plan.retroRate : plan.rate;
     const names = contactNames(raw.map((r) => r.contactId).filter((x): x is string => Boolean(x)));
-    for (const r of raw.sort((a, b) => (a.at < b.at ? -1 : 1))) {
-      const sem = semesters().find((s) => s.submittedKey === r.key);
+    for (const r of raw) {
       lines.push({
         kind: "submission",
         contactId: r.contactId,
         contactName: (r.contactId ? names.get(r.contactId) : null) ?? "(no name)",
-        program: r.key === CA101_KEY ? "Army CA 101" : `Veteran IAU · ${sem?.short ?? r.key}`,
-        eventAt: r.at,
-        eventDay: fmtDay(new Date(r.at)),
-        event: r.key === CA101_KEY ? "CA 101 submitted" : `IAU App Submitted (${sem?.short ?? r.key})`,
+        program: ledgerProgramLabel(r),
+        eventAt: r.time,
+        eventDay: fmtDay(new Date(r.time)),
+        event: ledgerEventLabel(r),
         rate,
         amount: rate,
         tier: retro ? "retro" : "",

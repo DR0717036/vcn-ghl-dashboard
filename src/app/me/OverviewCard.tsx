@@ -111,7 +111,7 @@ function MilestoneTile({ m }: { m: Milestone }) {
   const segments = p ? (m.done ? [{ label: m.unit === "won" ? "Reached" : "Retro unlocked", value: p.max, color: GOOD, tip: m.tipDone ?? undefined }] : [{ label: m.unit === "won" ? "Won" : "Submitted", value, color: chartSeries[0], tip: m.tipDone ?? undefined }, { label: "To go", value: Math.max(0, p.max - value), color: REMAINDER, tip: m.tipLeft ?? undefined }]) : [];
   const perDay = m.neededPerDay === null ? (m.quota > 0 && m.mtd >= m.quota ? "Quota met" : "—") : m.neededPerDay >= 20 ? n(Math.round(m.neededPerDay)) : m.neededPerDay.toFixed(1);
   return (
-    <div className="stat-tile me-ov">
+    <div className="stat-tile me-ov" data-me-milestone-mtd={m.mtd}>
       <div className="label">{m.title}</div>
       <div className="me-donut-row">
         {p ? (
@@ -152,7 +152,7 @@ function BountiesTile({ o }: { o: RepOverview }) {
     <div className="stat-tile me-ov">
       <div className="label">Bounties</div>
       <div className="me-ov-rank">
-        <span className="stat-value">{r.rank === null ? "—" : `#${r.rank}`}</span> <span className="me-hero-of">of {n(r.of)} this month</span>
+        <span className="stat-value" data-me-rank={r.rank ?? ""}>{r.rank === null ? "—" : `#${r.rank}`}</span> <span className="me-hero-of">of {n(r.of)} this month</span>
         <div className="note">
           {n(r.mtd)} submissions
           {rankDelta ? (
@@ -250,7 +250,7 @@ function BountiesTile({ o }: { o: RepOverview }) {
 
 export default function OverviewCard({ o, asQuery = "" }: { o: RepOverview; asQuery?: string }) {
   return (
-    <div className="stat kpi kpi-title-xl reveal me-card" data-kpi="me-overview">
+    <div className="stat kpi kpi-title-xl reveal me-card" data-kpi="me-overview" data-me-overview-mode={o.mode}>
       <div className="kpi-head">
         <div className="label">My overview</div>
         <div className="kpi-sub note">{o.monthLabel} · estimates from your plan and the bounty rules · the official commission and bounty decisions are made outside this dashboard</div>

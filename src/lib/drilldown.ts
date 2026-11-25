@@ -20,7 +20,7 @@ import { getDb } from "@/lib/db";
 import type { DateRange } from "@/lib/dates";
 import { getEnv } from "@/lib/env";
 import { getContact } from "@/lib/ghl/read";
-import { defaultSemester, mappingConfig, trackedMilestones, type MilestoneMapping, type Semester } from "@/lib/mapping-config";
+import { mappingConfig, semesters, trackedMilestones, type MilestoneMapping } from "@/lib/mapping-config";
 import { firstEvents, userNames, type EventRow } from "@/lib/milestones";
 import { repRoster } from "@/lib/reps";
 
@@ -280,15 +280,16 @@ export async function milestoneDrilldown(key: string, range: DateRange): Promise
  * current calendar month (`month`). `user` is a GHL user id, or "others" for
  * everyone who is not a configured rep (including unassigned).
  */
-export async function repDrilldown(user: string, range: DateRange, month: DateRange, semester: Semester = defaultSemester()): Promise<DrillResult | null> {
+export async function repDrilldown(user: string, range: DateRange, month: DateRange): Promise<DrillResult | null> {
+  // CA 101 plus every semester's IAU App Submitted: the rows behind the Combined column, which counts every semester.
   const ca = trackedMilestones().find((x) => x.key === CA101_KEY);
-  const fs = trackedMilestones().find((x) => x.key === semester.submittedKey);
-  if (!ca || !fs) return null;
+  const iau = semesters().map((sem) => trackedMilestones().find((x) => x.key === sem.submittedKey)).filter((m): m is MilestoneMapping => m !== undefined);
+  if (!ca || iau.length === 0) return null;
   const roster = repRoster(range);
   const names = userNames();
   const owned = (id: string | null): boolean => (user === "others" ? id === null || !roster.byUserId.has(id) : id === user);
 
-  const events = [...countedEvents(ca, range), ...countedEvents(fs, range)].filter((x) => owned(x.assigned_to_at_event));
+  const events = [ca, ...iau].flatMap((m) => countedEvents(m, range)).filter((x) => owned(x.assigned_to_at_event));
   const { rows, detailsNote } = await enrich(events);
 
   const wonLike: EventLike[] = wonEvents(month)

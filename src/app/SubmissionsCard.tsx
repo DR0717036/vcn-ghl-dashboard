@@ -62,13 +62,13 @@ export default function SubmissionsCard({
     return {
       query: `kind=rep&user=${encodeURIComponent(user)}&${rangeQuery}`,
       title: `${r.name} · ${n(r.total)} ${r.total === 1 ? "submission" : "submissions"}`,
-      subtitle: `Program Submissions (combined) · CA 101 ${n(r.ca101)} · IAU App (${s.semester.short}) ${n(r.iau)} · ${rangeLabel}`,
+      subtitle: `Program Submissions (combined) · CA 101 ${n(r.ca101)} · IAU App ${n(r.iauAll)}${r.iauAll !== r.iau ? ` (${s.semester.short} ${n(r.iau)})` : ""} · ${rangeLabel}`,
       expected: r.total,
       facts,
       columns: REP_COLUMNS,
       wonTable: wonBased ? { title: `Won opportunities counted this month (${c.monthLabel})`, expected: mtd ? mtd.wonMtd : c.othersWon } : undefined,
       notes: [
-        `Rows — one contact reaching one stage: CA 101 submitted (Army CA) or ${s.iauLabel} (Veteran G.I. Bill); a contact that reached both appears twice, once per stage, which is how the combined count works.`,
+        "Rows — one contact reaching one stage: CA 101 submitted (Army CA) or IAU App Submitted for any semester (Veteran G.I. Bill); a contact that reached both appears twice, once per stage, which is how the combined count works.",
         "Credit — the opportunity owner at the time of the event.",
         ...c.notes,
       ],
@@ -76,11 +76,17 @@ export default function SubmissionsCard({
     };
   };
 
+  // data-* hooks: tests/reconcile.test.mjs reads these cells and compares them with the rep's own page.
   const numCells = (r: SubmissionRow) => (
     <>
       <td className="num">{n(r.ca101)}</td>
-      <td className="num">{n(r.iau)}</td>
-      <td className="num combined">{n(r.total)}</td>
+      <td className="num">
+        {n(r.iau)}
+        {r.iauAll !== r.iau ? <span className="plan-label">+{n(r.iauAll - r.iau)} other sem.</span> : null}
+      </td>
+      <td className="num combined" data-user={r.userId ?? "others"} data-ca101={r.ca101} data-iau-all={r.iauAll} data-combined={r.total}>
+        {n(r.total)}
+      </td>
     </>
   );
   const mtdCells = (r: SubmissionRow) => {
@@ -102,7 +108,7 @@ export default function SubmissionsCard({
         <td className="num" title={`Won opportunities credited this month (${c.monthLabel}).`}>
           {n(mtd.wonMtd)}
         </td>
-        <td className="num commission" title={`${mtd.commission.label} · ${rangeLabel}. Plan: ${mtd.planKey}.`}>
+        <td className="num commission" title={`${mtd.commission.label} · ${rangeLabel}. Plan: ${mtd.planKey}.`} data-user={r.userId ?? "others"} data-commission={mtd.commission.amount ?? ""}>
           {mtd.commission.amount === null ? DASH : fmtUsd(mtd.commission.amount)}
           <span className="plan-label">{mtd.commission.label}</span>
         </td>
@@ -130,7 +136,9 @@ export default function SubmissionsCard({
               <th>Sales rep</th>
               <th className="num">CA 101</th>
               <th className="num">IAU App ({s.semester.short})</th>
-              <th className="num combined">Combined</th>
+              <th className="num combined" title="CA 101 + IAU App for every semester: the same list the rep dashboard, the quota and commission count.">
+                Combined
+              </th>
               {repGoalCol ? <th className="num">Rep goal</th> : null}
               {repGoalCol ? <th className="status">Status</th> : null}
               <th className="num" title={quotaTitle}>
@@ -171,7 +179,10 @@ export default function SubmissionsCard({
             <tr className="rep-total">
               <td className="rep-name">Team total</td>
               <td className="num">{n(s.ca101)}</td>
-              <td className="num">{n(s.iau)}</td>
+              <td className="num">
+                {n(s.iau)}
+                {s.iauAll !== s.iau ? <span className="plan-label">+{n(s.iauAll - s.iau)} other sem.</span> : null}
+              </td>
               <td className="num combined">{n(s.value ?? 0)}</td>
               {repGoalCol ? <td className="num">{Math.round(g.full)}</td> : null}
               {repGoalCol ? (

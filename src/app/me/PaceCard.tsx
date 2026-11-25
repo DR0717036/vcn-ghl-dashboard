@@ -31,7 +31,7 @@ export default function PaceCard({ p }: { p: RepPaceData }) {
       </div>
       <div className="me-hero">
         <div className="me-hero-main">
-          <div className="stat-value">
+          <div className="stat-value" data-me-pace-mtd={p.mtd} data-me-commission-mtd={p.commissionMtd.amount ?? ""}>
             {n(p.mtd)} <span className="me-hero-of">of {n(p.quota)}</span>
             <span className="me-hero-value" title="This month's commission estimate under your plan; the official calculation is done outside this dashboard">
               {p.commissionMtd.amount === null ? "—" : usd(p.commissionMtd.amount)} <span className="me-hero-of">commission</span>

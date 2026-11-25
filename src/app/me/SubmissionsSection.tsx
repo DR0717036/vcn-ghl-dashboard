@@ -357,11 +357,15 @@ function CombinedHero({ d }: { d: MySubmissions }) {
           </>
         ) : (
           <div>
-            <div className="stat-value me-hero-num">
+            <div className="stat-value me-hero-num" data-me-combined={total ?? ""}>
               {n(total)}
               {full !== null ? <span className="me-hero-of"> / {n(full)} goal</span> : g.goalNote ? <span className="me-hero-of"> · {g.goalNote}</span> : null}
             </div>
             <div className="note">Submissions</div>
+            <div className="note me-combined-commission" data-me-commission-range={d.commission.amount ?? ""} title="The same calculation as the admin table's Est. commission (selected range) column: every counted submission or won in the range, priced by calendar month under your plan.">
+              Est. commission · <b>{d.commission.amount === null ? "—" : usd(d.commission.amount)}</b> · {d.commission.label}
+              {d.commission.otherWon.count > 0 ? ` · includes ${n(d.commission.otherWon.count)} won in other Veteran stage${d.commission.otherWon.count === 1 ? "" : "s"} (${d.commission.otherWon.stages.join(", ")})` : ""}
+            </div>
           </div>
         )
       }
